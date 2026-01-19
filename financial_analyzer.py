@@ -15,21 +15,59 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from bs4 import BeautifulSoup
 from decimal import Decimal
+from sec_data_fetcher import SECDataFetcher
 
 
 class TargetFinancialAnalyzer:
     """Analyzes Target Corporation SEC filings for key financial metrics."""
 
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, auto_download: bool = False,
+                 user_name: str = None, user_email: str = None):
         """
         Initialize analyzer with data directory.
 
         Args:
             data_dir: Path to directory containing Target 10-Q/10-K files
+            auto_download: Enable automatic SEC EDGAR filing downloads
+            user_name: Your name (required if auto_download=True, for SEC User-Agent)
+            user_email: Your email (required if auto_download=True, for SEC User-Agent)
         """
         self.data_dir = Path(data_dir)
         self.baseline = None
         self.results = []
+        self.auto_download = auto_download
+        self.fetcher = None
+
+        if auto_download:
+            if not user_name or not user_email:
+                raise ValueError("User name and email required for SEC downloads")
+            self.fetcher = SECDataFetcher(user_name, user_email, str(data_dir))
+
+    def download_required_filings(self, ticker: str = "TGT",
+                                  cik: str = "0000027419") -> bool:
+        """
+        Download 5 years of 10-Ks and 12 quarters of 10-Qs from SEC EDGAR.
+
+        Args:
+            ticker: Stock ticker symbol (default: "TGT")
+            cik: Central Index Key (default: "0000027419")
+
+        Returns:
+            True if download successful, False otherwise
+        """
+        if not self.fetcher:
+            print("⚠️  Auto-download not enabled. Skipping download.")
+            return False
+
+        print("📥 Downloading filings from SEC EDGAR...")
+        try:
+            metadata = self.fetcher.download_filings(ticker, cik, num_10k=5, num_10q=12)
+            print(f"✅ Downloaded {len(metadata.get('10-K', []))} 10-Ks")
+            print(f"✅ Downloaded {len(metadata.get('10-Q', []))} 10-Qs")
+            return True
+        except Exception as e:
+            print(f"❌ Download failed: {e}")
+            return False
 
     def analyze_all_filings(self) -> List[Dict]:
         """
@@ -42,13 +80,22 @@ class TargetFinancialAnalyzer:
         Returns:
             List of analysis results for each filing
         """
-        # Define filings in order
-        filings = [
-            ("10-K FY2024", "0000027419-25-000018-xbrl/tgt-20250201.htm"),
-            ("Q1 2025", "0000027419-25-000101-xbrl/tgt-20250503.htm"),
-            ("Q2 2025", "tgt-20250802.htm"),
-            ("Q3 2025", "tgt-20251101.htm"),
-        ]
+        # If auto-download enabled, fetch filings first
+        if self.auto_download and self.fetcher:
+            self.download_required_filings()
+
+        # Get filing list (from fetcher if available, else use hardcoded list)
+        if self.fetcher:
+            filings = self.fetcher.get_filing_list()
+            print(f"📁 Found {len(filings)} downloaded filings")
+        else:
+            # Fall back to original hardcoded list for backward compatibility
+            filings = [
+                ("10-K FY2024", "0000027419-25-000018-xbrl/tgt-20250201.htm"),
+                ("Q1 2025", "0000027419-25-000101-xbrl/tgt-20250503.htm"),
+                ("Q2 2025", "tgt-20250802.htm"),
+                ("Q3 2025", "tgt-20251101.htm"),
+            ]
 
         for period, filename in filings:
             filepath = self.data_dir / filename
@@ -61,7 +108,10 @@ class TargetFinancialAnalyzer:
             print(f"📊 Analyzing: {period}")
             print(f"{'='*60}")
 
-            if period == "10-K FY2024":
+            # Determine filing type based on period label
+            is_10k = period.startswith("FY") or period == "10-K FY2024"
+
+            if is_10k:
                 result = self.analyze_10k(filepath, period)
                 self.baseline = result
             else:
@@ -524,14 +574,38 @@ class TargetFinancialAnalyzer:
 
 def main():
     """Main execution function."""
+    import os
+    from dotenv import load_dotenv
+
+    # Load environment variables
+    load_dotenv()
+
     print("🎯 Target Corporation Financial Analyzer")
     print("=" * 60)
 
-    # Initialize analyzer
+    # Configuration
     data_dir = "data/Target 10Q"
-    analyzer = TargetFinancialAnalyzer(data_dir)
+    auto_download = True  # Enable automated downloads
 
-    # Analyze all filings
+    # Get credentials from environment
+    user_name = os.getenv("SEC_USER_NAME")
+    user_email = os.getenv("SEC_USER_EMAIL")
+
+    if auto_download and (not user_name or not user_email):
+        print("❌ Error: SEC credentials not configured")
+        print("   Please create a .env file with SEC_USER_NAME and SEC_USER_EMAIL")
+        print("   See .env.example for template")
+        return
+
+    # Initialize analyzer with download capability
+    analyzer = TargetFinancialAnalyzer(
+        data_dir=data_dir,
+        auto_download=auto_download,
+        user_name=user_name,
+        user_email=user_email
+    )
+
+    # Analyze all filings (will auto-download if enabled)
     results = analyzer.analyze_all_filings()
 
     # Export results
