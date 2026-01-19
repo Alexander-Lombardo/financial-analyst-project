@@ -1,0 +1,81 @@
+[
+  {
+    "period": "10-K FY2024",
+    "filing_type": "10-K",
+    "vital_signs": {
+      "net_sales_billion": 106.57,
+      "operating_income_billion": 5.57,
+      "gross_margin_percent": 28.21,
+      "operating_margin_percent": 5.22,
+      "inventory_billion": 12.74
+    },
+    "comparable_sales": {},
+    "risk_flags": [
+      "Shrink/theft mentioned in filing",
+      "Increased markdown/promotional activity noted"
+    ]
+  },
+  {
+    "period": "Q1 2025",
+    "filing_type": "10-Q",
+    "vital_signs": {
+      "net_sales_billion": 23.85,
+      "operating_income_billion": 1.47,
+      "gross_margin_percent": 28.17,
+      "operating_margin_percent": 6.17,
+      "inventory_billion": 13.05,
+      "vs_baseline": {
+        "operating_margin_change": 0.95,
+        "operating_margin_trend": "improving",
+        "gross_margin_change": -0.04
+      }
+    },
+    "comparable_sales": {},
+    "risk_flags": [
+      "Shrink/theft mentioned in filing",
+      "Increased markdown/promotional activity noted"
+    ]
+  },
+  {
+    "period": "Q2 2025",
+    "filing_type": "10-Q",
+    "vital_signs": {
+      "net_sales_billion": 25.21,
+      "operating_income_billion": 1.32,
+      "gross_margin_percent": 28.99,
+      "operating_margin_percent": 5.22,
+      "inventory_billion": 12.88,
+      "vs_baseline": {
+        "operating_margin_change": 0.0,
+        "operating_margin_trend": "declining",
+        "gross_margin_change": 0.78
+      }
+    },
+    "comparable_sales": {},
+    "risk_flags": [
+      "Shrink/theft mentioned in filing",
+      "Increased markdown/promotional activity noted"
+    ]
+  },
+  {
+    "period": "Q3 2025",
+    "filing_type": "10-Q",
+    "vital_signs": {
+      "net_sales_billion": 25.27,
+      "operating_income_billion": 0.95,
+      "gross_margin_percent": 28.23,
+      "operating_margin_percent": 3.75,
+      "inventory_billion": 14.9,
+      "vs_baseline": {
+        "operating_margin_change": -1.47,
+        "operating_margin_trend": "declining",
+        "gross_margin_change": 0.02
+      }
+    },
+    "comparable_sales": {},
+    "risk_flags": [
+      "Shrink/theft mentioned in filing",
+      "Increased markdown/promotional activity noted"
+    ]
+  }
+]

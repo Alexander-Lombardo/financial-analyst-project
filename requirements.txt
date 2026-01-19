@@ -1,0 +1,12 @@
+# Target Financial Analyzer - Dependencies
+
+# HTML Parsing
+beautifulsoup4==4.12.2
+lxml==5.1.0
+
+# Data Processing (optional, for future enhancements)
+pandas==2.2.0
+numpy==1.26.4
+
+# JSON handling (built-in, listed for reference)
+# json - standard library
