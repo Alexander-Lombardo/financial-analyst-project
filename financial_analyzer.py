@@ -38,6 +38,17 @@ class TargetFinancialAnalyzer:
         self.auto_download = auto_download
         self.fetcher = None
 
+        # Phase 2: Track quarterly results by quarter number for YoY comparison
+        self.quarterly_history = {}  # {"Q1": [Q1 2024, Q1 2025], "Q2": [...], ...}
+
+        # Phase 2: Risk heatmap - count mentions across all filings
+        self.risk_heatmap = {
+            'shrink': [],      # [(period, mention_count), ...]
+            'theft': [],
+            'markdown': [],
+            'margin_pressure': []
+        }
+
         if auto_download:
             if not user_name or not user_email:
                 raise ValueError("User name and email required for SEC downloads")
@@ -140,6 +151,10 @@ class TargetFinancialAnalyzer:
         vital_signs = self._extract_vital_signs(soup, is_annual=True)
         comp_sales = self._extract_comparable_sales(soup, is_annual=True)
 
+        # Phase 2: Calculate inventory and debt metrics
+        inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
+        debt_metrics = self._calculate_debt_metrics(vital_signs)
+
         # Extract qualitative data
         strategic_promise = self._extract_strategic_promise(soup)
 
@@ -148,6 +163,8 @@ class TargetFinancialAnalyzer:
             "filing_type": "10-K",
             "vital_signs": vital_signs,
             "comparable_sales": comp_sales,
+            "inventory_metrics": inventory_metrics,
+            "debt_metrics": debt_metrics,
             "strategic_promise": strategic_promise,
             "risk_flags": []
         }
@@ -170,18 +187,39 @@ class TargetFinancialAnalyzer:
         vital_signs = self._extract_vital_signs(soup, is_annual=False)
         comp_sales = self._extract_comparable_sales(soup, is_annual=False)
 
-        # Extract risk flags
-        risk_flags = self._extract_risk_flags(soup)
+        # Phase 2: Calculate inventory and debt metrics
+        inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
+        debt_metrics = self._calculate_debt_metrics(vital_signs)
+
+        # Extract risk flags (with heatmap tracking)
+        risk_flags = self._extract_risk_flags(soup, period)
 
         # Compare to baseline if available
         if self.baseline:
             vital_signs['vs_baseline'] = self._compare_to_baseline(vital_signs)
+
+        # Phase 2: Year-over-Year comparison
+        quarter_num = self._extract_quarter_number(period)  # "Q1 2025" → "Q1"
+        if quarter_num:
+            vital_signs['vs_year_ago'] = self._compare_year_over_year(
+                vital_signs, quarter_num, period
+            )
+
+            # Store in history for future comparisons
+            if quarter_num not in self.quarterly_history:
+                self.quarterly_history[quarter_num] = []
+            self.quarterly_history[quarter_num].append({
+                'period': period,
+                'vital_signs': vital_signs.copy()  # Copy to avoid reference issues
+            })
 
         return {
             "period": period,
             "filing_type": "10-Q",
             "vital_signs": vital_signs,
             "comparable_sales": comp_sales,
+            "inventory_metrics": inventory_metrics,
+            "debt_metrics": debt_metrics,
             "risk_flags": risk_flags
         }
 
@@ -192,70 +230,240 @@ class TargetFinancialAnalyzer:
 
     def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool) -> Dict:
         """
-        Extract core financial metrics (Net Sales, Margins, Inventory).
+        Extract core financial metrics using direct XBRL tag parsing.
 
-        This is the most complex part - XBRL data is embedded in the HTML.
+        Phase 2 Enhancement: Uses GAAP taxonomy mappings to directly extract
+        values from <ix:nonFraction> tags instead of table parsing.
         """
         vital_signs = {}
 
-        # Strategy: Look for specific XBRL tags
-        # Net Sales: dei:EntityCommonStockSharesOutstanding or us-gaap:Revenues
-        # We'll use regex patterns to find financial statement tables
+        # Define GAAP taxonomy mappings
+        # Target uses specific GAAP tags - these were discovered by inspecting actual filings
+        GAAP_MAPPINGS = {
+            'us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax': 'net_sales',
+            'us-gaap:Revenues': 'net_sales',
+            'us-gaap:SalesRevenueNet': 'net_sales',
+            'us-gaap:CostOfGoodsAndServicesSold': 'cost_of_sales',
+            'us-gaap:CostOfGoodsSold': 'cost_of_sales',
+            'us-gaap:CostOfRevenue': 'cost_of_sales',
+            'us-gaap:OperatingIncomeLoss': 'operating_income',
+            'us-gaap:InventoryNet': 'inventory',
+            'us-gaap:InterestExpense': 'interest_expense',
+            'us-gaap:LongTermDebt': 'long_term_debt',
+            'us-gaap:ShortTermBorrowings': 'short_term_debt',
+            'us-gaap:DebtCurrent': 'short_term_debt'
+        }
 
-        # Find Consolidated Statements of Operations
-        operations_table = self._find_table_by_title(
-            soup,
-            r"Consolidated\s+Statements?\s+of\s+(Operations|Income)"
-        )
+        # Extract all XBRL tagged values
+        for gaap_tag, metric_name in GAAP_MAPPINGS.items():
+            value = self._extract_xbrl_value(soup, gaap_tag)
+            if value is not None:
+                # Convert to billions (values are usually in millions)
+                vital_signs[f'{metric_name}_billion'] = value / 1000.0
 
-        if operations_table:
-            # Extract Net Sales (first line item usually)
-            net_sales = self._extract_metric_from_table(
-                operations_table,
-                r"(Total\s+revenue|Net\s+sales)",
-                column_index=0  # Most recent period
-            )
-            vital_signs['net_sales_billion'] = net_sales
+        # Calculate derived metrics
+        if 'net_sales_billion' in vital_signs and 'cost_of_sales_billion' in vital_signs:
+            net_sales = vital_signs['net_sales_billion']
+            cost_of_sales = vital_signs['cost_of_sales_billion']
+            gross_margin = ((net_sales - cost_of_sales) / net_sales) * 100
+            vital_signs['gross_margin_percent'] = round(gross_margin, 2)
 
-            # Extract Cost of Sales
-            cost_of_sales = self._extract_metric_from_table(
-                operations_table,
-                r"Cost\s+of\s+(sales|goods\s+sold)",
-                column_index=0
-            )
-
-            # Extract Operating Income
-            operating_income = self._extract_metric_from_table(
-                operations_table,
-                r"Operating\s+income",
-                column_index=0
-            )
-            vital_signs['operating_income_billion'] = operating_income
-
-            # Calculate margins
-            if net_sales and cost_of_sales:
-                gross_margin = ((net_sales - cost_of_sales) / net_sales) * 100
-                vital_signs['gross_margin_percent'] = round(gross_margin, 2)
-
-            if net_sales and operating_income:
-                operating_margin = (operating_income / net_sales) * 100
-                vital_signs['operating_margin_percent'] = round(operating_margin, 2)
-
-        # Find Balance Sheet for Inventory
-        balance_sheet = self._find_table_by_title(
-            soup,
-            r"Consolidated\s+Balance\s+Sheets?"
-        )
-
-        if balance_sheet:
-            inventory = self._extract_metric_from_table(
-                balance_sheet,
-                r"Inventory|Inventories",
-                column_index=0
-            )
-            vital_signs['inventory_billion'] = inventory
+        if 'net_sales_billion' in vital_signs and 'operating_income_billion' in vital_signs:
+            operating_margin = (vital_signs['operating_income_billion'] / vital_signs['net_sales_billion']) * 100
+            vital_signs['operating_margin_percent'] = round(operating_margin, 2)
 
         return vital_signs
+
+    def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str) -> Optional[float]:
+        """
+        Extract numeric value from XBRL tag for the most recent period.
+
+        Args:
+            soup: BeautifulSoup parsed HTML
+            gaap_tag: US-GAAP taxonomy tag name (e.g., 'us-gaap:Revenues')
+
+        Returns:
+            Extracted numeric value in millions, or None if not found
+        """
+        # Find all instances of this XBRL tag
+        tags = soup.find_all('ix:nonfraction', attrs={'name': gaap_tag})
+
+        # Also try with different casing (some filings use different formats)
+        if not tags:
+            tags = soup.find_all('ix:nonFraction', attrs={'name': gaap_tag})
+
+        if not tags:
+            return None
+
+        # For simplicity, take the first occurrence (usually most recent period)
+        # More sophisticated: parse contextRef to determine period
+        tag = tags[0]
+        text = tag.get_text().strip().replace(',', '').replace('$', '')
+
+        # Extract the numeric value
+        try:
+            value = float(text) if text else None
+            if value is None:
+                return None
+
+            # Check for scale attribute (e.g., scale="6" means millions)
+            scale = tag.get('scale')
+            if scale:
+                scale_factor = int(scale)
+                # scale="6" means multiply by 10^6 (millions)
+                value = value * (10 ** scale_factor)
+
+            # Convert from dollars to millions
+            return value / 1_000_000
+        except (ValueError, TypeError):
+            return None
+
+    def _calculate_inventory_metrics(self, vital_signs: Dict, period: str) -> Dict:
+        """
+        Calculate inventory efficiency metrics (Phase 2 Enhancement).
+
+        Metrics:
+        - Inventory Turnover Ratio = COGS / Average Inventory
+        - Days Sales of Inventory (DSI) = 365 / Inventory Turnover
+
+        Args:
+            vital_signs: Dictionary containing cost_of_sales_billion and inventory_billion
+            period: Period label for tracking
+
+        Returns:
+            Dictionary with inventory metrics
+        """
+        inventory_metrics = {}
+
+        # Need COGS and Inventory
+        cogs = vital_signs.get('cost_of_sales_billion')
+        inventory = vital_signs.get('inventory_billion')
+
+        if cogs and inventory:
+            # For simplicity, use current inventory (not average)
+            # To calculate true average, would need previous period's inventory
+            inventory_turnover = cogs / inventory
+            dsi = 365 / inventory_turnover
+
+            inventory_metrics['inventory_turnover_ratio'] = round(inventory_turnover, 2)
+            inventory_metrics['days_sales_of_inventory'] = round(dsi, 1)
+
+        return inventory_metrics
+
+    def _calculate_debt_metrics(self, vital_signs: Dict) -> Dict:
+        """
+        Calculate debt servicing metrics (Phase 2 Enhancement).
+
+        Metrics:
+        - Interest Coverage Ratio = Operating Income / Interest Expense
+        - Total Debt = Long-term Debt + Short-term Debt
+
+        Args:
+            vital_signs: Dictionary containing operating_income, interest_expense, and debt values
+
+        Returns:
+            Dictionary with debt metrics
+        """
+        debt_metrics = {}
+
+        operating_income = vital_signs.get('operating_income_billion')
+        interest_expense = vital_signs.get('interest_expense_billion')
+        long_term_debt = vital_signs.get('long_term_debt_billion')
+        short_term_debt = vital_signs.get('short_term_debt_billion', 0)
+
+        if operating_income and interest_expense and interest_expense > 0:
+            # Calculate interest coverage ratio
+            interest_coverage = operating_income / interest_expense
+            debt_metrics['interest_coverage_ratio'] = round(interest_coverage, 2)
+
+            # Interest expense is in millions, operating income is in billions
+            # Both should be in same units for ratio
+            debt_metrics['interest_expense_million'] = round(interest_expense * 1000, 0)
+            debt_metrics['operating_income_million'] = round(operating_income * 1000, 0)
+
+            # Flag if below 2.0x (warning threshold)
+            if interest_coverage < 2.0:
+                debt_metrics['interest_coverage_warning'] = f"Low coverage: {interest_coverage:.2f}x"
+
+        if long_term_debt is not None:
+            total_debt = long_term_debt + short_term_debt
+            debt_metrics['total_debt_billion'] = round(total_debt, 2)
+
+        return debt_metrics
+
+    def _extract_quarter_number(self, period: str) -> Optional[str]:
+        """
+        Extract quarter number from period label (Phase 2 Enhancement).
+
+        Args:
+            period: Period label like "Q1 2025", "Q2 2024"
+
+        Returns:
+            Quarter number ("Q1", "Q2", "Q3") or None
+        """
+        match = re.match(r'(Q\d)', period)
+        return match.group(1) if match else None
+
+    def _compare_year_over_year(self, current_vital_signs: Dict,
+                                quarter_num: str, current_period: str) -> Dict:
+        """
+        Compare current quarter to same quarter from previous year (Phase 2 Enhancement).
+
+        Args:
+            current_vital_signs: Current quarter vital signs
+            quarter_num: Quarter number ("Q1", "Q2", "Q3")
+            current_period: Current period label
+
+        Returns:
+            Dictionary with YoY comparison metrics
+        """
+        comparison = {}
+
+        # Find previous year's same quarter
+        if quarter_num not in self.quarterly_history:
+            return comparison
+
+        # Get the most recent previous entry (year ago)
+        previous_quarters = self.quarterly_history[quarter_num]
+        if not previous_quarters:
+            return comparison
+
+        prior_year = previous_quarters[-1]  # Most recent Q1/Q2/Q3 from history
+        prior_vital = prior_year['vital_signs']
+
+        # Compare operating margin YoY
+        if 'operating_margin_percent' in current_vital_signs and 'operating_margin_percent' in prior_vital:
+            current_margin = current_vital_signs['operating_margin_percent']
+            prior_margin = prior_vital['operating_margin_percent']
+            diff = current_margin - prior_margin
+
+            comparison['operating_margin_yoy_change'] = round(diff, 2)
+            comparison['operating_margin_yoy_trend'] = "improving" if diff > 0 else "declining"
+            comparison['comparison_period'] = prior_year['period']
+
+        # Compare net sales YoY
+        if 'net_sales_billion' in current_vital_signs and 'net_sales_billion' in prior_vital:
+            current_sales = current_vital_signs['net_sales_billion']
+            prior_sales = prior_vital['net_sales_billion']
+            growth = ((current_sales - prior_sales) / prior_sales) * 100
+
+            comparison['net_sales_yoy_growth_percent'] = round(growth, 2)
+
+        # Compare inventory YoY
+        if 'inventory_billion' in current_vital_signs and 'inventory_billion' in prior_vital:
+            current_inv = current_vital_signs['inventory_billion']
+            prior_inv = prior_vital['inventory_billion']
+            inv_growth = ((current_inv - prior_inv) / prior_inv) * 100
+
+            comparison['inventory_yoy_growth_percent'] = round(inv_growth, 2)
+
+            # Flag if inventory growing faster than sales
+            if 'net_sales_yoy_growth_percent' in comparison:
+                if inv_growth > comparison['net_sales_yoy_growth_percent'] + 5:
+                    comparison['inventory_buildup_warning'] = \
+                        f"Inventory growing {inv_growth:.1f}% vs sales {comparison['net_sales_yoy_growth_percent']:.1f}%"
+
+        return comparison
 
     def _extract_comparable_sales(self, soup: BeautifulSoup, is_annual: bool) -> Dict:
         """
@@ -337,9 +545,17 @@ class TargetFinancialAnalyzer:
 
         return strategic
 
-    def _extract_risk_flags(self, soup: BeautifulSoup) -> List[str]:
+    def _extract_risk_flags(self, soup: BeautifulSoup, period: str) -> List[str]:
         """
         Phase 2: Monitor for markdown and shrink mentions in quarterly filings.
+        Also populate risk heatmap for trend analysis.
+
+        Args:
+            soup: BeautifulSoup parsed HTML
+            period: Period label for tracking in heatmap
+
+        Returns:
+            List of risk flag strings
         """
         flags = []
 
@@ -349,9 +565,12 @@ class TargetFinancialAnalyzer:
         if mda_section:
             text = mda_section.get_text()
 
-            # Check for shrink mentions
+            # Check for shrink mentions (with count for heatmap)
             shrink_pattern = r"shrink|inventory\s+shortage|theft"
-            if re.search(shrink_pattern, text, re.IGNORECASE):
+            shrink_matches = re.findall(shrink_pattern, text, re.IGNORECASE)
+            if shrink_matches:
+                self.risk_heatmap['shrink'].append((period, len(shrink_matches)))
+
                 # Try to extract basis point impact
                 bp_pattern = r"(\d+)\s*basis\s+points?"
                 match = re.search(bp_pattern, text, re.IGNORECASE)
@@ -360,17 +579,46 @@ class TargetFinancialAnalyzer:
                 else:
                     flags.append("Shrink/theft mentioned in MD&A")
 
-            # Check for markdown/clearance mentions
+            # Check for markdown/clearance mentions (with count for heatmap)
             markdown_pattern = r"markdown|clearance|promotional|discount"
-            if re.search(markdown_pattern, text, re.IGNORECASE):
+            markdown_matches = re.findall(markdown_pattern, text, re.IGNORECASE)
+            if markdown_matches:
+                self.risk_heatmap['markdown'].append((period, len(markdown_matches)))
                 flags.append("Increased markdown/promotional activity noted")
 
-            # Check for margin pressure
+            # Check for margin pressure (with count for heatmap)
             margin_pattern = r"margin\s+pressure|margin\s+decline|margin\s+compression"
-            if re.search(margin_pattern, text, re.IGNORECASE):
+            margin_matches = re.findall(margin_pattern, text, re.IGNORECASE)
+            if margin_matches:
+                self.risk_heatmap['margin_pressure'].append((period, len(margin_matches)))
                 flags.append("Margin pressure mentioned")
 
         return flags
+
+    def get_risk_heatmap_summary(self) -> Dict:
+        """
+        Generate summary of risk mentions across all periods (Phase 2 Enhancement).
+
+        Returns:
+            Dictionary with risk heatmap summary statistics
+        """
+        summary = {}
+
+        for risk_type, mentions in self.risk_heatmap.items():
+            if mentions:
+                total_mentions = sum(count for _, count in mentions)
+                periods_affected = len(mentions)
+                avg_mentions = total_mentions / periods_affected if periods_affected > 0 else 0
+
+                summary[risk_type] = {
+                    'total_mentions': total_mentions,
+                    'periods_affected': periods_affected,
+                    'avg_mentions_per_period': round(avg_mentions, 1),
+                    'trend': 'increasing' if mentions[-1][1] > mentions[0][1] else 'stable/decreasing',
+                    'details': mentions
+                }
+
+        return summary
 
     def _compare_to_baseline(self, current_vital_signs: Dict) -> Dict:
         """Compare current quarter to baseline 10-K metrics."""
@@ -506,10 +754,40 @@ class TargetFinancialAnalyzer:
         if vital.get('inventory_billion') is not None:
             print(f"   Inventory: ${vital['inventory_billion']:.2f}B")
 
+        # Phase 2: Display inventory metrics
+        inv_metrics = result.get('inventory_metrics', {})
+        if inv_metrics:
+            print("\n📦 Inventory Efficiency:")
+            if 'inventory_turnover_ratio' in inv_metrics:
+                print(f"   Turnover Ratio: {inv_metrics['inventory_turnover_ratio']:.2f}x")
+            if 'days_sales_of_inventory' in inv_metrics:
+                print(f"   Days Sales of Inventory: {inv_metrics['days_sales_of_inventory']:.1f} days")
+
+        # Phase 2: Display debt metrics
+        debt_metrics = result.get('debt_metrics', {})
+        if debt_metrics:
+            print("\n💳 Debt Metrics:")
+            if 'total_debt_billion' in debt_metrics:
+                print(f"   Total Debt: ${debt_metrics['total_debt_billion']:.2f}B")
+            if 'interest_coverage_ratio' in debt_metrics:
+                coverage = debt_metrics['interest_coverage_ratio']
+                warning = " ⚠️" if coverage < 2.0 else ""
+                print(f"   Interest Coverage: {coverage:.2f}x{warning}")
+            if 'interest_coverage_warning' in debt_metrics:
+                print(f"   {debt_metrics['interest_coverage_warning']}")
+
         if 'vs_baseline' in vital:
             print("\n📊 vs Baseline:")
             for key, value in vital['vs_baseline'].items():
                 print(f"   {key}: {value}")
+
+        # Phase 2: Display year-over-year comparison
+        if 'vs_year_ago' in vital:
+            yoy = vital['vs_year_ago']
+            if yoy:  # Only print if there's data
+                print("\n📅 Year-over-Year:")
+                for key, value in yoy.items():
+                    print(f"   {key}: {value}")
 
         comp = result.get('comparable_sales', {})
         if comp:
@@ -530,9 +808,14 @@ class TargetFinancialAnalyzer:
                     print(f"   {i}. {priority[:100]}...")
 
     def export_json(self, output_path: str):
-        """Export all results to JSON file."""
+        """Export all results to JSON file including risk heatmap (Phase 2)."""
+        output_data = {
+            'filings': self.results,
+            'risk_heatmap': self.get_risk_heatmap_summary()
+        }
+
         with open(output_path, 'w') as f:
-            json.dump(self.results, f, indent=2)
+            json.dump(output_data, f, indent=2)
 
         print(f"\n✅ Results exported to: {output_path}")
 

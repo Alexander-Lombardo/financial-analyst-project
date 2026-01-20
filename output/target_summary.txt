@@ -1,0 +1,339 @@
+================================================================================
+TARGET CORPORATION - FINANCIAL ANALYSIS REPORT
+================================================================================
+
+
+FY2020 (10-K)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 92.4
+  cost_of_sales_billion: 66.177
+  operating_income_billion: 6.539
+  inventory_billion: 10.653
+  interest_expense_billion: 0.977
+  long_term_debt_billion: 3.607
+  gross_margin_percent: 28.38
+  operating_margin_percent: 7.08
+
+
+FY2021 (10-K)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 104.611
+  cost_of_sales_billion: 74.963
+  operating_income_billion: 8.946
+  inventory_billion: 13.902
+  interest_expense_billion: 0.421
+  long_term_debt_billion: 4.544
+  gross_margin_percent: 28.34
+  operating_margin_percent: 8.55
+
+
+FY2022 (10-K)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 107.588
+  cost_of_sales_billion: 82.229
+  operating_income_billion: 3.848
+  inventory_billion: 13.499
+  interest_expense_billion: 0.478
+  gross_margin_percent: 23.57
+  operating_margin_percent: 3.58
+
+
+Q1 2022 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 24.83
+  cost_of_sales_billion: 18.461
+  operating_income_billion: 1.346
+  inventory_billion: 15.083
+  interest_expense_billion: 0.112
+  gross_margin_percent: 25.65
+  operating_margin_percent: 5.42
+  vs_year_ago: {}
+
+Trend Analysis:
+  operating_margin_change: 1.84
+  operating_margin_trend: improving
+  gross_margin_change: 2.08
+
+Risk Flags:
+  • Increased markdown/promotional activity noted
+
+
+Q2 2022 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.653
+  cost_of_sales_billion: 20.142
+  operating_income_billion: 0.321
+  inventory_billion: 15.32
+  interest_expense_billion: 0.112
+  gross_margin_percent: 21.48
+  operating_margin_percent: 1.25
+  vs_year_ago: {}
+
+Trend Analysis:
+  operating_margin_change: -2.33
+  operating_margin_trend: declining
+  gross_margin_change: -2.09
+  markdown_flag: Potential inventory clearance/discounting
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+Q3 2022 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 26.122
+  cost_of_sales_billion: 19.68
+  operating_income_billion: 1.022
+  inventory_billion: 17.117
+  interest_expense_billion: 0.125
+  gross_margin_percent: 24.66
+  operating_margin_percent: 3.91
+  vs_year_ago: {}
+
+Trend Analysis:
+  operating_margin_change: 0.33
+  operating_margin_trend: improving
+  gross_margin_change: 1.09
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+FY2023 (10-K)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 105.803
+  cost_of_sales_billion: 77.736
+  operating_income_billion: 5.707
+  inventory_billion: 11.886
+  interest_expense_billion: 0.502
+  long_term_debt_billion: 4.668
+  gross_margin_percent: 26.53
+  operating_margin_percent: 5.39
+
+
+Q1 2023 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 24.948
+  cost_of_sales_billion: 18.386
+  operating_income_billion: 1.328
+  inventory_billion: 12.616
+  interest_expense_billion: 0.147
+  gross_margin_percent: 26.3
+  operating_margin_percent: 5.32
+  vs_year_ago: {'operating_margin_yoy_change': -0.1, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q1 2022', 'net_sales_yoy_growth_percent': 0.48, 'inventory_yoy_growth_percent': -16.36}
+
+Trend Analysis:
+  operating_margin_change: -0.07
+  operating_margin_trend: declining
+  gross_margin_change: -0.23
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+Q2 2023 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 24.384
+  cost_of_sales_billion: 17.798
+  operating_income_billion: 1.197
+  inventory_billion: 12.684
+  interest_expense_billion: 0.141
+  gross_margin_percent: 27.01
+  operating_margin_percent: 4.91
+  vs_year_ago: {'operating_margin_yoy_change': 3.66, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q2 2022', 'net_sales_yoy_growth_percent': -4.95, 'inventory_yoy_growth_percent': -17.21}
+
+Trend Analysis:
+  operating_margin_change: -0.48
+  operating_margin_trend: declining
+  gross_margin_change: 0.48
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+Q3 2023 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.004
+  cost_of_sales_billion: 18.149
+  operating_income_billion: 1.317
+  inventory_billion: 14.731
+  interest_expense_billion: 0.107
+  gross_margin_percent: 27.42
+  operating_margin_percent: 5.27
+  vs_year_ago: {'operating_margin_yoy_change': 1.36, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q3 2022', 'net_sales_yoy_growth_percent': -4.28, 'inventory_yoy_growth_percent': -13.94}
+
+Trend Analysis:
+  operating_margin_change: -0.12
+  operating_margin_trend: declining
+  gross_margin_change: 0.89
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+FY2024 (10-K)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 106.566
+  cost_of_sales_billion: 76.502
+  operating_income_billion: 5.566
+  inventory_billion: 12.74
+  gross_margin_percent: 28.21
+  operating_margin_percent: 5.22
+
+
+Q1 2024 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 24.143
+  cost_of_sales_billion: 17.449
+  operating_income_billion: 1.296
+  inventory_billion: 11.73
+  interest_expense_billion: 0.106
+  gross_margin_percent: 27.73
+  operating_margin_percent: 5.37
+  vs_year_ago: {'operating_margin_yoy_change': 0.05, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q1 2023', 'net_sales_yoy_growth_percent': -3.23, 'inventory_yoy_growth_percent': -7.02}
+
+Trend Analysis:
+  operating_margin_change: 0.15
+  operating_margin_trend: improving
+  gross_margin_change: -0.48
+
+Risk Flags:
+  • Increased markdown/promotional activity noted
+
+
+Q2 2024 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.021
+  cost_of_sales_billion: 17.799
+  operating_income_billion: 1.635
+  inventory_billion: 12.604
+  gross_margin_percent: 28.86
+  operating_margin_percent: 6.53
+  vs_year_ago: {'operating_margin_yoy_change': 1.62, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q2 2023', 'net_sales_yoy_growth_percent': 2.61, 'inventory_yoy_growth_percent': -0.63}
+
+Trend Analysis:
+  operating_margin_change: 1.31
+  operating_margin_trend: improving
+  gross_margin_change: 0.65
+
+Risk Flags:
+  • Increased markdown/promotional activity noted
+
+
+Q3 2024 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.228
+  cost_of_sales_billion: 18.375
+  operating_income_billion: 1.168
+  inventory_billion: 15.165
+  gross_margin_percent: 27.16
+  operating_margin_percent: 4.63
+  vs_year_ago: {'operating_margin_yoy_change': -0.64, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q3 2023', 'net_sales_yoy_growth_percent': 0.9, 'inventory_yoy_growth_percent': 2.95}
+
+Trend Analysis:
+  operating_margin_change: -0.59
+  operating_margin_trend: declining
+  gross_margin_change: -1.05
+  markdown_flag: Potential inventory clearance/discounting
+
+Risk Flags:
+  • Increased markdown/promotional activity noted
+
+
+Q1 2025 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 23.846
+  cost_of_sales_billion: 17.128
+  operating_income_billion: 1.472
+  inventory_billion: 13.048
+  gross_margin_percent: 28.17
+  operating_margin_percent: 6.17
+  vs_year_ago: {'operating_margin_yoy_change': 0.8, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q1 2024', 'net_sales_yoy_growth_percent': -1.23, 'inventory_yoy_growth_percent': 11.24, 'inventory_buildup_warning': 'Inventory growing 11.2% vs sales -1.2%'}
+
+Trend Analysis:
+  operating_margin_change: 0.95
+  operating_margin_trend: improving
+  gross_margin_change: -0.04
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+Q2 2025 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.211
+  cost_of_sales_billion: 17.903
+  operating_income_billion: 1.317
+  inventory_billion: 12.881
+  gross_margin_percent: 28.99
+  operating_margin_percent: 5.22
+  vs_year_ago: {'operating_margin_yoy_change': -1.31, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q2 2024', 'net_sales_yoy_growth_percent': 0.76, 'inventory_yoy_growth_percent': 2.2}
+
+Trend Analysis:
+  operating_margin_change: 0.0
+  operating_margin_trend: declining
+  gross_margin_change: 0.78
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
+
+
+Q3 2025 (10-Q)
+--------------------------------------------------------------------------------
+
+Vital Signs:
+  net_sales_billion: 25.27
+  cost_of_sales_billion: 18.137
+  operating_income_billion: 0.948
+  inventory_billion: 14.896
+  gross_margin_percent: 28.23
+  operating_margin_percent: 3.75
+  vs_year_ago: {'operating_margin_yoy_change': -0.88, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q3 2024', 'net_sales_yoy_growth_percent': 0.17, 'inventory_yoy_growth_percent': -1.77}
+
+Trend Analysis:
+  operating_margin_change: -1.47
+  operating_margin_trend: declining
+  gross_margin_change: 0.02
+
+Risk Flags:
+  • Shrink/theft mentioned in MD&A
+  • Increased markdown/promotional activity noted
