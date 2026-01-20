@@ -16,3 +16,6 @@ sec-edgar-downloader==5.0.3
 
 # Environment configuration
 python-dotenv==1.0.0
+
+# Visualization (Phase 3)
+plotly>=5.0.0

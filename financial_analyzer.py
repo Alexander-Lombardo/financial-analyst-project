@@ -155,16 +155,25 @@ class TargetFinancialAnalyzer:
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
 
+        # Phase 3: Calculate cash flow metrics
+        cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
+
+        # Phase 3: Extract temporal keys
+        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+
         # Extract qualitative data
         strategic_promise = self._extract_strategic_promise(soup)
 
         return {
             "period": period,
             "filing_type": "10-K",
+            "fiscal_year": fiscal_year,
+            "fiscal_quarter": fiscal_quarter,
             "vital_signs": vital_signs,
             "comparable_sales": comp_sales,
             "inventory_metrics": inventory_metrics,
             "debt_metrics": debt_metrics,
+            "cashflow_metrics": cashflow_metrics,
             "strategic_promise": strategic_promise,
             "risk_flags": []
         }
@@ -191,6 +200,12 @@ class TargetFinancialAnalyzer:
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
 
+        # Phase 3: Calculate cash flow metrics
+        cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
+
+        # Phase 3: Extract temporal keys
+        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+
         # Extract risk flags (with heatmap tracking)
         risk_flags = self._extract_risk_flags(soup, period)
 
@@ -216,10 +231,13 @@ class TargetFinancialAnalyzer:
         return {
             "period": period,
             "filing_type": "10-Q",
+            "fiscal_year": fiscal_year,
+            "fiscal_quarter": fiscal_quarter,
             "vital_signs": vital_signs,
             "comparable_sales": comp_sales,
             "inventory_metrics": inventory_metrics,
             "debt_metrics": debt_metrics,
+            "cashflow_metrics": cashflow_metrics,
             "risk_flags": risk_flags
         }
 
@@ -251,7 +269,11 @@ class TargetFinancialAnalyzer:
             'us-gaap:InterestExpense': 'interest_expense',
             'us-gaap:LongTermDebt': 'long_term_debt',
             'us-gaap:ShortTermBorrowings': 'short_term_debt',
-            'us-gaap:DebtCurrent': 'short_term_debt'
+            'us-gaap:DebtCurrent': 'short_term_debt',
+            # Phase 3: Cash Flow Statement metrics
+            'us-gaap:NetCashProvidedByUsedInOperatingActivities': 'operating_cash_flow',
+            'us-gaap:NetCashProvidedByUsedInInvestingActivities': 'investing_cash_flow',
+            'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow'
         }
 
         # Extract all XBRL tagged values
@@ -317,6 +339,73 @@ class TargetFinancialAnalyzer:
             return value / 1_000_000
         except (ValueError, TypeError):
             return None
+
+    def _parse_period_to_fiscal(self, period: str) -> tuple:
+        """
+        Parse period string to fiscal year and quarter (Phase 3).
+
+        Args:
+            period: Period label like "FY2024", "Q1 2025"
+
+        Returns:
+            Tuple of (fiscal_year, fiscal_quarter)
+            - fiscal_year: int (e.g., 2024)
+            - fiscal_quarter: int or None (1-3 for Q1-Q3, None for annual)
+        """
+        # Match annual format: FY2024
+        annual_match = re.match(r'FY(\d{4})', period)
+        if annual_match:
+            return int(annual_match.group(1)), None
+
+        # Match quarterly format: Q1 2025
+        quarterly_match = re.match(r'Q(\d)\s+(\d{4})', period)
+        if quarterly_match:
+            quarter = int(quarterly_match.group(1))
+            year = int(quarterly_match.group(2))
+            return year, quarter
+
+        # Fallback - try to extract just the year
+        year_match = re.search(r'(\d{4})', period)
+        if year_match:
+            return int(year_match.group(1)), None
+
+        return None, None
+
+    def _calculate_cashflow_metrics(self, vital_signs: Dict) -> Dict:
+        """
+        Calculate cash flow metrics (Phase 3 Enhancement).
+
+        Metrics:
+        - Free Cash Flow = Operating Cash Flow - CapEx (if available)
+        - Operating Cash Flow Margin = Operating Cash Flow / Revenue
+
+        Args:
+            vital_signs: Dictionary containing cash flow and revenue data
+
+        Returns:
+            Dictionary with cash flow metrics
+        """
+        cashflow_metrics = {}
+
+        operating_cf = vital_signs.get('operating_cash_flow_billion')
+        investing_cf = vital_signs.get('investing_cash_flow_billion')
+        financing_cf = vital_signs.get('financing_cash_flow_billion')
+        net_sales = vital_signs.get('net_sales_billion')
+
+        if operating_cf is not None:
+            cashflow_metrics['operating_cash_flow_billion'] = operating_cf
+
+            if net_sales and net_sales > 0:
+                cf_margin = (operating_cf / net_sales) * 100
+                cashflow_metrics['operating_cash_flow_margin_percent'] = round(cf_margin, 2)
+
+        if investing_cf is not None:
+            cashflow_metrics['investing_cash_flow_billion'] = investing_cf
+
+        if financing_cf is not None:
+            cashflow_metrics['financing_cash_flow_billion'] = financing_cf
+
+        return cashflow_metrics
 
     def _calculate_inventory_metrics(self, vital_signs: Dict, period: str) -> Dict:
         """
@@ -819,6 +908,163 @@ class TargetFinancialAnalyzer:
 
         print(f"\n✅ Results exported to: {output_path}")
 
+    def export_timeseries_json(self, output_path: str):
+        """
+        Export time-series friendly JSON format (Phase 3).
+
+        Creates a flat structure optimized for Plotly visualization with parallel
+        arrays for each metric category.
+        """
+        timeseries_data = {
+            'metadata': {
+                'company': 'Target Corporation',
+                'ticker': 'TGT',
+                'cik': '0000027419',
+                'total_periods': len(self.results)
+            },
+            'periods': [],
+            'metrics': {
+                'revenue': {
+                    'net_sales_billion': [],
+                    'yoy_growth_percent': []
+                },
+                'margins': {
+                    'gross_margin_percent': [],
+                    'operating_margin_percent': [],
+                    'operating_margin_yoy_change': []
+                },
+                'inventory': {
+                    'inventory_billion': [],
+                    'inventory_turnover_ratio': [],
+                    'days_sales_of_inventory': [],
+                    'inventory_yoy_growth_percent': []
+                },
+                'debt': {
+                    'total_debt_billion': [],
+                    'interest_coverage_ratio': []
+                },
+                'comparable_sales': {
+                    'total_change_percent': [],
+                    'digital_change_percent': []
+                },
+                'cash_flows': {
+                    'operating_cash_flow_billion': [],
+                    'investing_cash_flow_billion': [],
+                    'financing_cash_flow_billion': [],
+                    'operating_cash_flow_margin_percent': []
+                }
+            },
+            'comparisons': {
+                'revenue_vs_inventory': [],
+                'margin_waterfall': []
+            },
+            'risk_heatmap': self.get_risk_heatmap_summary()
+        }
+
+        # Populate arrays in chronological order
+        for filing in self.results:
+            # Period metadata
+            period_entry = {
+                'period': filing['period'],
+                'fiscal_year': filing.get('fiscal_year'),
+                'fiscal_quarter': filing.get('fiscal_quarter'),
+                'filing_type': filing['filing_type']
+            }
+            timeseries_data['periods'].append(period_entry)
+
+            vital = filing['vital_signs']
+            inv_metrics = filing.get('inventory_metrics', {})
+            debt_metrics = filing.get('debt_metrics', {})
+            comp_sales = filing.get('comparable_sales', {})
+            cashflow_metrics = filing.get('cashflow_metrics', {})
+
+            # Revenue metrics
+            timeseries_data['metrics']['revenue']['net_sales_billion'].append(
+                vital.get('net_sales_billion')
+            )
+            yoy = vital.get('vs_year_ago', {})
+            timeseries_data['metrics']['revenue']['yoy_growth_percent'].append(
+                yoy.get('net_sales_yoy_growth_percent')
+            )
+
+            # Margin metrics
+            timeseries_data['metrics']['margins']['gross_margin_percent'].append(
+                vital.get('gross_margin_percent')
+            )
+            timeseries_data['metrics']['margins']['operating_margin_percent'].append(
+                vital.get('operating_margin_percent')
+            )
+            timeseries_data['metrics']['margins']['operating_margin_yoy_change'].append(
+                yoy.get('operating_margin_yoy_change')
+            )
+
+            # Inventory metrics
+            timeseries_data['metrics']['inventory']['inventory_billion'].append(
+                vital.get('inventory_billion')
+            )
+            timeseries_data['metrics']['inventory']['inventory_turnover_ratio'].append(
+                inv_metrics.get('inventory_turnover_ratio')
+            )
+            timeseries_data['metrics']['inventory']['days_sales_of_inventory'].append(
+                inv_metrics.get('days_sales_of_inventory')
+            )
+            timeseries_data['metrics']['inventory']['inventory_yoy_growth_percent'].append(
+                yoy.get('inventory_yoy_growth_percent')
+            )
+
+            # Debt metrics
+            timeseries_data['metrics']['debt']['total_debt_billion'].append(
+                debt_metrics.get('total_debt_billion')
+            )
+            timeseries_data['metrics']['debt']['interest_coverage_ratio'].append(
+                debt_metrics.get('interest_coverage_ratio')
+            )
+
+            # Comparable sales
+            timeseries_data['metrics']['comparable_sales']['total_change_percent'].append(
+                comp_sales.get('total_change_percent')
+            )
+            timeseries_data['metrics']['comparable_sales']['digital_change_percent'].append(
+                comp_sales.get('digital_change_percent')
+            )
+
+            # Cash flows (Phase 3)
+            timeseries_data['metrics']['cash_flows']['operating_cash_flow_billion'].append(
+                cashflow_metrics.get('operating_cash_flow_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['investing_cash_flow_billion'].append(
+                cashflow_metrics.get('investing_cash_flow_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['financing_cash_flow_billion'].append(
+                cashflow_metrics.get('financing_cash_flow_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['operating_cash_flow_margin_percent'].append(
+                cashflow_metrics.get('operating_cash_flow_margin_percent')
+            )
+
+            # Comparisons
+            net_sales = vital.get('net_sales_billion')
+            inventory = vital.get('inventory_billion')
+            if net_sales and inventory:
+                timeseries_data['comparisons']['revenue_vs_inventory'].append({
+                    'period': filing['period'],
+                    'revenue': net_sales,
+                    'inventory': inventory,
+                    'inventory_to_revenue_ratio': round(inventory / net_sales, 3)
+                })
+
+            operating_margin = vital.get('operating_margin_percent')
+            if operating_margin:
+                timeseries_data['comparisons']['margin_waterfall'].append({
+                    'period': filing['period'],
+                    'operating_margin': operating_margin
+                })
+
+        with open(output_path, 'w') as f:
+            json.dump(timeseries_data, f, indent=2)
+
+        print(f"✅ Time-series data exported to: {output_path}")
+
     def export_summary_report(self, output_path: str):
         """Export executive summary report."""
         report_lines = []
@@ -897,11 +1143,15 @@ def main():
     print("=" * 60)
 
     analyzer.export_json("output/target_analysis.json")
+    analyzer.export_timeseries_json("output/target_timeseries.json")
     analyzer.export_summary_report("output/target_summary.txt")
 
     print("\n✅ Analysis complete!")
     print(f"   Total filings analyzed: {len(results)}")
-    print(f"   Output files created in: output/")
+    print(f"   Output files:")
+    print(f"     - target_analysis.json (detailed format)")
+    print(f"     - target_timeseries.json (time-series format for Plotly)")
+    print(f"     - target_summary.txt (human-readable report)")
 
 
 if __name__ == "__main__":

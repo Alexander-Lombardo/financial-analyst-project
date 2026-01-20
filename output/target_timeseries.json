@@ -1,0 +1,723 @@
+{
+  "metadata": {
+    "company": "Target Corporation",
+    "ticker": "TGT",
+    "cik": "0000027419",
+    "total_periods": 17
+  },
+  "periods": [
+    {
+      "period": "FY2020",
+      "fiscal_year": 2020,
+      "fiscal_quarter": null,
+      "filing_type": "10-K"
+    },
+    {
+      "period": "FY2021",
+      "fiscal_year": 2021,
+      "fiscal_quarter": null,
+      "filing_type": "10-K"
+    },
+    {
+      "period": "FY2022",
+      "fiscal_year": 2022,
+      "fiscal_quarter": null,
+      "filing_type": "10-K"
+    },
+    {
+      "period": "Q1 2022",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 1,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q2 2022",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 2,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q3 2022",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 3,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "FY2023",
+      "fiscal_year": 2023,
+      "fiscal_quarter": null,
+      "filing_type": "10-K"
+    },
+    {
+      "period": "Q1 2023",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 1,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q2 2023",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 2,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q3 2023",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 3,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "FY2024",
+      "fiscal_year": 2024,
+      "fiscal_quarter": null,
+      "filing_type": "10-K"
+    },
+    {
+      "period": "Q1 2024",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 1,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q2 2024",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 2,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q3 2024",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 3,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q1 2025",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 1,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q2 2025",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 2,
+      "filing_type": "10-Q"
+    },
+    {
+      "period": "Q3 2025",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 3,
+      "filing_type": "10-Q"
+    }
+  ],
+  "metrics": {
+    "revenue": {
+      "net_sales_billion": [
+        92.4,
+        104.611,
+        107.588,
+        24.83,
+        25.653,
+        26.122,
+        105.803,
+        24.948,
+        24.384,
+        25.004,
+        106.566,
+        24.143,
+        25.021,
+        25.228,
+        23.846,
+        25.211,
+        25.27
+      ],
+      "yoy_growth_percent": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0.48,
+        -4.95,
+        -4.28,
+        null,
+        -3.23,
+        2.61,
+        0.9,
+        -1.23,
+        0.76,
+        0.17
+      ]
+    },
+    "margins": {
+      "gross_margin_percent": [
+        28.38,
+        28.34,
+        23.57,
+        25.65,
+        21.48,
+        24.66,
+        26.53,
+        26.3,
+        27.01,
+        27.42,
+        28.21,
+        27.73,
+        28.86,
+        27.16,
+        28.17,
+        28.99,
+        28.23
+      ],
+      "operating_margin_percent": [
+        7.08,
+        8.55,
+        3.58,
+        5.42,
+        1.25,
+        3.91,
+        5.39,
+        5.32,
+        4.91,
+        5.27,
+        5.22,
+        5.37,
+        6.53,
+        4.63,
+        6.17,
+        5.22,
+        3.75
+      ],
+      "operating_margin_yoy_change": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        -0.1,
+        3.66,
+        1.36,
+        null,
+        0.05,
+        1.62,
+        -0.64,
+        0.8,
+        -1.31,
+        -0.88
+      ]
+    },
+    "inventory": {
+      "inventory_billion": [
+        10.653,
+        13.902,
+        13.499,
+        15.083,
+        15.32,
+        17.117,
+        11.886,
+        12.616,
+        12.684,
+        14.731,
+        12.74,
+        11.73,
+        12.604,
+        15.165,
+        13.048,
+        12.881,
+        14.896
+      ],
+      "inventory_turnover_ratio": [
+        6.21,
+        5.39,
+        6.09,
+        1.22,
+        1.31,
+        1.15,
+        6.54,
+        1.46,
+        1.4,
+        1.23,
+        6.0,
+        1.49,
+        1.41,
+        1.21,
+        1.31,
+        1.39,
+        1.22
+      ],
+      "days_sales_of_inventory": [
+        58.8,
+        67.7,
+        59.9,
+        298.2,
+        277.6,
+        317.5,
+        55.8,
+        250.5,
+        260.1,
+        296.3,
+        60.8,
+        245.4,
+        258.5,
+        301.2,
+        278.1,
+        262.6,
+        299.8
+      ],
+      "inventory_yoy_growth_percent": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        -16.36,
+        -17.21,
+        -13.94,
+        null,
+        -7.02,
+        -0.63,
+        2.95,
+        11.24,
+        2.2,
+        -1.77
+      ]
+    },
+    "debt": {
+      "total_debt_billion": [
+        3.61,
+        4.54,
+        null,
+        null,
+        null,
+        null,
+        4.67,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "interest_coverage_ratio": [
+        6.69,
+        21.25,
+        8.05,
+        12.02,
+        2.87,
+        8.18,
+        11.37,
+        9.03,
+        8.49,
+        12.31,
+        null,
+        12.23,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "comparable_sales": {
+      "total_change_percent": [
+        null,
+        null,
+        null,
+        3.3,
+        2.6,
+        2.7,
+        null,
+        null,
+        null,
+        4.9,
+        null,
+        3.7,
+        2.0,
+        0.3,
+        3.8,
+        1.9,
+        2.7
+      ],
+      "digital_change_percent": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        1.4,
+        8.7,
+        10.8,
+        4.7,
+        4.3,
+        2.4
+      ]
+    },
+    "cash_flows": {
+      "operating_cash_flow_billion": [
+        10.525,
+        8.625,
+        4.018,
+        1.394,
+        0.047,
+        0.552,
+        8.621,
+        1.265,
+        3.398,
+        5.332,
+        7.367,
+        1.101,
+        3.339,
+        4.078,
+        0.275,
+        2.358,
+        3.485
+      ],
+      "investing_cash_flow_billion": [
+        2.591,
+        3.154,
+        5.504,
+        0.948,
+        2.518,
+        4.303,
+        4.76,
+        1.602,
+        2.821,
+        3.91,
+        2.86,
+        0.671,
+        1.305,
+        1.942,
+        0.787,
+        1.853,
+        2.79
+      ],
+      "financing_cash_flow_billion": [
+        2.0,
+        8.071,
+        2.196,
+        2.457,
+        2.229,
+        1.206,
+        2.285,
+        0.571,
+        1.189,
+        1.741,
+        3.55,
+        0.631,
+        2.342,
+        2.508,
+        1.363,
+        0.926,
+        1.635
+      ],
+      "operating_cash_flow_margin_percent": [
+        11.39,
+        8.24,
+        3.73,
+        5.61,
+        0.18,
+        2.11,
+        8.15,
+        5.07,
+        13.94,
+        21.32,
+        6.91,
+        4.56,
+        13.34,
+        16.16,
+        1.15,
+        9.35,
+        13.79
+      ]
+    }
+  },
+  "comparisons": {
+    "revenue_vs_inventory": [
+      {
+        "period": "FY2020",
+        "revenue": 92.4,
+        "inventory": 10.653,
+        "inventory_to_revenue_ratio": 0.115
+      },
+      {
+        "period": "FY2021",
+        "revenue": 104.611,
+        "inventory": 13.902,
+        "inventory_to_revenue_ratio": 0.133
+      },
+      {
+        "period": "FY2022",
+        "revenue": 107.588,
+        "inventory": 13.499,
+        "inventory_to_revenue_ratio": 0.125
+      },
+      {
+        "period": "Q1 2022",
+        "revenue": 24.83,
+        "inventory": 15.083,
+        "inventory_to_revenue_ratio": 0.607
+      },
+      {
+        "period": "Q2 2022",
+        "revenue": 25.653,
+        "inventory": 15.32,
+        "inventory_to_revenue_ratio": 0.597
+      },
+      {
+        "period": "Q3 2022",
+        "revenue": 26.122,
+        "inventory": 17.117,
+        "inventory_to_revenue_ratio": 0.655
+      },
+      {
+        "period": "FY2023",
+        "revenue": 105.803,
+        "inventory": 11.886,
+        "inventory_to_revenue_ratio": 0.112
+      },
+      {
+        "period": "Q1 2023",
+        "revenue": 24.948,
+        "inventory": 12.616,
+        "inventory_to_revenue_ratio": 0.506
+      },
+      {
+        "period": "Q2 2023",
+        "revenue": 24.384,
+        "inventory": 12.684,
+        "inventory_to_revenue_ratio": 0.52
+      },
+      {
+        "period": "Q3 2023",
+        "revenue": 25.004,
+        "inventory": 14.731,
+        "inventory_to_revenue_ratio": 0.589
+      },
+      {
+        "period": "FY2024",
+        "revenue": 106.566,
+        "inventory": 12.74,
+        "inventory_to_revenue_ratio": 0.12
+      },
+      {
+        "period": "Q1 2024",
+        "revenue": 24.143,
+        "inventory": 11.73,
+        "inventory_to_revenue_ratio": 0.486
+      },
+      {
+        "period": "Q2 2024",
+        "revenue": 25.021,
+        "inventory": 12.604,
+        "inventory_to_revenue_ratio": 0.504
+      },
+      {
+        "period": "Q3 2024",
+        "revenue": 25.228,
+        "inventory": 15.165,
+        "inventory_to_revenue_ratio": 0.601
+      },
+      {
+        "period": "Q1 2025",
+        "revenue": 23.846,
+        "inventory": 13.048,
+        "inventory_to_revenue_ratio": 0.547
+      },
+      {
+        "period": "Q2 2025",
+        "revenue": 25.211,
+        "inventory": 12.881,
+        "inventory_to_revenue_ratio": 0.511
+      },
+      {
+        "period": "Q3 2025",
+        "revenue": 25.27,
+        "inventory": 14.896,
+        "inventory_to_revenue_ratio": 0.589
+      }
+    ],
+    "margin_waterfall": [
+      {
+        "period": "FY2020",
+        "operating_margin": 7.08
+      },
+      {
+        "period": "FY2021",
+        "operating_margin": 8.55
+      },
+      {
+        "period": "FY2022",
+        "operating_margin": 3.58
+      },
+      {
+        "period": "Q1 2022",
+        "operating_margin": 5.42
+      },
+      {
+        "period": "Q2 2022",
+        "operating_margin": 1.25
+      },
+      {
+        "period": "Q3 2022",
+        "operating_margin": 3.91
+      },
+      {
+        "period": "FY2023",
+        "operating_margin": 5.39
+      },
+      {
+        "period": "Q1 2023",
+        "operating_margin": 5.32
+      },
+      {
+        "period": "Q2 2023",
+        "operating_margin": 4.91
+      },
+      {
+        "period": "Q3 2023",
+        "operating_margin": 5.27
+      },
+      {
+        "period": "FY2024",
+        "operating_margin": 5.22
+      },
+      {
+        "period": "Q1 2024",
+        "operating_margin": 5.37
+      },
+      {
+        "period": "Q2 2024",
+        "operating_margin": 6.53
+      },
+      {
+        "period": "Q3 2024",
+        "operating_margin": 4.63
+      },
+      {
+        "period": "Q1 2025",
+        "operating_margin": 6.17
+      },
+      {
+        "period": "Q2 2025",
+        "operating_margin": 5.22
+      },
+      {
+        "period": "Q3 2025",
+        "operating_margin": 3.75
+      }
+    ]
+  },
+  "risk_heatmap": {
+    "shrink": {
+      "total_mentions": 22,
+      "periods_affected": 8,
+      "avg_mentions_per_period": 2.8,
+      "trend": "increasing",
+      "details": [
+        [
+          "Q2 2022",
+          1
+        ],
+        [
+          "Q3 2022",
+          3
+        ],
+        [
+          "Q1 2023",
+          4
+        ],
+        [
+          "Q2 2023",
+          4
+        ],
+        [
+          "Q3 2023",
+          5
+        ],
+        [
+          "Q1 2025",
+          1
+        ],
+        [
+          "Q2 2025",
+          2
+        ],
+        [
+          "Q3 2025",
+          2
+        ]
+      ]
+    },
+    "markdown": {
+      "total_mentions": 89,
+      "periods_affected": 12,
+      "avg_mentions_per_period": 7.4,
+      "trend": "stable/decreasing",
+      "details": [
+        [
+          "Q1 2022",
+          9
+        ],
+        [
+          "Q2 2022",
+          9
+        ],
+        [
+          "Q3 2022",
+          12
+        ],
+        [
+          "Q1 2023",
+          6
+        ],
+        [
+          "Q2 2023",
+          7
+        ],
+        [
+          "Q3 2023",
+          10
+        ],
+        [
+          "Q1 2024",
+          6
+        ],
+        [
+          "Q2 2024",
+          6
+        ],
+        [
+          "Q3 2024",
+          7
+        ],
+        [
+          "Q1 2025",
+          5
+        ],
+        [
+          "Q2 2025",
+          6
+        ],
+        [
+          "Q3 2025",
+          6
+        ]
+      ]
+    }
+  }
+}
