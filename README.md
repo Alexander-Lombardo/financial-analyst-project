@@ -21,11 +21,29 @@ Also extracts:
 - CEO's Top 3 Strategic Priorities
 - Top 2 Risk Factors from Item 1A
 
-### Phase 2: Trend Analysis (10-Q Quarterly Analysis)
-Compares each quarter against the baseline:
-- **Operating Income Trend**: Growth vs. same quarter prior year
-- **Markdown Watch**: Gross margin decline = potential inventory clearance
-- **Theft/Shrink Monitor**: Scans MD&A for "shrink" mentions and basis point impact
+### Phase 2: Enhanced Analytics (10-Q Quarterly Analysis)
+Comprehensive trend analysis with multiple comparison methods:
+
+**Year-over-Year Comparisons:**
+- Compares Q1 2025 vs Q1 2024, Q2 2025 vs Q2 2024, etc.
+- Tracks operating margin YoY changes
+- Identifies sales growth vs inventory growth mismatches
+- Flags inventory buildup warnings (inventory growing >5% faster than sales)
+
+**Inventory Efficiency Metrics:**
+- **Inventory Turnover Ratio** = COGS / Inventory
+- **Days Sales of Inventory (DSI)** = 365 / Inventory Turnover
+- Tracks how quickly Target is moving inventory
+
+**Debt Health Monitoring:**
+- **Interest Coverage Ratio** = Operating Income / Interest Expense
+- **Total Debt** tracking (long-term + short-term)
+- Flags coverage ratios below 2.0x (warning threshold)
+
+**Risk Heatmap Tracking:**
+- Counts mentions of "shrink", "theft", "markdown" across all periods
+- Identifies trend direction (increasing/stable/decreasing)
+- Provides average mentions per period for risk assessment
 
 ### Phase 3: Data Structure (JSON Output)
 Outputs structured JSON for each period, ready for graphing and visualization:
@@ -35,25 +53,36 @@ Outputs structured JSON for each period, ready for graphing and visualization:
   "period": "Q1 2025",
   "filing_type": "10-Q",
   "vital_signs": {
-    "net_sales_billion": 24.5,
-    "gross_margin_percent": 26.3,
-    "operating_income_billion": 1.2,
-    "operating_margin_percent": 4.9,
-    "inventory_billion": 13.1,
+    "net_sales_billion": 23.846,
+    "gross_margin_percent": 28.17,
+    "operating_income_billion": 1.472,
+    "operating_margin_percent": 6.17,
+    "inventory_billion": 13.048,
     "vs_baseline": {
-      "operating_margin_change": -0.3,
-      "operating_margin_trend": "declining",
-      "gross_margin_change": -0.5,
-      "markdown_flag": "Potential inventory clearance/discounting"
+      "operating_margin_change": 0.95,
+      "operating_margin_trend": "improving",
+      "gross_margin_change": -0.04
+    },
+    "vs_year_ago": {
+      "operating_margin_yoy_change": 0.8,
+      "operating_margin_yoy_trend": "improving",
+      "comparison_period": "Q1 2024",
+      "net_sales_yoy_growth_percent": -1.23,
+      "inventory_yoy_growth_percent": 11.24,
+      "inventory_buildup_warning": "Inventory growing 11.2% vs sales -1.2%"
     }
   },
   "comparable_sales": {
-    "total_change_percent": 0.5,
-    "store_change_percent": -1.2,
-    "digital_change_percent": 8.4
+    "total_change_percent": 3.8,
+    "digital_change_percent": 4.7
   },
+  "inventory_metrics": {
+    "inventory_turnover_ratio": 1.31,
+    "days_sales_of_inventory": 278.1
+  },
+  "debt_metrics": {},
   "risk_flags": [
-    "Shrink reduced gross margin by 50 basis points",
+    "Shrink/theft mentioned in MD&A",
     "Increased markdown/promotional activity noted"
   ]
 }
@@ -176,6 +205,25 @@ financial-analyst-project/
 - Compare to sales to calculate inventory turnover
 - Rising inventory + falling sales = clearance risk
 
+**Inventory Turnover Ratio** (Phase 2)
+- Formula: COGS / Inventory
+- Measures how many times inventory is sold and replaced
+- Higher is better (faster inventory movement)
+- Target's typical range: 5-6x annually, ~1.2-1.5x quarterly
+
+**Days Sales of Inventory (DSI)** (Phase 2)
+- Formula: 365 / Inventory Turnover Ratio
+- Average number of days to sell inventory
+- Lower is better (faster turnover)
+- Target's typical range: 60-70 days annually, ~240-300 days quarterly
+
+**Interest Coverage Ratio** (Phase 2)
+- Formula: Operating Income / Interest Expense
+- Measures ability to pay interest on debt
+- Healthy range: Above 2.5x
+- Warning threshold: Below 2.0x
+- Critical: Below 1.5x
+
 ### Risk Flags
 
 The analyzer automatically flags:
@@ -285,11 +333,13 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - 12 quarters of 10-Q quarterly reports
 - Environment-based credential management
 
-### 🚧 Phase 2: Enhanced Analytics (Planned)
-- Year-over-year comparisons
-- Inventory turnover ratio
-- Interest coverage ratio
-- Advanced trend detection
+### ✅ Phase 2: Enhanced Analytics (Complete)
+- ✅ Year-over-year comparisons (Q1 2025 vs Q1 2024, etc.)
+- ✅ Inventory turnover ratio and Days Sales of Inventory (DSI)
+- ✅ Interest coverage ratio and total debt tracking
+- ✅ Risk heatmap with trend analysis (shrink, markdown, margin pressure)
+- ✅ Inventory buildup warnings (inventory growth vs sales growth)
+- ✅ Automated XBRL extraction using GAAP taxonomy mappings
 
 ### 📋 Phase 3: JSON Restructuring (Planned)
 - Time-series friendly data format
@@ -352,37 +402,65 @@ SEC filings use **Inline XBRL** (iXBRL) format where:
   "filing_type": "10-Q",
   "vital_signs": {
     "net_sales_billion": 25.27,
-    "operating_income_billion": 0.95,
+    "cost_of_sales_billion": 18.137,
+    "operating_income_billion": 0.948,
+    "inventory_billion": 14.896,
     "gross_margin_percent": 28.23,
     "operating_margin_percent": 3.75,
-    "inventory_billion": 14.9,
     "vs_baseline": {
       "operating_margin_change": -1.47,
       "operating_margin_trend": "declining",
       "gross_margin_change": 0.02
+    },
+    "vs_year_ago": {
+      "operating_margin_yoy_change": -0.88,
+      "operating_margin_yoy_trend": "declining",
+      "comparison_period": "Q3 2024",
+      "net_sales_yoy_growth_percent": 0.17,
+      "inventory_yoy_growth_percent": -1.77
     }
   },
   "comparable_sales": {
-    "total_change_percent": 0.3,
-    "store_change_percent": -2.4,
-    "digital_change_percent": 10.8
+    "total_change_percent": 2.7,
+    "digital_change_percent": 2.4
   },
-  "debt_metrics": {
-    "total_debt_billion": 15.49,
-    "interest_expense_million": 123,
-    "interest_coverage_ratio": 7.72,
-    "vs_baseline": {
-      "debt_change_percent": 7.51,
-      "interest_coverage_change": -1.98
+  "inventory_metrics": {
+    "inventory_turnover_ratio": 1.22,
+    "days_sales_of_inventory": 299.8
+  },
+  "debt_metrics": {},
+  "risk_flags": [
+    "Shrink/theft mentioned in MD&A",
+    "Increased markdown/promotional activity noted"
+  ]
+}
+```
+
+**Plus top-level risk heatmap:**
+```json
+{
+  "risk_heatmap": {
+    "shrink": {
+      "total_mentions": 22,
+      "periods_affected": 8,
+      "avg_mentions_per_period": 2.8,
+      "trend": "increasing"
+    },
+    "markdown": {
+      "total_mentions": 89,
+      "periods_affected": 12,
+      "avg_mentions_per_period": 7.4,
+      "trend": "stable/decreasing"
     }
   }
 }
 ```
 
-The analyzer outputs structured JSON for all periods (FY2024, Q1-Q3 2025) showing:
-- Operating margin decline of 147 basis points in Q3 2025
-- Inventory buildup of 16.9% above baseline
-- Interest coverage deterioration from 9.7x to 1.5x (critical weakness)
+The analyzer outputs structured JSON for all periods (FY2020-FY2024 annual, Q1 2022-Q3 2025 quarterly) showing:
+- Operating margin decline of 88 basis points YoY in Q3 2025
+- Inventory turnover of 1.22x (slower than typical 1.3-1.5x range)
+- Days Sales of Inventory at 299.8 days (high, indicating slower inventory movement)
+- Risk heatmap shows increasing shrink mentions trend (2.8 mentions/period average)
 
 ## License
 
