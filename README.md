@@ -68,11 +68,17 @@ cd financial-analyst-project
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure SEC credentials
+cp .env.example .env
+# Edit .env with your name and email (required by SEC)
 ```
 
 **Dependencies:**
 - `beautifulsoup4` - HTML/XBRL parsing
 - `lxml` - XML processing
+- `sec-edgar-downloader` - Automated SEC filing downloads
+- `python-dotenv` - Environment variable management
 - `pandas` (optional) - Future data analysis
 - `numpy` (optional) - Future calculations
 
@@ -81,33 +87,59 @@ pip install -r requirements.txt
 ### Quick Start
 
 ```bash
-python xbrl_parser.py
+# Run the analyzer (automatically downloads SEC filings)
+python financial_analyzer.py
 ```
 
 The script will automatically:
-1. Process the 2024 10-K to establish baseline
-2. Analyze Q1, Q2, Q3 2025 10-Qs in sequence
-3. Generate comparison against baseline
-4. Export JSON to `output/target_analysis.json`
+1. **Download** 5 years of 10-K reports and 12 quarters of 10-Q reports from SEC EDGAR
+2. **Extract** financial metrics from each filing using XBRL parsing
+3. **Analyze** trends and compare against baseline
+4. **Export** results to `output/target_analysis.json` and `output/target_summary.txt`
 
-### Expected Data Structure
+### SEC Credentials Setup
 
-The analyzer expects Target SEC filings in this structure:
+The SEC requires all automated downloads to include contact information in the User-Agent header. This is part of their [fair access policy](https://www.sec.gov/os/webmaster-faq#code-support).
+
+**No account needed!** Just provide your name and email:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` with your information:
+   ```
+   SEC_USER_NAME="Your Name"
+   SEC_USER_EMAIL="your.email@example.com"
+   ```
+
+3. The `.env` file is git-ignored for security.
+
+### Data Structure (Automated)
+
+After the first run, SEC filings are organized automatically:
 
 ```
 financial-analyst-project/
 ├── data/
 │   └── Target 10Q/
-│       ├── 0000027419-25-000018-xbrl/
-│       │   └── tgt-20250201.htm        # 10-K FY2024
-│       ├── 0000027419-25-000101-xbrl/
-│       │   └── tgt-20250503.htm        # Q1 2025
-│       ├── tgt-20250802.htm             # Q2 2025
-│       └── tgt-20251101.htm             # Q3 2025
+│       └── sec-edgar-filings/          # Auto-downloaded (git-ignored)
+│           └── TGT/
+│               ├── 10-K/
+│               │   ├── 0000027419-25-000018/
+│               │   │   └── primary-document.html
+│               │   └── ... (5 years)
+│               └── 10-Q/
+│                   ├── 0000027419-25-000101/
+│                   │   └── primary-document.html
+│                   └── ... (12 quarters)
 ├── output/
-│   └── target_analysis.json             # Generated
-├── xbrl_parser.py                       # Main analyzer
-└── requirements.txt
+│   ├── target_analysis.json            # Structured data
+│   └── target_summary.txt              # Human-readable report
+├── financial_analyzer.py               # Main analyzer
+├── sec_data_fetcher.py                 # SEC EDGAR downloader
+└── .env                                # Your credentials (git-ignored)
 ```
 
 ### Output Files
@@ -156,7 +188,7 @@ The analyzer automatically flags:
 
 ### Modifying Extraction Logic
 
-Edit `xbrl_parser.py` to customize:
+Edit `financial_analyzer.py` to customize:
 
 **Add new GAAP mappings:**
 ```python
@@ -192,7 +224,7 @@ def calculate_vital_signs(self, data: Dict) -> Dict:
 1. Open the .htm file in browser
 2. Inspect the element to find the actual `<ix:nonFraction>` tag
 3. Check the `name` attribute (e.g., `us-gaap:Revenues`)
-4. Add the mapping to `GAAP_MAPPINGS` dictionary in [xbrl_parser.py](xbrl_parser.py)
+4. Add the mapping to `GAAP_MAPPINGS` dictionary in [financial_analyzer.py](financial_analyzer.py)
 
 ### Incorrect Values
 
@@ -245,16 +277,38 @@ python create_presentation.py
 
 Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 
-## Future Enhancements
+## Roadmap
 
-Potential additions:
-- [ ] Cash flow statement analysis
-- [ ] Balance sheet ratio calculations (Current Ratio, Quick Ratio)
-- [ ] Segment-level analysis (if disclosed)
-- [ ] Year-over-year comparisons
-- [ ] Visualization dashboard (Plotly/Dash)
-- [ ] Excel export with charts
-- [ ] Automated SEC EDGAR downloads
+### ✅ Phase 1: Automated Data Acquisition (Complete)
+- Automated SEC EDGAR filing downloads
+- 5 years of 10-K annual reports
+- 12 quarters of 10-Q quarterly reports
+- Environment-based credential management
+
+### 🚧 Phase 2: Enhanced Analytics (Planned)
+- Year-over-year comparisons
+- Inventory turnover ratio
+- Interest coverage ratio
+- Advanced trend detection
+
+### 📋 Phase 3: JSON Restructuring (Planned)
+- Time-series friendly data format
+- Period-over-period deltas
+- Normalized metric names
+- API-ready structure
+
+### 📊 Phase 4: Professional Reports (Planned)
+- Margin bridge analysis
+- Risk heatmaps
+- Investment thesis generation
+- Executive summary
+
+### Future Considerations
+- Cash flow statement analysis
+- Balance sheet ratio calculations (Current Ratio, Quick Ratio)
+- Segment-level analysis (if disclosed)
+- Visualization dashboard (Plotly/Dash)
+- Excel export with charts
 
 ## Technical Notes
 
@@ -266,25 +320,29 @@ SEC filings use **Inline XBRL** (iXBRL) format where:
 - BeautifulSoup parses HTML structure
 - Regex extracts numeric values from text
 
-Alternative approach (more robust but complex):
-- Use `python-xbrl` or `sec-edgar-downloader` libraries
-- Parse XBRL XML files directly
-- Map GAAP taxonomy codes to metrics
+**Current Implementation:**
+- Uses `sec-edgar-downloader` for automated filing retrieval
+- BeautifulSoup parses iXBRL HTML structure
+- Regex extracts numeric values and contextual text
+- GAAP taxonomy mappings for metric extraction
 
 ### Why This Approach?
 
 **Pros:**
-- Simple, minimal dependencies
-- Works with downloaded HTML files
+- Automated filing downloads (no manual work)
+- Simple, maintainable codebase
+- Works with standard SEC EDGAR structure
 - Easy to debug and customize
 - Fast execution
+- Environment-based configuration
 
 **Cons:**
 - Fragile to HTML structure changes
-- Requires manual pattern updates
+- Requires manual pattern updates for new metrics
 - May miss some edge cases
+- Dependent on SEC EDGAR API availability
 
-For production use, consider dedicated XBRL parsing libraries.
+**Trade-offs:** This approach prioritizes simplicity and automation over robustness. For production use requiring high reliability, consider dedicated XBRL parsing libraries like `python-xbrl`.
 
 ## Example Output
 
