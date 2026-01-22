@@ -13,6 +13,9 @@ Vital Signs:
   inventory_billion: 10.653
   interest_expense_billion: 0.977
   long_term_debt_billion: 3.607
+  operating_cash_flow_billion: 10.525
+  investing_cash_flow_billion: 2.591
+  financing_cash_flow_billion: 2.0
   gross_margin_percent: 28.38
   operating_margin_percent: 7.08
 
@@ -27,6 +30,9 @@ Vital Signs:
   inventory_billion: 13.902
   interest_expense_billion: 0.421
   long_term_debt_billion: 4.544
+  operating_cash_flow_billion: 8.625
+  investing_cash_flow_billion: 3.154
+  financing_cash_flow_billion: 8.071
   gross_margin_percent: 28.34
   operating_margin_percent: 8.55
 
@@ -40,8 +46,13 @@ Vital Signs:
   operating_income_billion: 3.848
   inventory_billion: 13.499
   interest_expense_billion: 0.478
+  operating_cash_flow_billion: 4.018
+  investing_cash_flow_billion: 5.504
+  financing_cash_flow_billion: 2.196
+  net_income_billion: 2.78
   gross_margin_percent: 23.57
   operating_margin_percent: 3.58
+  net_profit_margin_percent: 2.58
 
 
 Q1 2022 (10-Q)
@@ -53,8 +64,13 @@ Vital Signs:
   operating_income_billion: 1.346
   inventory_billion: 15.083
   interest_expense_billion: 0.112
+  operating_cash_flow_billion: 1.394
+  investing_cash_flow_billion: 0.948
+  financing_cash_flow_billion: 2.457
+  net_income_billion: 1.009
   gross_margin_percent: 25.65
   operating_margin_percent: 5.42
+  net_profit_margin_percent: 4.06
   vs_year_ago: {}
 
 Trend Analysis:
@@ -75,8 +91,13 @@ Vital Signs:
   operating_income_billion: 0.321
   inventory_billion: 15.32
   interest_expense_billion: 0.112
+  operating_cash_flow_billion: 0.047
+  investing_cash_flow_billion: 2.518
+  financing_cash_flow_billion: 2.229
+  net_income_billion: 0.183
   gross_margin_percent: 21.48
   operating_margin_percent: 1.25
+  net_profit_margin_percent: 0.71
   vs_year_ago: {}
 
 Trend Analysis:
@@ -99,8 +120,13 @@ Vital Signs:
   operating_income_billion: 1.022
   inventory_billion: 17.117
   interest_expense_billion: 0.125
+  operating_cash_flow_billion: 0.552
+  investing_cash_flow_billion: 4.303
+  financing_cash_flow_billion: 1.206
+  net_income_billion: 0.712
   gross_margin_percent: 24.66
   operating_margin_percent: 3.91
+  net_profit_margin_percent: 2.73
   vs_year_ago: {}
 
 Trend Analysis:
@@ -123,8 +149,13 @@ Vital Signs:
   inventory_billion: 11.886
   interest_expense_billion: 0.502
   long_term_debt_billion: 4.668
+  operating_cash_flow_billion: 8.621
+  investing_cash_flow_billion: 4.76
+  financing_cash_flow_billion: 2.285
+  net_income_billion: 4.138
   gross_margin_percent: 26.53
   operating_margin_percent: 5.39
+  net_profit_margin_percent: 3.91
 
 
 Q1 2023 (10-Q)
@@ -136,8 +167,13 @@ Vital Signs:
   operating_income_billion: 1.328
   inventory_billion: 12.616
   interest_expense_billion: 0.147
+  operating_cash_flow_billion: 1.265
+  investing_cash_flow_billion: 1.602
+  financing_cash_flow_billion: 0.571
+  net_income_billion: 0.95
   gross_margin_percent: 26.3
   operating_margin_percent: 5.32
+  net_profit_margin_percent: 3.81
   vs_year_ago: {'operating_margin_yoy_change': -0.1, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q1 2022', 'net_sales_yoy_growth_percent': 0.48, 'inventory_yoy_growth_percent': -16.36}
 
 Trend Analysis:
@@ -159,8 +195,13 @@ Vital Signs:
   operating_income_billion: 1.197
   inventory_billion: 12.684
   interest_expense_billion: 0.141
+  operating_cash_flow_billion: 3.398
+  investing_cash_flow_billion: 2.821
+  financing_cash_flow_billion: 1.189
+  net_income_billion: 0.835
   gross_margin_percent: 27.01
   operating_margin_percent: 4.91
+  net_profit_margin_percent: 3.42
   vs_year_ago: {'operating_margin_yoy_change': 3.66, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q2 2022', 'net_sales_yoy_growth_percent': -4.95, 'inventory_yoy_growth_percent': -17.21}
 
 Trend Analysis:
@@ -182,8 +223,13 @@ Vital Signs:
   operating_income_billion: 1.317
   inventory_billion: 14.731
   interest_expense_billion: 0.107
+  operating_cash_flow_billion: 5.332
+  investing_cash_flow_billion: 3.91
+  financing_cash_flow_billion: 1.741
+  net_income_billion: 0.971
   gross_margin_percent: 27.42
   operating_margin_percent: 5.27
+  net_profit_margin_percent: 3.88
   vs_year_ago: {'operating_margin_yoy_change': 1.36, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q3 2022', 'net_sales_yoy_growth_percent': -4.28, 'inventory_yoy_growth_percent': -13.94}
 
 Trend Analysis:
@@ -204,8 +250,13 @@ Vital Signs:
   cost_of_sales_billion: 76.502
   operating_income_billion: 5.566
   inventory_billion: 12.74
+  operating_cash_flow_billion: 7.367
+  investing_cash_flow_billion: 2.86
+  financing_cash_flow_billion: 3.55
+  net_income_billion: 4.091
   gross_margin_percent: 28.21
   operating_margin_percent: 5.22
+  net_profit_margin_percent: 3.84
 
 
 Q1 2024 (10-Q)
@@ -217,8 +268,13 @@ Vital Signs:
   operating_income_billion: 1.296
   inventory_billion: 11.73
   interest_expense_billion: 0.106
+  operating_cash_flow_billion: 1.101
+  investing_cash_flow_billion: 0.671
+  financing_cash_flow_billion: 0.631
+  net_income_billion: 0.942
   gross_margin_percent: 27.73
   operating_margin_percent: 5.37
+  net_profit_margin_percent: 3.9
   vs_year_ago: {'operating_margin_yoy_change': 0.05, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q1 2023', 'net_sales_yoy_growth_percent': -3.23, 'inventory_yoy_growth_percent': -7.02}
 
 Trend Analysis:
@@ -238,8 +294,13 @@ Vital Signs:
   cost_of_sales_billion: 17.799
   operating_income_billion: 1.635
   inventory_billion: 12.604
+  operating_cash_flow_billion: 3.339
+  investing_cash_flow_billion: 1.305
+  financing_cash_flow_billion: 2.342
+  net_income_billion: 1.192
   gross_margin_percent: 28.86
   operating_margin_percent: 6.53
+  net_profit_margin_percent: 4.76
   vs_year_ago: {'operating_margin_yoy_change': 1.62, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q2 2023', 'net_sales_yoy_growth_percent': 2.61, 'inventory_yoy_growth_percent': -0.63}
 
 Trend Analysis:
@@ -259,8 +320,13 @@ Vital Signs:
   cost_of_sales_billion: 18.375
   operating_income_billion: 1.168
   inventory_billion: 15.165
+  operating_cash_flow_billion: 4.078
+  investing_cash_flow_billion: 1.942
+  financing_cash_flow_billion: 2.508
+  net_income_billion: 0.854
   gross_margin_percent: 27.16
   operating_margin_percent: 4.63
+  net_profit_margin_percent: 3.39
   vs_year_ago: {'operating_margin_yoy_change': -0.64, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q3 2023', 'net_sales_yoy_growth_percent': 0.9, 'inventory_yoy_growth_percent': 2.95}
 
 Trend Analysis:
@@ -281,8 +347,13 @@ Vital Signs:
   cost_of_sales_billion: 17.128
   operating_income_billion: 1.472
   inventory_billion: 13.048
+  operating_cash_flow_billion: 0.275
+  investing_cash_flow_billion: 0.787
+  financing_cash_flow_billion: 1.363
+  net_income_billion: 1.036
   gross_margin_percent: 28.17
   operating_margin_percent: 6.17
+  net_profit_margin_percent: 4.34
   vs_year_ago: {'operating_margin_yoy_change': 0.8, 'operating_margin_yoy_trend': 'improving', 'comparison_period': 'Q1 2024', 'net_sales_yoy_growth_percent': -1.23, 'inventory_yoy_growth_percent': 11.24, 'inventory_buildup_warning': 'Inventory growing 11.2% vs sales -1.2%'}
 
 Trend Analysis:
@@ -303,8 +374,13 @@ Vital Signs:
   cost_of_sales_billion: 17.903
   operating_income_billion: 1.317
   inventory_billion: 12.881
+  operating_cash_flow_billion: 2.358
+  investing_cash_flow_billion: 1.853
+  financing_cash_flow_billion: 0.926
+  net_income_billion: 0.935
   gross_margin_percent: 28.99
   operating_margin_percent: 5.22
+  net_profit_margin_percent: 3.71
   vs_year_ago: {'operating_margin_yoy_change': -1.31, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q2 2024', 'net_sales_yoy_growth_percent': 0.76, 'inventory_yoy_growth_percent': 2.2}
 
 Trend Analysis:
@@ -325,8 +401,13 @@ Vital Signs:
   cost_of_sales_billion: 18.137
   operating_income_billion: 0.948
   inventory_billion: 14.896
+  operating_cash_flow_billion: 3.485
+  investing_cash_flow_billion: 2.79
+  financing_cash_flow_billion: 1.635
+  net_income_billion: 0.689
   gross_margin_percent: 28.23
   operating_margin_percent: 3.75
+  net_profit_margin_percent: 2.73
   vs_year_ago: {'operating_margin_yoy_change': -0.88, 'operating_margin_yoy_trend': 'declining', 'comparison_period': 'Q3 2024', 'net_sales_yoy_growth_percent': 0.17, 'inventory_yoy_growth_percent': -1.77}
 
 Trend Analysis:

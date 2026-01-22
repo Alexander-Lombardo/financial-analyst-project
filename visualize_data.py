@@ -239,6 +239,110 @@ def create_revenue_growth_yoy_chart(data):
     return fig
 
 
+def create_margin_analysis_chart(data):
+    """Chart 3: Margin Analysis (Gross, Operating, Net Profit)"""
+    periods = [p['period'] for p in data['periods']]
+    gross_margin = data['metrics']['margins']['gross_margin_percent']
+    operating_margin = data['metrics']['margins']['operating_margin_percent']
+    net_profit_margin = data['metrics']['margins']['net_profit_margin_percent']
+
+    # Step 1: Collect 10-Q quarterly data (starting from Q1 2022)
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            quarterly_data.append({
+                'period': period['period'],
+                'fiscal_year': period['fiscal_year'],
+                'gross_margin': gross_margin[i],
+                'operating_margin': operating_margin[i],
+                'net_profit_margin': net_profit_margin[i]
+            })
+
+    # Step 2: Add Q4 data from 10-K annual reports (FY2022 onwards)
+    # For margins (percentages), use annual margin as Q4 proxy
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+            # Use annual margins as Q4 proxy
+            quarterly_data.append({
+                'period': f'Q4 {fy}',
+                'fiscal_year': fy,
+                'gross_margin': gross_margin[i],
+                'operating_margin': operating_margin[i],
+                'net_profit_margin': net_profit_margin[i]
+            })
+
+    # Step 3: Sort chronologically
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Extract arrays
+    quarterly_periods = [q['period'] for q in quarterly_data]
+    quarterly_gross = [q['gross_margin'] for q in quarterly_data]
+    quarterly_operating = [q['operating_margin'] for q in quarterly_data]
+    quarterly_net_profit = [q['net_profit_margin'] for q in quarterly_data]
+
+    # Step 5: Create multi-line chart
+    fig = go.Figure()
+
+    # Gross margin line (top)
+    fig.add_trace(go.Scatter(
+        x=quarterly_periods, y=quarterly_gross,
+        name='Gross Margin %',
+        line=dict(color='blue', width=3),
+        mode='lines+markers',
+        fill='tozeroy',
+        fillcolor='rgba(173, 216, 230, 0.3)'  # Light blue
+    ))
+
+    # Operating margin line (middle)
+    fig.add_trace(go.Scatter(
+        x=quarterly_periods, y=quarterly_operating,
+        name='Operating Margin %',
+        line=dict(color='green', width=3),
+        mode='lines+markers',
+        fill='tozeroy',
+        fillcolor='rgba(144, 238, 144, 0.3)'  # Light green
+    ))
+
+    # Net profit margin line (bottom)
+    fig.add_trace(go.Scatter(
+        x=quarterly_periods, y=quarterly_net_profit,
+        name='Net Profit Margin %',
+        line=dict(color='red', width=3),
+        mode='lines+markers',
+        fill='tozeroy',
+        fillcolor='rgba(255, 182, 193, 0.3)'  # Light red
+    ))
+
+    fig.update_layout(
+        title="Target: Margin Analysis (Gross, Operating, Net Profit) - Q1 2022 to Q3 2025",
+        xaxis_title="Quarter",
+        yaxis_title="Margin %",
+        hovermode='x unified',
+        height=600,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    fig.write_html("output/chart_margin_analysis.html")
+    print("✅ Chart created: output/chart_margin_analysis.html")
+    return fig
+
+
 def create_operating_margin_waterfall(data):
     """Chart 3: Operating Margin Waterfall (Year-over-Year Changes)"""
     periods = [p['period'] for p in data['periods']]
@@ -603,9 +707,10 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 9 charts (6 from Phase 3 + 3 from Phase 4)
+    # Create all 10 charts (6 from Phase 3 + 3 from Phase 4 + 1 margin analysis)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
+    create_margin_analysis_chart(data)
     create_operating_margin_waterfall(data)
     create_inventory_efficiency_chart(data)
     create_debt_health_chart(data)
@@ -614,10 +719,11 @@ def main():
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 9 visualizations created in output/ directory")
+    print("\n✅ All 10 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
-    print("     - chart_revenue_growth_yoy.html (NEW)")
+    print("     - chart_revenue_growth_yoy.html")
+    print("     - chart_margin_analysis.html (NEW)")
     print("     - chart_operating_margin_waterfall.html")
     print("     - chart_inventory_efficiency.html")
     print("     - chart_debt_health.html")

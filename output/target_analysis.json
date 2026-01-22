@@ -3,6 +3,8 @@
     {
       "period": "FY2020",
       "filing_type": "10-K",
+      "fiscal_year": 2020,
+      "fiscal_quarter": null,
       "vital_signs": {
         "net_sales_billion": 92.4,
         "cost_of_sales_billion": 66.177,
@@ -10,6 +12,9 @@
         "inventory_billion": 10.653,
         "interest_expense_billion": 0.977,
         "long_term_debt_billion": 3.607,
+        "operating_cash_flow_billion": 10.525,
+        "investing_cash_flow_billion": 2.591,
+        "financing_cash_flow_billion": 2.0,
         "gross_margin_percent": 28.38,
         "operating_margin_percent": 7.08
       },
@@ -24,6 +29,12 @@
         "operating_income_million": 6539.0,
         "total_debt_billion": 3.61
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 10.525,
+        "operating_cash_flow_margin_percent": 11.39,
+        "investing_cash_flow_billion": 2.591,
+        "financing_cash_flow_billion": 2.0
+      },
       "strategic_promise": {
         "top_priorities": [],
         "top_risks": []
@@ -33,6 +44,8 @@
     {
       "period": "FY2021",
       "filing_type": "10-K",
+      "fiscal_year": 2021,
+      "fiscal_quarter": null,
       "vital_signs": {
         "net_sales_billion": 104.611,
         "cost_of_sales_billion": 74.963,
@@ -40,6 +53,9 @@
         "inventory_billion": 13.902,
         "interest_expense_billion": 0.421,
         "long_term_debt_billion": 4.544,
+        "operating_cash_flow_billion": 8.625,
+        "investing_cash_flow_billion": 3.154,
+        "financing_cash_flow_billion": 8.071,
         "gross_margin_percent": 28.34,
         "operating_margin_percent": 8.55
       },
@@ -54,6 +70,12 @@
         "operating_income_million": 8946.0,
         "total_debt_billion": 4.54
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 8.625,
+        "operating_cash_flow_margin_percent": 8.24,
+        "investing_cash_flow_billion": 3.154,
+        "financing_cash_flow_billion": 8.071
+      },
       "strategic_promise": {
         "top_priorities": [
           "We champion workplace diversity and an inclusive work environment with a focus on attracting, engaging, developing and advancing diverse talent"
@@ -65,14 +87,21 @@
     {
       "period": "FY2022",
       "filing_type": "10-K",
+      "fiscal_year": 2022,
+      "fiscal_quarter": null,
       "vital_signs": {
         "net_sales_billion": 107.588,
         "cost_of_sales_billion": 82.229,
         "operating_income_billion": 3.848,
         "inventory_billion": 13.499,
         "interest_expense_billion": 0.478,
+        "operating_cash_flow_billion": 4.018,
+        "investing_cash_flow_billion": 5.504,
+        "financing_cash_flow_billion": 2.196,
+        "net_income_billion": 2.78,
         "gross_margin_percent": 23.57,
-        "operating_margin_percent": 3.58
+        "operating_margin_percent": 3.58,
+        "net_profit_margin_percent": 2.58
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -83,6 +112,12 @@
         "interest_coverage_ratio": 8.05,
         "interest_expense_million": 478.0,
         "operating_income_million": 3848.0
+      },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 4.018,
+        "operating_cash_flow_margin_percent": 3.73,
+        "investing_cash_flow_billion": 5.504,
+        "financing_cash_flow_billion": 2.196
       },
       "strategic_promise": {
         "top_priorities": [
@@ -95,14 +130,21 @@
     {
       "period": "Q1 2022",
       "filing_type": "10-Q",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 1,
       "vital_signs": {
         "net_sales_billion": 24.83,
         "cost_of_sales_billion": 18.461,
         "operating_income_billion": 1.346,
         "inventory_billion": 15.083,
         "interest_expense_billion": 0.112,
+        "operating_cash_flow_billion": 1.394,
+        "investing_cash_flow_billion": 0.948,
+        "financing_cash_flow_billion": 2.457,
+        "net_income_billion": 1.009,
         "gross_margin_percent": 25.65,
         "operating_margin_percent": 5.42,
+        "net_profit_margin_percent": 4.06,
         "vs_baseline": {
           "operating_margin_change": 1.84,
           "operating_margin_trend": "improving",
@@ -122,6 +164,12 @@
         "interest_expense_million": 112.0,
         "operating_income_million": 1346.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 1.394,
+        "operating_cash_flow_margin_percent": 5.61,
+        "investing_cash_flow_billion": 0.948,
+        "financing_cash_flow_billion": 2.457
+      },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
       ]
@@ -129,14 +177,21 @@
     {
       "period": "Q2 2022",
       "filing_type": "10-Q",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 2,
       "vital_signs": {
         "net_sales_billion": 25.653,
         "cost_of_sales_billion": 20.142,
         "operating_income_billion": 0.321,
         "inventory_billion": 15.32,
         "interest_expense_billion": 0.112,
+        "operating_cash_flow_billion": 0.047,
+        "investing_cash_flow_billion": 2.518,
+        "financing_cash_flow_billion": 2.229,
+        "net_income_billion": 0.183,
         "gross_margin_percent": 21.48,
         "operating_margin_percent": 1.25,
+        "net_profit_margin_percent": 0.71,
         "vs_baseline": {
           "operating_margin_change": -2.33,
           "operating_margin_trend": "declining",
@@ -157,6 +212,12 @@
         "interest_expense_million": 112.0,
         "operating_income_million": 321.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 0.047,
+        "operating_cash_flow_margin_percent": 0.18,
+        "investing_cash_flow_billion": 2.518,
+        "financing_cash_flow_billion": 2.229
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -165,14 +226,21 @@
     {
       "period": "Q3 2022",
       "filing_type": "10-Q",
+      "fiscal_year": 2022,
+      "fiscal_quarter": 3,
       "vital_signs": {
         "net_sales_billion": 26.122,
         "cost_of_sales_billion": 19.68,
         "operating_income_billion": 1.022,
         "inventory_billion": 17.117,
         "interest_expense_billion": 0.125,
+        "operating_cash_flow_billion": 0.552,
+        "investing_cash_flow_billion": 4.303,
+        "financing_cash_flow_billion": 1.206,
+        "net_income_billion": 0.712,
         "gross_margin_percent": 24.66,
         "operating_margin_percent": 3.91,
+        "net_profit_margin_percent": 2.73,
         "vs_baseline": {
           "operating_margin_change": 0.33,
           "operating_margin_trend": "improving",
@@ -192,6 +260,12 @@
         "interest_expense_million": 125.0,
         "operating_income_million": 1022.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 0.552,
+        "operating_cash_flow_margin_percent": 2.11,
+        "investing_cash_flow_billion": 4.303,
+        "financing_cash_flow_billion": 1.206
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -200,6 +274,8 @@
     {
       "period": "FY2023",
       "filing_type": "10-K",
+      "fiscal_year": 2023,
+      "fiscal_quarter": null,
       "vital_signs": {
         "net_sales_billion": 105.803,
         "cost_of_sales_billion": 77.736,
@@ -207,8 +283,13 @@
         "inventory_billion": 11.886,
         "interest_expense_billion": 0.502,
         "long_term_debt_billion": 4.668,
+        "operating_cash_flow_billion": 8.621,
+        "investing_cash_flow_billion": 4.76,
+        "financing_cash_flow_billion": 2.285,
+        "net_income_billion": 4.138,
         "gross_margin_percent": 26.53,
-        "operating_margin_percent": 5.39
+        "operating_margin_percent": 5.39,
+        "net_profit_margin_percent": 3.91
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -220,6 +301,12 @@
         "interest_expense_million": 502.0,
         "operating_income_million": 5707.0,
         "total_debt_billion": 4.67
+      },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 8.621,
+        "operating_cash_flow_margin_percent": 8.15,
+        "investing_cash_flow_billion": 4.76,
+        "financing_cash_flow_billion": 2.285
       },
       "strategic_promise": {
         "top_priorities": [
@@ -233,14 +320,21 @@
     {
       "period": "Q1 2023",
       "filing_type": "10-Q",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 1,
       "vital_signs": {
         "net_sales_billion": 24.948,
         "cost_of_sales_billion": 18.386,
         "operating_income_billion": 1.328,
         "inventory_billion": 12.616,
         "interest_expense_billion": 0.147,
+        "operating_cash_flow_billion": 1.265,
+        "investing_cash_flow_billion": 1.602,
+        "financing_cash_flow_billion": 0.571,
+        "net_income_billion": 0.95,
         "gross_margin_percent": 26.3,
         "operating_margin_percent": 5.32,
+        "net_profit_margin_percent": 3.81,
         "vs_baseline": {
           "operating_margin_change": -0.07,
           "operating_margin_trend": "declining",
@@ -264,6 +358,12 @@
         "interest_expense_million": 147.0,
         "operating_income_million": 1328.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 1.265,
+        "operating_cash_flow_margin_percent": 5.07,
+        "investing_cash_flow_billion": 1.602,
+        "financing_cash_flow_billion": 0.571
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -272,14 +372,21 @@
     {
       "period": "Q2 2023",
       "filing_type": "10-Q",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 2,
       "vital_signs": {
         "net_sales_billion": 24.384,
         "cost_of_sales_billion": 17.798,
         "operating_income_billion": 1.197,
         "inventory_billion": 12.684,
         "interest_expense_billion": 0.141,
+        "operating_cash_flow_billion": 3.398,
+        "investing_cash_flow_billion": 2.821,
+        "financing_cash_flow_billion": 1.189,
+        "net_income_billion": 0.835,
         "gross_margin_percent": 27.01,
         "operating_margin_percent": 4.91,
+        "net_profit_margin_percent": 3.42,
         "vs_baseline": {
           "operating_margin_change": -0.48,
           "operating_margin_trend": "declining",
@@ -303,6 +410,12 @@
         "interest_expense_million": 141.0,
         "operating_income_million": 1197.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 3.398,
+        "operating_cash_flow_margin_percent": 13.94,
+        "investing_cash_flow_billion": 2.821,
+        "financing_cash_flow_billion": 1.189
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -311,14 +424,21 @@
     {
       "period": "Q3 2023",
       "filing_type": "10-Q",
+      "fiscal_year": 2023,
+      "fiscal_quarter": 3,
       "vital_signs": {
         "net_sales_billion": 25.004,
         "cost_of_sales_billion": 18.149,
         "operating_income_billion": 1.317,
         "inventory_billion": 14.731,
         "interest_expense_billion": 0.107,
+        "operating_cash_flow_billion": 5.332,
+        "investing_cash_flow_billion": 3.91,
+        "financing_cash_flow_billion": 1.741,
+        "net_income_billion": 0.971,
         "gross_margin_percent": 27.42,
         "operating_margin_percent": 5.27,
+        "net_profit_margin_percent": 3.88,
         "vs_baseline": {
           "operating_margin_change": -0.12,
           "operating_margin_trend": "declining",
@@ -344,6 +464,12 @@
         "interest_expense_million": 107.0,
         "operating_income_million": 1317.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 5.332,
+        "operating_cash_flow_margin_percent": 21.32,
+        "investing_cash_flow_billion": 3.91,
+        "financing_cash_flow_billion": 1.741
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -352,13 +478,20 @@
     {
       "period": "FY2024",
       "filing_type": "10-K",
+      "fiscal_year": 2024,
+      "fiscal_quarter": null,
       "vital_signs": {
         "net_sales_billion": 106.566,
         "cost_of_sales_billion": 76.502,
         "operating_income_billion": 5.566,
         "inventory_billion": 12.74,
+        "operating_cash_flow_billion": 7.367,
+        "investing_cash_flow_billion": 2.86,
+        "financing_cash_flow_billion": 3.55,
+        "net_income_billion": 4.091,
         "gross_margin_percent": 28.21,
-        "operating_margin_percent": 5.22
+        "operating_margin_percent": 5.22,
+        "net_profit_margin_percent": 3.84
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -366,6 +499,12 @@
         "days_sales_of_inventory": 60.8
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 7.367,
+        "operating_cash_flow_margin_percent": 6.91,
+        "investing_cash_flow_billion": 2.86,
+        "financing_cash_flow_billion": 3.55
+      },
       "strategic_promise": {
         "top_priorities": [
           "Core elements include:\u2022Delighting with newness, style, and value by strengthening our owned brands portfolio, curating leading national brands, and expanding the breadth and depth of signature partner",
@@ -378,14 +517,21 @@
     {
       "period": "Q1 2024",
       "filing_type": "10-Q",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 1,
       "vital_signs": {
         "net_sales_billion": 24.143,
         "cost_of_sales_billion": 17.449,
         "operating_income_billion": 1.296,
         "inventory_billion": 11.73,
         "interest_expense_billion": 0.106,
+        "operating_cash_flow_billion": 1.101,
+        "investing_cash_flow_billion": 0.671,
+        "financing_cash_flow_billion": 0.631,
+        "net_income_billion": 0.942,
         "gross_margin_percent": 27.73,
         "operating_margin_percent": 5.37,
+        "net_profit_margin_percent": 3.9,
         "vs_baseline": {
           "operating_margin_change": 0.15,
           "operating_margin_trend": "improving",
@@ -412,6 +558,12 @@
         "interest_expense_million": 106.0,
         "operating_income_million": 1296.0
       },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 1.101,
+        "operating_cash_flow_margin_percent": 4.56,
+        "investing_cash_flow_billion": 0.671,
+        "financing_cash_flow_billion": 0.631
+      },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
       ]
@@ -419,13 +571,20 @@
     {
       "period": "Q2 2024",
       "filing_type": "10-Q",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 2,
       "vital_signs": {
         "net_sales_billion": 25.021,
         "cost_of_sales_billion": 17.799,
         "operating_income_billion": 1.635,
         "inventory_billion": 12.604,
+        "operating_cash_flow_billion": 3.339,
+        "investing_cash_flow_billion": 1.305,
+        "financing_cash_flow_billion": 2.342,
+        "net_income_billion": 1.192,
         "gross_margin_percent": 28.86,
         "operating_margin_percent": 6.53,
+        "net_profit_margin_percent": 4.76,
         "vs_baseline": {
           "operating_margin_change": 1.31,
           "operating_margin_trend": "improving",
@@ -448,6 +607,12 @@
         "days_sales_of_inventory": 258.5
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 3.339,
+        "operating_cash_flow_margin_percent": 13.34,
+        "investing_cash_flow_billion": 1.305,
+        "financing_cash_flow_billion": 2.342
+      },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
       ]
@@ -455,13 +620,20 @@
     {
       "period": "Q3 2024",
       "filing_type": "10-Q",
+      "fiscal_year": 2024,
+      "fiscal_quarter": 3,
       "vital_signs": {
         "net_sales_billion": 25.228,
         "cost_of_sales_billion": 18.375,
         "operating_income_billion": 1.168,
         "inventory_billion": 15.165,
+        "operating_cash_flow_billion": 4.078,
+        "investing_cash_flow_billion": 1.942,
+        "financing_cash_flow_billion": 2.508,
+        "net_income_billion": 0.854,
         "gross_margin_percent": 27.16,
         "operating_margin_percent": 4.63,
+        "net_profit_margin_percent": 3.39,
         "vs_baseline": {
           "operating_margin_change": -0.59,
           "operating_margin_trend": "declining",
@@ -485,6 +657,12 @@
         "days_sales_of_inventory": 301.2
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 4.078,
+        "operating_cash_flow_margin_percent": 16.16,
+        "investing_cash_flow_billion": 1.942,
+        "financing_cash_flow_billion": 2.508
+      },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
       ]
@@ -492,13 +670,20 @@
     {
       "period": "Q1 2025",
       "filing_type": "10-Q",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 1,
       "vital_signs": {
         "net_sales_billion": 23.846,
         "cost_of_sales_billion": 17.128,
         "operating_income_billion": 1.472,
         "inventory_billion": 13.048,
+        "operating_cash_flow_billion": 0.275,
+        "investing_cash_flow_billion": 0.787,
+        "financing_cash_flow_billion": 1.363,
+        "net_income_billion": 1.036,
         "gross_margin_percent": 28.17,
         "operating_margin_percent": 6.17,
+        "net_profit_margin_percent": 4.34,
         "vs_baseline": {
           "operating_margin_change": 0.95,
           "operating_margin_trend": "improving",
@@ -522,6 +707,12 @@
         "days_sales_of_inventory": 278.1
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 0.275,
+        "operating_cash_flow_margin_percent": 1.15,
+        "investing_cash_flow_billion": 0.787,
+        "financing_cash_flow_billion": 1.363
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -530,13 +721,20 @@
     {
       "period": "Q2 2025",
       "filing_type": "10-Q",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 2,
       "vital_signs": {
         "net_sales_billion": 25.211,
         "cost_of_sales_billion": 17.903,
         "operating_income_billion": 1.317,
         "inventory_billion": 12.881,
+        "operating_cash_flow_billion": 2.358,
+        "investing_cash_flow_billion": 1.853,
+        "financing_cash_flow_billion": 0.926,
+        "net_income_billion": 0.935,
         "gross_margin_percent": 28.99,
         "operating_margin_percent": 5.22,
+        "net_profit_margin_percent": 3.71,
         "vs_baseline": {
           "operating_margin_change": 0.0,
           "operating_margin_trend": "declining",
@@ -559,6 +757,12 @@
         "days_sales_of_inventory": 262.6
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 2.358,
+        "operating_cash_flow_margin_percent": 9.35,
+        "investing_cash_flow_billion": 1.853,
+        "financing_cash_flow_billion": 0.926
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"
@@ -567,13 +771,20 @@
     {
       "period": "Q3 2025",
       "filing_type": "10-Q",
+      "fiscal_year": 2025,
+      "fiscal_quarter": 3,
       "vital_signs": {
         "net_sales_billion": 25.27,
         "cost_of_sales_billion": 18.137,
         "operating_income_billion": 0.948,
         "inventory_billion": 14.896,
+        "operating_cash_flow_billion": 3.485,
+        "investing_cash_flow_billion": 2.79,
+        "financing_cash_flow_billion": 1.635,
+        "net_income_billion": 0.689,
         "gross_margin_percent": 28.23,
         "operating_margin_percent": 3.75,
+        "net_profit_margin_percent": 2.73,
         "vs_baseline": {
           "operating_margin_change": -1.47,
           "operating_margin_trend": "declining",
@@ -596,6 +807,12 @@
         "days_sales_of_inventory": 299.8
       },
       "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 3.485,
+        "operating_cash_flow_margin_percent": 13.79,
+        "investing_cash_flow_billion": 2.79,
+        "financing_cash_flow_billion": 1.635
+      },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
         "Increased markdown/promotional activity noted"

@@ -273,7 +273,9 @@ class TargetFinancialAnalyzer:
             # Phase 3: Cash Flow Statement metrics
             'us-gaap:NetCashProvidedByUsedInOperatingActivities': 'operating_cash_flow',
             'us-gaap:NetCashProvidedByUsedInInvestingActivities': 'investing_cash_flow',
-            'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow'
+            'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow',
+            # Phase 4: Net Income for profit margin calculation
+            'us-gaap:NetIncomeLoss': 'net_income'
         }
 
         # Extract all XBRL tagged values
@@ -293,6 +295,11 @@ class TargetFinancialAnalyzer:
         if 'net_sales_billion' in vital_signs and 'operating_income_billion' in vital_signs:
             operating_margin = (vital_signs['operating_income_billion'] / vital_signs['net_sales_billion']) * 100
             vital_signs['operating_margin_percent'] = round(operating_margin, 2)
+
+        # Phase 4: Calculate net profit margin
+        if 'net_income_billion' in vital_signs and 'net_sales_billion' in vital_signs:
+            net_profit_margin = (vital_signs['net_income_billion'] / vital_signs['net_sales_billion']) * 100
+            vital_signs['net_profit_margin_percent'] = round(net_profit_margin, 2)
 
         return vital_signs
 
@@ -709,6 +716,103 @@ class TargetFinancialAnalyzer:
 
         return summary
 
+    def extract_executive_insights(self) -> Dict:
+        """
+        Extract key insights for executive summary (Phase 4).
+
+        Identifies:
+        - Inflection points (major quarterly changes)
+        - Top trends (strongest/weakest metrics)
+        - Critical warnings (debt, inventory, margin risks)
+        """
+        insights = {
+            'inflection_points': [],
+            'top_trends': {},
+            'critical_warnings': []
+        }
+
+        # 1. Identify inflection points (>50bp margin change QoQ)
+        prev_margin = None
+        for filing in self.results:
+            if filing['filing_type'] == '10-Q':
+                current_margin = filing['vital_signs'].get('operating_margin_percent')
+                if current_margin and prev_margin:
+                    delta = current_margin - prev_margin
+                    if abs(delta) >= 0.5:  # 50 basis points
+                        insights['inflection_points'].append({
+                            'period': filing['period'],
+                            'metric': 'Operating Margin',
+                            'change_bp': round(delta * 100, 0),
+                            'direction': 'improvement' if delta > 0 else 'deterioration'
+                        })
+                prev_margin = current_margin
+
+        # 2. Identify top YoY trends
+        yoy_changes = []
+        for filing in self.results:
+            if filing['filing_type'] == '10-Q':
+                vs_year_ago = filing['vital_signs'].get('vs_year_ago', {})
+                if vs_year_ago:
+                    margin_yoy = vs_year_ago.get('operating_margin_yoy_change')
+                    sales_yoy = vs_year_ago.get('net_sales_yoy_growth_percent')
+
+                    if margin_yoy is not None:
+                        yoy_changes.append({
+                            'period': filing['period'],
+                            'metric': 'Operating Margin',
+                            'yoy_change': margin_yoy
+                        })
+
+                    if sales_yoy is not None:
+                        yoy_changes.append({
+                            'period': filing['period'],
+                            'metric': 'Net Sales',
+                            'yoy_change': sales_yoy
+                        })
+
+        # Get strongest/weakest
+        if yoy_changes:
+            yoy_changes_sorted = sorted(yoy_changes, key=lambda x: x['yoy_change'])
+            insights['top_trends']['weakest'] = yoy_changes_sorted[0]
+            insights['top_trends']['strongest'] = yoy_changes_sorted[-1]
+
+        # 3. Critical warnings
+        for filing in self.results:
+            period = filing['period']
+
+            # Debt coverage warning
+            debt_metrics = filing.get('debt_metrics', {})
+            coverage = debt_metrics.get('interest_coverage_ratio')
+            if coverage and coverage < 2.0:
+                insights['critical_warnings'].append({
+                    'period': period,
+                    'type': 'Debt Coverage',
+                    'severity': 'Critical',
+                    'message': f"Interest coverage at {coverage:.2f}x (below 2.0x threshold)"
+                })
+
+            # Inventory buildup warning
+            vs_year_ago = filing['vital_signs'].get('vs_year_ago', {})
+            inv_warning = vs_year_ago.get('inventory_buildup_warning')
+            if inv_warning:
+                insights['critical_warnings'].append({
+                    'period': period,
+                    'type': 'Inventory Risk',
+                    'severity': 'High',
+                    'message': inv_warning
+                })
+
+        return insights
+
+    def export_executive_insights(self, output_path: str):
+        """Export executive insights to JSON (Phase 4)."""
+        insights = self.extract_executive_insights()
+
+        with open(output_path, 'w') as f:
+            json.dump(insights, f, indent=2)
+
+        print(f"✅ Executive insights exported to: {output_path}")
+
     def _compare_to_baseline(self, current_vital_signs: Dict) -> Dict:
         """Compare current quarter to baseline 10-K metrics."""
         comparison = {}
@@ -931,6 +1035,7 @@ class TargetFinancialAnalyzer:
                 'margins': {
                     'gross_margin_percent': [],
                     'operating_margin_percent': [],
+                    'net_profit_margin_percent': [],
                     'operating_margin_yoy_change': []
                 },
                 'inventory': {
@@ -993,6 +1098,9 @@ class TargetFinancialAnalyzer:
             )
             timeseries_data['metrics']['margins']['operating_margin_percent'].append(
                 vital.get('operating_margin_percent')
+            )
+            timeseries_data['metrics']['margins']['net_profit_margin_percent'].append(
+                vital.get('net_profit_margin_percent')
             )
             timeseries_data['metrics']['margins']['operating_margin_yoy_change'].append(
                 yoy.get('operating_margin_yoy_change')
@@ -1145,6 +1253,7 @@ def main():
     analyzer.export_json("output/target_analysis.json")
     analyzer.export_timeseries_json("output/target_timeseries.json")
     analyzer.export_summary_report("output/target_summary.txt")
+    analyzer.export_executive_insights("output/executive_insights.json")
 
     print("\n✅ Analysis complete!")
     print(f"   Total filings analyzed: {len(results)}")
@@ -1152,6 +1261,7 @@ def main():
     print(f"     - target_analysis.json (detailed format)")
     print(f"     - target_timeseries.json (time-series format for Plotly)")
     print(f"     - target_summary.txt (human-readable report)")
+    print(f"     - executive_insights.json (key insights for reports)")
 
 
 if __name__ == "__main__":
