@@ -1056,7 +1056,8 @@ class TargetFinancialAnalyzer:
                     'operating_cash_flow_billion': [],
                     'investing_cash_flow_billion': [],
                     'financing_cash_flow_billion': [],
-                    'operating_cash_flow_margin_percent': []
+                    'operating_cash_flow_margin_percent': [],
+                    'net_income_billion': []  # For earnings quality analysis
                 }
             },
             'comparisons': {
@@ -1148,6 +1149,9 @@ class TargetFinancialAnalyzer:
             )
             timeseries_data['metrics']['cash_flows']['operating_cash_flow_margin_percent'].append(
                 cashflow_metrics.get('operating_cash_flow_margin_percent')
+            )
+            timeseries_data['metrics']['cash_flows']['net_income_billion'].append(
+                vital.get('net_income_billion')
             )
 
             # Comparisons

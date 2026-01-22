@@ -503,6 +503,182 @@ def create_cash_flows_chart(data):
     return fig
 
 
+def create_earnings_quality_chart(data):
+    """Chart 11: Earnings Quality (Net Income vs Operating Cash Flow)
+
+    Compares net income to operating cash flow to assess earnings quality.
+    Calculates Cash Conversion Ratio = (Operating CF / Net Income) × 100
+    Ratio > 100% = Good (cash exceeds earnings)
+    Ratio < 100% = Warning (earnings not backed by cash)
+    """
+    periods = [p['period'] for p in data['periods']]
+    net_income = data['metrics']['cash_flows']['net_income_billion']
+    operating_cf = data['metrics']['cash_flows']['operating_cash_flow_billion']
+
+    # Step 1: Collect 10-Q quarterly data (starting from Q1 2022)
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            quarterly_data.append({
+                'period': period['period'],
+                'fiscal_year': period['fiscal_year'],
+                'net_income': net_income[i],
+                'operating_cf': operating_cf[i]
+            })
+
+    # Step 2: Calculate Q4 data from 10-K annual reports (FY2022 onwards)
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+            annual_net_income = net_income[i]
+            annual_operating_cf = operating_cf[i]
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1_ni = q2_ni = q3_ni = None
+            q1_cf = q2_cf = q3_cf = None
+
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1_ni = q['net_income']
+                        q1_cf = q['operating_cf']
+                    elif 'Q2' in q['period']:
+                        q2_ni = q['net_income']
+                        q2_cf = q['operating_cf']
+                    elif 'Q3' in q['period']:
+                        q3_ni = q['net_income']
+                        q3_cf = q['operating_cf']
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if q1_ni and q2_ni and q3_ni and q1_cf and q2_cf and q3_cf:
+                q4_net_income = annual_net_income - (q1_ni + q2_ni + q3_ni)
+                q4_operating_cf = annual_operating_cf - (q1_cf + q2_cf + q3_cf)
+
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'net_income': q4_net_income,
+                    'operating_cf': q4_operating_cf
+                })
+
+    # Step 3: Sort chronologically
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Calculate Cash Conversion Ratio
+    for q in quarterly_data:
+        if q['net_income'] and q['net_income'] != 0:
+            q['cash_conversion_ratio'] = (q['operating_cf'] / q['net_income']) * 100
+        else:
+            q['cash_conversion_ratio'] = None
+
+    # Step 5: Extract arrays
+    quarterly_periods = [q['period'] for q in quarterly_data]
+    quarterly_net_income = [q['net_income'] for q in quarterly_data]
+    quarterly_operating_cf = [q['operating_cf'] for q in quarterly_data]
+    quarterly_cash_conversion = [q['cash_conversion_ratio'] for q in quarterly_data]
+
+    # Step 6: Create dual-axis chart
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Net Income bars on primary axis
+    fig.add_trace(
+        go.Bar(
+            x=quarterly_periods,
+            y=quarterly_net_income,
+            name="Net Income",
+            marker_color='lightblue',
+            opacity=0.7
+        ),
+        secondary_y=False
+    )
+
+    # Operating Cash Flow bars on primary axis
+    fig.add_trace(
+        go.Bar(
+            x=quarterly_periods,
+            y=quarterly_operating_cf,
+            name="Operating Cash Flow",
+            marker_color='lightgreen',
+            opacity=0.7
+        ),
+        secondary_y=False
+    )
+
+    # Cash Conversion Ratio line on secondary axis
+    # Color code markers: green if > 100%, red if < 100%
+    colors = ['green' if r and r >= 100 else 'red' if r else 'gray'
+              for r in quarterly_cash_conversion]
+
+    fig.add_trace(
+        go.Scatter(
+            x=quarterly_periods,
+            y=quarterly_cash_conversion,
+            name="Cash Conversion Ratio %",
+            line=dict(color='darkred', width=3),
+            mode='lines+markers',
+            marker=dict(size=10, color=colors,
+                       line=dict(color='darkred', width=2))
+        ),
+        secondary_y=True
+    )
+
+    # Add 100% reference line on secondary axis
+    fig.add_hline(
+        y=100,
+        line_dash="dash",
+        line_color="gray",
+        line_width=2,
+        secondary_y=True,
+        annotation_text="100% (Earnings = Cash)",
+        annotation_position="right"
+    )
+
+    fig.update_xaxes(title_text="Quarter")
+    fig.update_yaxes(
+        title_text="Amount ($ Billions)",
+        secondary_y=False,
+        range=[0, 12]  # Fixed range: max Operating CF is 10.53B, provides 14% headroom
+    )
+    fig.update_yaxes(
+        title_text="Cash Conversion Ratio %",
+        secondary_y=True,
+        range=[-150, 650]  # Accommodates negative Q4 values (-104%, -99%) and extreme positives (549%, 506%)
+    )
+
+    fig.update_layout(
+        title="Target: Earnings Quality Analysis (Net Income vs Operating Cash Flow)<br>Q1 2022 - Q3 2025",
+        hovermode='x unified',
+        height=600,
+        barmode='group',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    fig.write_html("output/chart_earnings_quality.html")
+    print("✅ Chart created: output/chart_earnings_quality.html")
+    return fig
+
+
 def create_margin_bridge_waterfall(data):
     """Chart 6: Operating Margin Bridge (FY2022 → Q3 2025)
 
@@ -707,7 +883,7 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 10 charts (6 from Phase 3 + 3 from Phase 4 + 1 margin analysis)
+    # Create all 11 charts (7 from Phase 3 + 4 from Phase 4)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
     create_margin_analysis_chart(data)
@@ -715,19 +891,21 @@ def main():
     create_inventory_efficiency_chart(data)
     create_debt_health_chart(data)
     create_cash_flows_chart(data)
+    create_earnings_quality_chart(data)  # NEW - Phase 4
     create_margin_bridge_waterfall(data)
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 10 visualizations created in output/ directory")
+    print("\n✅ All 11 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
-    print("     - chart_margin_analysis.html (NEW)")
+    print("     - chart_margin_analysis.html")
     print("     - chart_operating_margin_waterfall.html")
     print("     - chart_inventory_efficiency.html")
     print("     - chart_debt_health.html")
     print("     - chart_cash_flows.html")
+    print("     - chart_earnings_quality.html (Phase 4 - NEW)")
     print("     - chart_margin_bridge.html (Phase 4)")
     print("     - chart_risk_trends.html (Phase 4)")
     print("     - chart_risk_heatmap_grid.html (Phase 4)")

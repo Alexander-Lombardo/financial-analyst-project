@@ -425,12 +425,15 @@ self.risk_heatmap = {
   - Exports investment_thesis.json + console summary
 
 **Extended Scripts**:
-- `visualize_data.py` - 4 new charts added (total 10):
+- `visualize_data.py` - 5 new charts added (total 11):
   - Chart 2: Revenue Growth YoY (Phase 3 - dual-axis: revenue bars + YoY growth line)
   - Chart 3: Margin Analysis (Phase 3 - 3-line: Gross, Operating, Net Profit margins)
   - Chart 7: Margin bridge waterfall (FY2022 → Q3 2025)
   - Chart 8: Risk trends stacked area
   - Chart 9: Risk heatmap grid
+  - Chart 11: Earnings Quality (Net Income vs Operating CF with Cash Conversion Ratio)
+    - **Y-axis scaling fix**: Secondary Y-axis range [-150%, 650%] accommodates negative Q4 values (-104%, -99%) and extreme positive outliers (549%, 506%, 478%)
+    - Negative ratios indicate Q4 periods where Operating CF was negative (calculated as Annual - Q1-Q2-Q3)
 - `financial_analyzer.py` - Executive insights extraction:
   - extract_executive_insights() - Finds inflection points, top trends, warnings
   - export_executive_insights() - Exports executive_insights.json
@@ -446,6 +449,7 @@ self.risk_heatmap = {
 4. ✅ Executive insights extracted (inflection points, trends, warnings)
 5. ✅ PowerPoint enhanced with 3 new Phase 4 slides
 6. ✅ All outputs professionally formatted and data-driven
+7. ✅ Earnings quality chart created with proper Y-axis scaling for negative and extreme positive values
 
 ## Testing & Verification
 
@@ -590,6 +594,10 @@ for i, period in enumerate(data['periods']):
 - **Quarterly debt data is sparse**: Don't expect full debt metrics in every 10-Q
 - **Inventory turnover is quarterly**: Annual formula / 4 != quarterly ratio
 - **Risk mentions are noisy**: "promotional" can be positive or negative context
+- **Q4 Operating Cash Flow can be negative**: When calculated as Annual - (Q1+Q2+Q3), if quarterly filings report cumulative cash flows that exceed the annual total, Q4 will be negative
+  - Example: FY2023 Annual OCF = $8.62B, but Q1-Q3 cumulative = $10.00B → Q4 = -$1.37B
+  - This affects Cash Conversion Ratio calculations (Operating CF / Net Income × 100), producing negative ratios
+  - Chart Y-axis must accommodate negative values: Earnings Quality chart uses range [-150%, 650%]
 
 ### Performance
 
