@@ -116,8 +116,131 @@ def create_revenue_vs_inventory_chart(data):
     return fig
 
 
+def create_revenue_growth_yoy_chart(data):
+    """Chart 2: Revenue Growth Year-over-Year (Quarterly with Calculated Q4)"""
+    periods = [p['period'] for p in data['periods']]
+    revenue = data['metrics']['revenue']['net_sales_billion']
+
+    # Step 1: Collect 10-Q quarterly data
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q':
+            quarterly_data.append({
+                'period': period['period'],
+                'fiscal_year': period['fiscal_year'],
+                'revenue': revenue[i]
+            })
+
+    # Step 2: Calculate Q4 data from 10-K annual reports
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K':
+            fy = period['fiscal_year']
+            annual_revenue = revenue[i]
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1_rev = q2_rev = q3_rev = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1_rev = q['revenue']
+                    elif 'Q2' in q['period']:
+                        q2_rev = q['revenue']
+                    elif 'Q3' in q['period']:
+                        q3_rev = q['revenue']
+
+            # Calculate Q4 revenue = Annual - (Q1 + Q2 + Q3)
+            if q1_rev and q2_rev and q3_rev:
+                q4_revenue = annual_revenue - (q1_rev + q2_rev + q3_rev)
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'revenue': q4_revenue
+                })
+
+    # Step 3: Sort by fiscal year and quarter
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Calculate YoY growth percentages
+    for i in range(len(quarterly_data)):
+        current = quarterly_data[i]
+        current_period = current['period']
+        current_revenue = current['revenue']
+
+        # Find same quarter last year (4 quarters back)
+        if i >= 4:
+            prior = quarterly_data[i - 4]
+            prior_revenue = prior['revenue']
+
+            if prior_revenue and prior_revenue > 0:
+                yoy_growth = ((current_revenue - prior_revenue) / prior_revenue) * 100
+                quarterly_data[i]['yoy_growth_percent'] = round(yoy_growth, 2)
+            else:
+                quarterly_data[i]['yoy_growth_percent'] = None
+        else:
+            quarterly_data[i]['yoy_growth_percent'] = None
+
+    # Step 5: Extract sorted arrays
+    quarterly_periods = [q['period'] for q in quarterly_data]
+    quarterly_revenue = [q['revenue'] for q in quarterly_data]
+    quarterly_yoy_growth = [q['yoy_growth_percent'] for q in quarterly_data]
+
+    # Step 6: Create dual-axis chart
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Revenue bars on primary axis
+    fig.add_trace(
+        go.Bar(x=quarterly_periods, y=quarterly_revenue, name="Net Sales",
+               marker_color='lightblue', opacity=0.7),
+        secondary_y=False
+    )
+
+    # YoY growth line on secondary axis
+    # Color code: green for positive, red for negative
+    colors = ['green' if g and g >= 0 else 'red' for g in quarterly_yoy_growth]
+
+    fig.add_trace(
+        go.Scatter(x=quarterly_periods, y=quarterly_yoy_growth, name="YoY Growth %",
+                   line=dict(color='darkblue', width=3), mode='lines+markers',
+                   marker=dict(size=10, color=colors, line=dict(color='darkblue', width=2))),
+        secondary_y=True
+    )
+
+    # Add zero line for YoY growth reference
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", line_width=1, secondary_y=True)
+
+    fig.update_xaxes(title_text="Quarter")
+    fig.update_yaxes(title_text="Revenue ($ Billions)", secondary_y=False)
+    fig.update_yaxes(title_text="YoY Growth %", secondary_y=True)
+
+    fig.update_layout(
+        title="Target: Revenue Growth Year-over-Year (Q1 2022 - Q3 2025)",
+        hovermode='x unified',
+        height=600,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    fig.write_html("output/chart_revenue_growth_yoy.html")
+    print("✅ Chart created: output/chart_revenue_growth_yoy.html")
+    return fig
+
+
 def create_operating_margin_waterfall(data):
-    """Chart 2: Operating Margin Waterfall (Year-over-Year Changes)"""
+    """Chart 3: Operating Margin Waterfall (Year-over-Year Changes)"""
     periods = [p['period'] for p in data['periods']]
     operating_margins = data['metrics']['margins']['operating_margin_percent']
 
@@ -480,8 +603,9 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 8 charts (5 from Phase 3 + 3 from Phase 4)
+    # Create all 9 charts (6 from Phase 3 + 3 from Phase 4)
     create_revenue_vs_inventory_chart(data)
+    create_revenue_growth_yoy_chart(data)
     create_operating_margin_waterfall(data)
     create_inventory_efficiency_chart(data)
     create_debt_health_chart(data)
@@ -490,9 +614,10 @@ def main():
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 8 visualizations created in output/ directory")
+    print("\n✅ All 9 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
+    print("     - chart_revenue_growth_yoy.html (NEW)")
     print("     - chart_operating_margin_waterfall.html")
     print("     - chart_inventory_efficiency.html")
     print("     - chart_debt_health.html")
