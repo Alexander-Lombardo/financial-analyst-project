@@ -98,13 +98,14 @@ Comprehensive trend analysis with multiple comparison methods:
 }
 ```
 
-**6 Interactive Charts:**
+**7 Interactive Charts:**
 1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
 2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth % line, **15 quarters with Q4**)
-3. Operating Margin Waterfall (quarterly trend)
-4. Inventory Efficiency (turnover + DSI)
-5. Debt Health (coverage ratio + total debt)
-6. Statement of Cash Flows (3 lines: operating, investing, financing)
+3. **Margin Analysis** (3-line chart: Gross, Operating, Net Profit margins, **15 quarters Q1 2022-Q3 2025**)
+4. Operating Margin Waterfall (quarterly trend)
+5. Inventory Efficiency (turnover + DSI)
+6. Debt Health (coverage ratio + total debt)
+7. Statement of Cash Flows (3 lines: operating, investing, financing)
 
 ## Installation
 
@@ -159,7 +160,7 @@ The analyzer will automatically:
    - `output/executive_insights.json` (key insights for reports - Phase 4)
 
 The visualization script will generate:
-- 9 interactive HTML charts in the `output/` directory (6 from Phase 3 + 3 from Phase 4)
+- 10 interactive HTML charts in the `output/` directory (7 from Phase 3 + 3 from Phase 4)
 - Charts include hover tooltips, zoom, and pan features
 - Open any `.html` file in your browser to view
 
@@ -171,7 +172,7 @@ The thesis generator (Phase 4) will produce:
 The presentation generator (Phase 4) will create:
 - Professional PowerPoint with 11 slides including Phase 4 enhancements
 - Investment thesis, margin bridge, and risk heatmap slides
-- Links to all 9 interactive charts
+- Links to all 10 interactive charts
 
 ### SEC Credentials Setup
 

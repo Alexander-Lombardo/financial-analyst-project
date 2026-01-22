@@ -392,12 +392,14 @@ self.risk_heatmap = {
 - **Cash Flow Analysis**: 3 new GAAP mappings (operating, investing, financing)
 - **Operating CF Margin**: Calculated as Operating CF / Net Sales × 100
 - **Time-Series Format**: Flat array structure optimized for Plotly
-- **Interactive Visualizations**: 5 Plotly charts created in visualize_data.py
+- **Interactive Visualizations**: 7 Plotly charts created in visualize_data.py
   1. Revenue vs Inventory Growth (dual-axis line)
-  2. Operating Margin Waterfall (quarterly trend)
-  3. Inventory Efficiency (turnover + DSI)
-  4. Debt Health (coverage ratio + total debt)
-  5. Statement of Cash Flows (3 lines: operating, investing, financing)
+  2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth line)
+  3. Margin Analysis (3-line: Gross, Operating, Net Profit margins Q1 2022-Q3 2025)
+  4. Operating Margin Waterfall (quarterly trend)
+  5. Inventory Efficiency (turnover + DSI)
+  6. Debt Health (coverage ratio + total debt)
+  7. Statement of Cash Flows (3 lines: operating, investing, financing)
 - **New Methods Added**:
   - `_parse_period_to_fiscal()` - Extracts fiscal_year and fiscal_quarter from period strings
   - `_calculate_cashflow_metrics()` - Computes cash flow metrics
@@ -408,10 +410,11 @@ self.risk_heatmap = {
 2. ✅ Time-series JSON has flat array structure
 3. ✅ fiscal_year and fiscal_quarter present in all filings
 4. ✅ Cash flow data extracted and charted
-5. ✅ 6 Plotly charts created (including Revenue Growth YoY and Cash Flows)
+5. ✅ 7 Plotly charts created (including Revenue Growth YoY, Margin Analysis, and Cash Flows)
 6. ✅ All charts are interactive with hover tooltips
-7. ✅ 43/43 RTM requirements met (100% coverage)
-8. ✅ 89 tests passed (98.9% success rate)
+7. ✅ Net profit margin data extracted from us-gaap:NetIncomeLoss tag
+8. ✅ 43/43 RTM requirements met (100% coverage)
+9. ✅ 89 tests passed (98.9% success rate)
 
 ### Phase 4: Professional Reports (Complete) ✅
 
@@ -422,11 +425,12 @@ self.risk_heatmap = {
   - Exports investment_thesis.json + console summary
 
 **Extended Scripts**:
-- `visualize_data.py` - 3 new charts added (total 9):
+- `visualize_data.py` - 4 new charts added (total 10):
   - Chart 2: Revenue Growth YoY (Phase 3 - dual-axis: revenue bars + YoY growth line)
-  - Chart 6: Margin bridge waterfall (FY2022 → Q3 2025)
-  - Chart 7: Risk trends stacked area
-  - Chart 8: Risk heatmap grid
+  - Chart 3: Margin Analysis (Phase 3 - 3-line: Gross, Operating, Net Profit margins)
+  - Chart 7: Margin bridge waterfall (FY2022 → Q3 2025)
+  - Chart 8: Risk trends stacked area
+  - Chart 9: Risk heatmap grid
 - `financial_analyzer.py` - Executive insights extraction:
   - extract_executive_insights() - Finds inflection points, top trends, warnings
   - export_executive_insights() - Exports executive_insights.json
