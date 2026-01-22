@@ -408,7 +408,7 @@ self.risk_heatmap = {
 2. ✅ Time-series JSON has flat array structure
 3. ✅ fiscal_year and fiscal_quarter present in all filings
 4. ✅ Cash flow data extracted and charted
-5. ✅ 5 Plotly charts created (including Cash Flows chart with 3 lines)
+5. ✅ 6 Plotly charts created (including Revenue Growth YoY and Cash Flows)
 6. ✅ All charts are interactive with hover tooltips
 7. ✅ 43/43 RTM requirements met (100% coverage)
 8. ✅ 89 tests passed (98.9% success rate)
@@ -422,7 +422,8 @@ self.risk_heatmap = {
   - Exports investment_thesis.json + console summary
 
 **Extended Scripts**:
-- `visualize_data.py` - 3 new charts added (total 8):
+- `visualize_data.py` - 3 new charts added (total 9):
+  - Chart 2: Revenue Growth YoY (Phase 3 - dual-axis: revenue bars + YoY growth line)
   - Chart 6: Margin bridge waterfall (FY2022 → Q3 2025)
   - Chart 7: Risk trends stacked area
   - Chart 8: Risk heatmap grid

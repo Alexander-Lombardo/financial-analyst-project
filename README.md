@@ -98,12 +98,13 @@ Comprehensive trend analysis with multiple comparison methods:
 }
 ```
 
-**5 Interactive Charts:**
+**6 Interactive Charts:**
 1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
-2. Operating Margin Waterfall (quarterly trend)
-3. Inventory Efficiency (turnover + DSI)
-4. Debt Health (coverage ratio + total debt)
-5. Statement of Cash Flows (3 lines: operating, investing, financing)
+2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth % line, **15 quarters with Q4**)
+3. Operating Margin Waterfall (quarterly trend)
+4. Inventory Efficiency (turnover + DSI)
+5. Debt Health (coverage ratio + total debt)
+6. Statement of Cash Flows (3 lines: operating, investing, financing)
 
 ## Installation
 
@@ -158,7 +159,7 @@ The analyzer will automatically:
    - `output/executive_insights.json` (key insights for reports - Phase 4)
 
 The visualization script will generate:
-- 8 interactive HTML charts in the `output/` directory (5 from Phase 3 + 3 from Phase 4)
+- 9 interactive HTML charts in the `output/` directory (6 from Phase 3 + 3 from Phase 4)
 - Charts include hover tooltips, zoom, and pan features
 - Open any `.html` file in your browser to view
 
@@ -170,7 +171,7 @@ The thesis generator (Phase 4) will produce:
 The presentation generator (Phase 4) will create:
 - Professional PowerPoint with 11 slides including Phase 4 enhancements
 - Investment thesis, margin bridge, and risk heatmap slides
-- Links to all 8 interactive charts
+- Links to all 9 interactive charts
 
 ### SEC Credentials Setup
 
@@ -214,6 +215,7 @@ financial-analyst-project/
 │   ├── target_timeseries.json          # Time-series format (Phase 3)
 │   ├── target_summary.txt              # Human-readable report
 │   ├── chart_revenue_vs_inventory.html # Interactive charts (Phase 3)
+│   ├── chart_revenue_growth_yoy.html   # Revenue Growth YoY (Phase 3)
 │   ├── chart_operating_margin_waterfall.html
 │   ├── chart_inventory_efficiency.html
 │   ├── chart_debt_health.html
@@ -253,8 +255,8 @@ financial-analyst-project/
 - Current state analysis with 3-year comparisons
 
 **5. Interactive Charts** (Phases 3 & 4)
-- 8 HTML files with embedded Plotly visualizations
-- Phase 3: Revenue vs Inventory, Operating Margin, Inventory Efficiency, Debt Health, Cash Flows
+- 9 HTML files with embedded Plotly visualizations
+- Phase 3: Revenue vs Inventory, Revenue Growth YoY, Operating Margin, Inventory Efficiency, Debt Health, Cash Flows
 - Phase 4: Margin Bridge (waterfall), Risk Trends, Risk Heatmap Grid
 - Fully interactive: hover tooltips, zoom, pan
 - No external dependencies - open directly in browser
@@ -265,7 +267,7 @@ financial-analyst-project/
 - Investment Thesis slide with color-coded recommendation
 - Margin Bridge Analysis slide with FY2022 → Q3 2025 summary
 - Risk Heatmap slide with shrink/markdown statistics
-- Links to all 8 interactive charts
+- Links to all 9 interactive charts
 
 ## Understanding the Analysis
 
@@ -447,7 +449,7 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - ✅ Cash flow statement analysis (operating, investing, financing)
 - ✅ Operating cash flow margin calculation
 - ✅ Time-series friendly flat array structure
-- ✅ 5 interactive Plotly charts (HTML format)
+- ✅ 6 interactive Plotly charts (HTML format)
 - ✅ Backward compatibility maintained
 - ✅ 100% requirement coverage (43/43 requirements met)
 
@@ -457,7 +459,7 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - ✅ Executive insights extraction (inflection points, top trends, warnings)
 - ✅ Risk heatmap visualizations (2 interactive charts)
 - ✅ Enhanced PowerPoint with Phase 4 slides
-- ✅ 8 total Plotly charts (5 from Phase 3 + 3 from Phase 4)
+- ✅ 9 total Plotly charts (6 from Phase 3 + 3 from Phase 4)
 
 ### Future Considerations
 - Balance sheet ratio calculations (Current Ratio, Quick Ratio)
