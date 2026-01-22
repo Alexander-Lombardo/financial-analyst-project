@@ -413,24 +413,55 @@ self.risk_heatmap = {
 7. ✅ 43/43 RTM requirements met (100% coverage)
 8. ✅ 89 tests passed (98.9% success rate)
 
-### Phase 4: Professional Reports (Planned)
-- Margin bridge analysis (waterfall charts)
-- Investment thesis generation
-- Executive summary with key insights
-- Risk heatmap visualizations
+### Phase 4: Professional Reports (Complete) ✅
+
+**New Scripts**:
+- `thesis_generator.py` - Investment thesis auto-generation
+  - ThesisGenerator class with 6 analysis methods
+  - Generates Buy/Hold/Sell recommendation from data
+  - Exports investment_thesis.json + console summary
+
+**Extended Scripts**:
+- `visualize_data.py` - 3 new charts added (total 8):
+  - Chart 6: Margin bridge waterfall (FY2022 → Q3 2025)
+  - Chart 7: Risk trends stacked area
+  - Chart 8: Risk heatmap grid
+- `financial_analyzer.py` - Executive insights extraction:
+  - extract_executive_insights() - Finds inflection points, top trends, warnings
+  - export_executive_insights() - Exports executive_insights.json
+- `create_presentation.py` - 3 new slides:
+  - Investment Thesis (with recommendation)
+  - Margin Bridge Analysis (with summary)
+  - Risk Heatmap (with stats table)
+
+**Phase 4 Success Criteria** (all met ✅):
+1. ✅ Margin bridge waterfall chart shows FY2022 → Q3 2025 evolution
+2. ✅ Investment thesis auto-generated with Buy/Hold/Sell rating
+3. ✅ Risk heatmap visualizations created (2 charts)
+4. ✅ Executive insights extracted (inflection points, trends, warnings)
+5. ✅ PowerPoint enhanced with 3 new Phase 4 slides
+6. ✅ All outputs professionally formatted and data-driven
 
 ## Testing & Verification
 
 ### Quick Test
 ```bash
-# Run analyzer
+# Run analyzer (includes executive insights export - Phase 4)
 python3 financial_analyzer.py
 
-# Run visualizations
+# Run visualizations (creates 8 charts including Phase 4)
 python3 visualize_data.py
 
+# Generate investment thesis (Phase 4)
+python3 thesis_generator.py
+
+# Create PowerPoint presentation (Phase 4)
+python3 create_presentation.py
+
 # Open charts in browser
-open output/chart_cash_flows.html
+open output/chart_margin_bridge.html
+open output/chart_risk_trends.html
+open output/Target_Financial_Analysis.pptx
 ```
 
 ### Comprehensive Verification (Phase 3)
@@ -475,6 +506,61 @@ python3 visualize_data.py
 # 5. View charts
 open output/chart_cash_flows.html
 ```
+
+## Quarterly Data Calculation (Phase 3 Enhancement)
+
+### Q4 Data from 10-K Annual Reports
+
+Target only files 10-Q reports for Q1, Q2, and Q3. Q4 data is calculated from annual 10-K reports:
+
+**Implementation** (in `visualize_data.py`):
+```python
+# Step 1: Collect Q1-Q3 from 10-Q filings
+quarterly_data = []
+for i, period in enumerate(data['periods']):
+    if period['filing_type'] == '10-Q':
+        quarterly_data.append({
+            'period': period['period'],
+            'fiscal_year': period['fiscal_year'],
+            'revenue': revenue[i],
+            'inventory': inventory[i]
+        })
+
+# Step 2: Calculate Q4 from 10-K annual reports
+for i, period in enumerate(data['periods']):
+    if period['filing_type'] == '10-K':
+        fy = period['fiscal_year']
+        annual_revenue = revenue[i]
+
+        # Find Q1, Q2, Q3 for this fiscal year
+        q1_rev = q2_rev = q3_rev = None
+        for q in quarterly_data:
+            if q['fiscal_year'] == fy:
+                if 'Q1' in q['period']:
+                    q1_rev = q['revenue']
+                # ... match Q2, Q3
+
+        # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+        if q1_rev and q2_rev and q3_rev:
+            q4_revenue = annual_revenue - (q1_rev + q2_rev + q3_rev)
+            quarterly_data.append({
+                'period': f'Q4 {fy}',
+                'fiscal_year': fy,
+                'revenue': q4_revenue,
+                'inventory': annual_inventory  # Year-end balance
+            })
+```
+
+**Key Principles**:
+- Q4 Revenue = Annual Total - (Q1 + Q2 + Q3)
+- Q4 Inventory = Year-end inventory from 10-K (point-in-time, not cumulative)
+- Fiscal year totals (10-K) are **never displayed** in charts to avoid distortion
+- Results in 15 complete quarters: Q1 2022 through Q3 2025
+
+**Why This Matters**:
+- Reveals seasonal patterns (Q4 consistently 20-35% higher revenue)
+- Enables proper YoY comparisons (Q4 2024 vs Q4 2023)
+- Prevents mixing annual and quarterly data in visualizations
 
 ## Key Learnings
 

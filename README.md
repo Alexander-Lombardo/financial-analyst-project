@@ -99,7 +99,7 @@ Comprehensive trend analysis with multiple comparison methods:
 ```
 
 **5 Interactive Charts:**
-1. Revenue vs Inventory Growth (dual-axis line)
+1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
 2. Operating Margin Waterfall (quarterly trend)
 3. Inventory Efficiency (turnover + DSI)
 4. Debt Health (coverage ratio + total debt)
@@ -139,6 +139,12 @@ python financial_analyzer.py
 
 # Generate interactive visualizations
 python visualize_data.py
+
+# Generate investment thesis (Phase 4)
+python thesis_generator.py
+
+# Create PowerPoint presentation (Phase 4)
+python create_presentation.py
 ```
 
 The analyzer will automatically:
@@ -149,11 +155,22 @@ The analyzer will automatically:
    - `output/target_analysis.json` (detailed format)
    - `output/target_timeseries.json` (time-series format)
    - `output/target_summary.txt` (human-readable report)
+   - `output/executive_insights.json` (key insights for reports - Phase 4)
 
 The visualization script will generate:
-- 5 interactive HTML charts in the `output/` directory
+- 8 interactive HTML charts in the `output/` directory (5 from Phase 3 + 3 from Phase 4)
 - Charts include hover tooltips, zoom, and pan features
 - Open any `.html` file in your browser to view
+
+The thesis generator (Phase 4) will produce:
+- Auto-generated investment thesis with Buy/Hold/Sell recommendation
+- Risk factor analysis and opportunity identification
+- Exported to `output/investment_thesis.json`
+
+The presentation generator (Phase 4) will create:
+- Professional PowerPoint with 11 slides including Phase 4 enhancements
+- Investment thesis, margin bridge, and risk heatmap slides
+- Links to all 8 interactive charts
 
 ### SEC Credentials Setup
 
@@ -223,11 +240,32 @@ financial-analyst-project/
 - Ideal for charting and data visualization
 - 65% smaller file size
 
-**3. Interactive Charts** (Phase 3)
-- 5 HTML files with embedded Plotly visualizations
+**3. `executive_insights.json`** (Phase 4)
+- Inflection points (>50bp margin changes)
+- Top YoY trends (strongest/weakest metrics)
+- Critical warnings (debt coverage, inventory risks)
+- Auto-generated insights for reports
+
+**4. `investment_thesis.json`** (Phase 4)
+- Auto-generated Buy/Hold/Sell recommendation
+- Risk factor analysis (severity, trend, evidence)
+- Opportunity identification (digital growth, margin recovery)
+- Current state analysis with 3-year comparisons
+
+**5. Interactive Charts** (Phases 3 & 4)
+- 8 HTML files with embedded Plotly visualizations
+- Phase 3: Revenue vs Inventory, Operating Margin, Inventory Efficiency, Debt Health, Cash Flows
+- Phase 4: Margin Bridge (waterfall), Risk Trends, Risk Heatmap Grid
 - Fully interactive: hover tooltips, zoom, pan
 - No external dependencies - open directly in browser
 - Professional presentation quality
+
+**6. PowerPoint Presentation** (Phase 4)
+- `Target_Financial_Analysis.pptx` - Enhanced 11-slide deck
+- Investment Thesis slide with color-coded recommendation
+- Margin Bridge Analysis slide with FY2022 → Q3 2025 summary
+- Risk Heatmap slide with shrink/markdown statistics
+- Links to all 8 interactive charts
 
 ## Understanding the Analysis
 
@@ -351,6 +389,18 @@ Files are processed in this **specific order** for accurate trend analysis:
 
 This creates a chronological trend line.
 
+### Q4 Data Calculation
+
+Q4 quarterly data is **calculated from 10-K annual reports** since Target only files 10-Q for Q1-Q3:
+
+- **Q4 Revenue** = Annual Revenue (10-K) - (Q1 + Q2 + Q3 Revenue from 10-Q)
+- **Q4 Inventory** = Year-end inventory balance from 10-K (point-in-time metric)
+
+This approach:
+- Provides complete quarterly coverage (15 quarters: Q1 2022 - Q3 2025)
+- Excludes fiscal year totals from charts to prevent distortion
+- Reveals seasonal patterns (Q4 typically 20-35% higher due to holidays)
+
 ## Additional Tools
 
 ### Presentation Generation
@@ -401,11 +451,13 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - ✅ Backward compatibility maintained
 - ✅ 100% requirement coverage (43/43 requirements met)
 
-### 📊 Phase 4: Professional Reports (Planned)
-- Margin bridge analysis (waterfall charts)
-- Risk heatmap visualizations
-- Investment thesis generation
-- Executive summary with key insights
+### ✅ Phase 4: Professional Reports (Complete)
+- ✅ Margin bridge analysis (waterfall chart FY2022 → Q3 2025)
+- ✅ Investment thesis generation (auto-generated Buy/Hold/Sell recommendation)
+- ✅ Executive insights extraction (inflection points, top trends, warnings)
+- ✅ Risk heatmap visualizations (2 interactive charts)
+- ✅ Enhanced PowerPoint with Phase 4 slides
+- ✅ 8 total Plotly charts (5 from Phase 3 + 3 from Phase 4)
 
 ### Future Considerations
 - Balance sheet ratio calculations (Current Ratio, Quick Ratio)
