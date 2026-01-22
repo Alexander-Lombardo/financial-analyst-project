@@ -679,6 +679,143 @@ def create_earnings_quality_chart(data):
     return fig
 
 
+def create_revenue_netincome_longterm_chart(data):
+    """Chart 12: Revenue & Net Income Long-Term Trajectory (5-10 Year Period)
+
+    Line chart showing Revenue and Net Income over 5-10 years to show
+    long-term trajectory and correlation between sales and profit.
+    Includes calculated Q4 data from annual 10-K reports.
+    """
+    periods = [p['period'] for p in data['periods']]
+    revenue = data['metrics']['revenue']['net_sales_billion']
+    net_income = data['metrics']['cash_flows']['net_income_billion']
+
+    # Step 1: Collect 10-Q quarterly data (all available years)
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q':
+            quarterly_data.append({
+                'period': period['period'],
+                'fiscal_year': period['fiscal_year'],
+                'revenue': revenue[i],
+                'net_income': net_income[i]
+            })
+
+    # Step 2: Calculate Q4 data from 10-K annual reports
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K':
+            fy = period['fiscal_year']
+            annual_revenue = revenue[i]
+            annual_net_income = net_income[i]
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1_rev = q2_rev = q3_rev = None
+            q1_ni = q2_ni = q3_ni = None
+
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1_rev = q['revenue']
+                        q1_ni = q['net_income']
+                    elif 'Q2' in q['period']:
+                        q2_rev = q['revenue']
+                        q2_ni = q['net_income']
+                    elif 'Q3' in q['period']:
+                        q3_rev = q['revenue']
+                        q3_ni = q['net_income']
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if q1_rev and q2_rev and q3_rev and q1_ni and q2_ni and q3_ni:
+                q4_revenue = annual_revenue - (q1_rev + q2_rev + q3_rev)
+                q4_net_income = annual_net_income - (q1_ni + q2_ni + q3_ni)
+
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'revenue': q4_revenue,
+                    'net_income': q4_net_income
+                })
+
+    # Step 3: Sort chronologically
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Extract arrays
+    quarterly_periods = [q['period'] for q in quarterly_data]
+    quarterly_revenue = [q['revenue'] for q in quarterly_data]
+    quarterly_net_income = [q['net_income'] for q in quarterly_data]
+
+    # Step 5: Create dual-axis line chart
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Revenue line on primary axis
+    fig.add_trace(
+        go.Scatter(
+            x=quarterly_periods,
+            y=quarterly_revenue,
+            name="Revenue (Net Sales)",
+            line=dict(color='blue', width=3),
+            mode='lines+markers',
+            marker=dict(size=6)
+        ),
+        secondary_y=False
+    )
+
+    # Net Income line on secondary axis
+    fig.add_trace(
+        go.Scatter(
+            x=quarterly_periods,
+            y=quarterly_net_income,
+            name="Net Income",
+            line=dict(color='green', width=3),
+            mode='lines+markers',
+            marker=dict(size=6)
+        ),
+        secondary_y=True
+    )
+
+    fig.update_xaxes(title_text="Quarter")
+    fig.update_yaxes(
+        title_text="Revenue ($ Billions)",
+        secondary_y=False
+    )
+    fig.update_yaxes(
+        title_text="Net Income ($ Billions)",
+        secondary_y=True
+    )
+
+    fig.update_layout(
+        title="Target: Revenue & Net Income Long-Term Trajectory<br>Quarterly Data",
+        hovermode='x unified',
+        height=600,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    fig.write_html("output/chart_revenue_netincome_longterm.html")
+    print("✅ Chart created: output/chart_revenue_netincome_longterm.html")
+    return fig
+
+
 def create_margin_bridge_waterfall(data):
     """Chart 6: Operating Margin Bridge (FY2022 → Q3 2025)
 
@@ -883,7 +1020,7 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 11 charts (7 from Phase 3 + 4 from Phase 4)
+    # Create all 12 charts (7 from Phase 3 + 4 from Phase 4 + 1 new)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
     create_margin_analysis_chart(data)
@@ -891,12 +1028,13 @@ def main():
     create_inventory_efficiency_chart(data)
     create_debt_health_chart(data)
     create_cash_flows_chart(data)
-    create_earnings_quality_chart(data)  # NEW - Phase 4
+    create_earnings_quality_chart(data)  # Phase 4
+    create_revenue_netincome_longterm_chart(data)  # NEW - Chart 12
     create_margin_bridge_waterfall(data)
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 11 visualizations created in output/ directory")
+    print("\n✅ All 12 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -905,7 +1043,8 @@ def main():
     print("     - chart_inventory_efficiency.html")
     print("     - chart_debt_health.html")
     print("     - chart_cash_flows.html")
-    print("     - chart_earnings_quality.html (Phase 4 - NEW)")
+    print("     - chart_earnings_quality.html (Phase 4)")
+    print("     - chart_revenue_netincome_longterm.html (NEW)")
     print("     - chart_margin_bridge.html (Phase 4)")
     print("     - chart_risk_trends.html (Phase 4)")
     print("     - chart_risk_heatmap_grid.html (Phase 4)")
