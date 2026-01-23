@@ -79,27 +79,30 @@ def analyze_10q(self, filepath: Path, period: str) -> Dict
 - Performs year-over-year comparison (Phase 2)
 - Returns: vital_signs, comparable_sales, inventory_metrics, debt_metrics, risk_flags
 
-#### XBRL Extraction (Phase 2 Enhancement)
+#### XBRL Extraction (Phase 2 Enhancement + 10-Year Data Fix)
 ```python
-def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool) -> Dict
+def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool, raw_content: str = None) -> Dict
 ```
 - **CRITICAL**: Uses direct XBRL tag parsing (not table parsing)
 - GAAP taxonomy mappings defined in `GAAP_MAPPINGS` dict
 - Handles Target-specific tags like `us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax`
+- Passes `raw_content` to `_extract_xbrl_value()` for legacy XML format support
 
 ```python
-def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str) -> Optional[float]
+def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str, raw_content: str = None) -> Optional[float]
 ```
-- Finds `<ix:nonFraction>` tags with matching GAAP tag name
-- Handles scale attribute (e.g., `scale="6"` = millions)
+- **Dual-format support** for both modern iXBRL and legacy raw XML formats
+- Method 1: Finds modern `<ix:nonFraction>` tags with matching GAAP tag name
+- Method 2: Uses regex to find legacy raw XML tags (for FY2015-2018 filings)
+- Handles scale attribute (modern: `scale="6"`) and decimals attribute (legacy: `decimals="-6"`)
 - Returns value in millions
 
-**GAAP Mappings Used** (as of Phase 3):
+**GAAP Mappings Used** (as of Phase 3 + 10-Year Data Fix):
 ```python
 GAAP_MAPPINGS = {
     'us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax': 'net_sales',
     'us-gaap:Revenues': 'net_sales',
-    'us-gaap:SalesRevenueNet': 'net_sales',
+    'us-gaap:SalesRevenueNet': 'net_sales',  # Legacy tag for older filings
     'us-gaap:CostOfGoodsAndServicesSold': 'cost_of_sales',
     'us-gaap:CostOfGoodsSold': 'cost_of_sales',
     'us-gaap:CostOfRevenue': 'cost_of_sales',
@@ -112,7 +115,10 @@ GAAP_MAPPINGS = {
     # Phase 3: Cash Flow Statement metrics
     'us-gaap:NetCashProvidedByUsedInOperatingActivities': 'operating_cash_flow',
     'us-gaap:NetCashProvidedByUsedInInvestingActivities': 'investing_cash_flow',
-    'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow'
+    'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow',
+    # Net Income (both modern and legacy tags)
+    'us-gaap:NetIncomeLoss': 'net_income',
+    'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income'  # Legacy tag
 }
 ```
 
@@ -341,13 +347,24 @@ self.risk_heatmap = {
 
 ### Issue: XBRL values are null or incorrect scale
 
-**Cause**: Company uses different GAAP tags or scale attributes
+**Cause**: Company uses different GAAP tags, scale attributes, or older filings use legacy XML format
 
 **Solution**:
-1. Inspect actual HTML filing
-2. Find correct GAAP tag name
-3. Add to GAAP_MAPPINGS
-4. Verify scale attribute handling in `_extract_xbrl_value()`
+1. Inspect actual HTML filing and `full-submission.txt` file
+2. Find correct GAAP tag name (check both modern and legacy tag names)
+3. Add to GAAP_MAPPINGS (add both modern and legacy tag variants if needed)
+4. Verify scale/decimals attribute handling in `_extract_xbrl_value()`
+5. For older filings (pre-2019), ensure `full-submission.txt` is being read by `_read_html()`
+
+### Issue: Older filings (FY2015-2018) return NULL values
+
+**Cause**: Legacy XBRL format uses raw XML tags without `<ix:nonfraction>` wrapper
+
+**Solution**:
+- The dual-format `_extract_xbrl_value()` method (Phase 5) automatically handles this
+- Method 2 uses regex to find raw XML tags in `full-submission.txt` content
+- Ensure `_read_html()` is appending `full-submission.txt` to the HTML content
+- Verify GAAP tag names match legacy format (e.g., `SalesRevenueNet`, `NetIncomeLossAvailableToCommonStockholdersBasic`)
 
 ### Issue: Quarter comparison not working
 
@@ -438,10 +455,10 @@ self.risk_heatmap = {
     - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
     - Covers 5-10 year period with calculated Q4 data
     - Shows long-term trends and profit margin evolution
-  - Chart 13: Revenue & Net Income Annual Trajectory (NEW)
+  - Chart 13: Revenue & Net Income Annual Trajectory (10-Year Complete Data ✅)
     - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
     - Uses ONLY annual fiscal year data from 10-K reports (no quarterly data)
-    - Covers 10-year period (FY2020-FY2024 currently, expandable to 10 years)
+    - **Complete 10-year period: FY2015 through FY2024** with NO data gaps
     - Shows long-term trends without quarterly noise
     - Complements Chart 12 which uses quarterly data with calculated Q4
 - `financial_analyzer.py` - Executive insights extraction:
@@ -460,6 +477,57 @@ self.risk_heatmap = {
 5. ✅ PowerPoint enhanced with 3 new Phase 4 slides
 6. ✅ All outputs professionally formatted and data-driven
 7. ✅ Earnings quality chart created with proper Y-axis scaling for negative and extreme positive values
+
+### Phase 5: 10-Year Historical Data Extraction (Complete) ✅
+
+**Problem**: Older SEC filings (FY2015-FY2018) used a fundamentally different XBRL format that the existing extraction logic couldn't parse, resulting in NULL values for revenue and net income in Chart 13.
+
+**Root Cause Analysis**:
+- Modern filings (FY2022+): Use iXBRL format with `<ix:nonfraction name="us-gaap:TagName">` wrapper
+- Older filings (FY2015-2018): Use raw XML format `<us-gaap:TagName contextRef="..." decimals="...">` without wrapper
+- XBRL data for older filings stored in `full-submission.txt`, not in HTML file
+- Different GAAP tags used: `NetIncomeLossAvailableToCommonStockholdersBasic` (old) vs `NetIncomeLoss` (new)
+
+**Solution Implemented**:
+1. **Enhanced `_read_html()` method** in `financial_analyzer.py`:
+   - Now reads both HTML file and `full-submission.txt`
+   - Appends full-submission.txt content when it exists (for older filings)
+
+2. **Rewrote `_extract_xbrl_value()` method** with dual-format support:
+   - **Method 1** (primary): Modern iXBRL format with `<ix:nonfraction>` wrapper
+   - **Method 2** (fallback): Legacy raw XML format using regex pattern matching
+   - Handles both `scale` attribute (modern) and `decimals` attribute (legacy)
+   - Regex pattern: `<us-gaap:TagName contextRef="...(Q4YTD|FY)..." decimals="..." >value</us-gaap:TagName>`
+
+3. **Added alternative GAAP tag mapping**:
+   - `us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic`: 'net_income' (for FY2015-2021)
+   - Complements existing `us-gaap:NetIncomeLoss`: 'net_income' (for FY2022+)
+
+4. **Enhanced `sec_data_fetcher.py`**:
+   - Added `_extract_period_from_submission()` method to read period dates from `full-submission.txt`
+   - Updated `_extract_period_from_file()` to use submission file as fallback
+   - Improved period label extraction for older 10-K reports
+
+**Results**:
+- ✅ **Complete 10-year data extraction**: FY2015 through FY2024
+- ✅ **Revenue data**: All 10 years successfully extracted (~$70B to ~$107B range)
+- ✅ **Net Income data**: All 10 years successfully extracted (~$2B to ~$7B range)
+- ✅ **Chart 13**: Displays continuous trend lines with NO gaps or missing data points
+- ✅ **Backwards compatible**: Modern filings (FY2022+) continue to work with Method 1
+
+**Technical Details**:
+- Legacy format uses `decimals="-6"` meaning value is in actual dollars (not pre-scaled)
+- All values converted to millions for consistency, then to billions in vital_signs
+- Regex uses `contextRef` filter to match only annual data (Q4YTD or FY)
+- BeautifulSoup cannot find namespace-prefixed tags, hence regex on raw content
+
+**Phase 5 Success Criteria** (all met ✅):
+1. ✅ Dual-format XBRL extraction supports both modern and legacy formats
+2. ✅ All 10 years (FY2015-FY2024) have complete revenue data
+3. ✅ All 10 years (FY2015-FY2024) have complete net income data
+4. ✅ Chart 13 shows continuous lines with no breaks or gaps
+5. ✅ Console output displays "Net Sales: $XX.XXB" for all 10 years during analysis
+6. ✅ Alternative GAAP tag mapping added for legacy net income format
 
 ## Testing & Verification
 
