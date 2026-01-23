@@ -197,8 +197,14 @@ class SECDataFetcher:
         except Exception:
             pass
 
-        # Fallback: try filename
-        return self._extract_period_from_filename(filepath.name)
+        # Fallback 1: try filename
+        period_from_filename = self._extract_period_from_filename(filepath.name)
+        if period_from_filename != "Unknown Period":
+            return period_from_filename
+
+        # Fallback 2: try full-submission.txt (for older filings)
+        filing_dir = filepath.parent
+        return self._extract_period_from_submission(filing_dir, filing_type)
 
     def _extract_period_from_filename(self, filename: str) -> str:
         """
@@ -237,6 +243,58 @@ class SECDataFetcher:
             return f"Q3 {year}"
         else:
             return f"Period {year}-{month:02d}"
+
+    def _extract_period_from_submission(self, filing_dir: Path, filing_type: str) -> str:
+        """
+        Extract period label from full-submission.txt metadata file.
+
+        This is used as a fallback for older filings that don't have
+        date-based titles or filenames.
+
+        Args:
+            filing_dir: Path to filing directory
+            filing_type: "10-K" or "10-Q"
+
+        Returns:
+            Period label string (e.g., "FY2024", "Q1 2025")
+        """
+        submission_file = filing_dir / "full-submission.txt"
+
+        if not submission_file.exists():
+            return "Unknown Period"
+
+        try:
+            with open(submission_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read(10000)  # Read first 10KB
+
+            # Look for "CONFORMED PERIOD OF REPORT:	YYYYMMDD"
+            period_match = re.search(r'CONFORMED PERIOD OF REPORT:\s+(\d{8})', content)
+            if period_match:
+                date_str = period_match.group(1)
+                year = int(date_str[0:4])
+                month = int(date_str[4:6])
+
+                # Target's fiscal year ends in late January/early February
+                if filing_type == "10-K":
+                    # FY2015 ends in Jan/Feb 2016
+                    fiscal_year = year - 1 if month <= 3 else year
+                    return f"FY{fiscal_year}"
+                else:  # 10-Q
+                    # Map months to quarters
+                    if month in [4, 5, 6]:
+                        return f"Q1 {year}"
+                    elif month in [7, 8, 9]:
+                        return f"Q2 {year}"
+                    elif month in [10, 11, 12]:
+                        return f"Q3 {year}"
+                    else:
+                        # Month 1-3 might be Q4 from previous year
+                        return f"Period {year}-{month:02d}"
+
+        except Exception:
+            pass
+
+        return "Unknown Period"
 
     def get_filing_list(self) -> List[Tuple[str, str]]:
         """

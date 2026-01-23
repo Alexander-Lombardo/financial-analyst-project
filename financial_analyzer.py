@@ -72,7 +72,7 @@ class TargetFinancialAnalyzer:
 
         print("📥 Downloading filings from SEC EDGAR...")
         try:
-            metadata = self.fetcher.download_filings(ticker, cik, num_10k=5, num_10q=12)
+            metadata = self.fetcher.download_filings(ticker, cik, num_10k=10, num_10q=12)
             print(f"✅ Downloaded {len(metadata.get('10-K', []))} 10-Ks")
             print(f"✅ Downloaded {len(metadata.get('10-Q', []))} 10-Qs")
             return True
@@ -147,8 +147,8 @@ class TargetFinancialAnalyzer:
         html_content = self._read_html(filepath)
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Extract financial data
-        vital_signs = self._extract_vital_signs(soup, is_annual=True)
+        # Extract financial data (pass raw content for older filings)
+        vital_signs = self._extract_vital_signs(soup, is_annual=True, raw_content=html_content)
         comp_sales = self._extract_comparable_sales(soup, is_annual=True)
 
         # Phase 2: Calculate inventory and debt metrics
@@ -192,8 +192,8 @@ class TargetFinancialAnalyzer:
         html_content = self._read_html(filepath)
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Extract financial data
-        vital_signs = self._extract_vital_signs(soup, is_annual=False)
+        # Extract financial data (pass raw content for older filings)
+        vital_signs = self._extract_vital_signs(soup, is_annual=False, raw_content=html_content)
         comp_sales = self._extract_comparable_sales(soup, is_annual=False)
 
         # Phase 2: Calculate inventory and debt metrics
@@ -242,16 +242,33 @@ class TargetFinancialAnalyzer:
         }
 
     def _read_html(self, filepath: Path) -> str:
-        """Read HTML file content."""
+        """Read HTML file content and append full-submission.txt for older filings."""
         with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
+            html_content = f.read()
 
-    def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool) -> Dict:
+        # For older filings, XBRL data is in full-submission.txt, not in HTML
+        # Check if full-submission.txt exists and append it
+        submission_file = filepath.parent / "full-submission.txt"
+        if submission_file.exists():
+            try:
+                with open(submission_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    html_content += f.read()
+            except Exception:
+                pass  # If we can't read it, continue with just HTML
+
+        return html_content
+
+    def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool, raw_content: str = None) -> Dict:
         """
         Extract core financial metrics using direct XBRL tag parsing.
 
         Phase 2 Enhancement: Uses GAAP taxonomy mappings to directly extract
         values from <ix:nonFraction> tags instead of table parsing.
+
+        Args:
+            soup: BeautifulSoup parsed HTML/XML
+            is_annual: True for 10-K, False for 10-Q
+            raw_content: Optional raw HTML/XML content for regex-based extraction (older filings)
         """
         vital_signs = {}
 
@@ -275,12 +292,13 @@ class TargetFinancialAnalyzer:
             'us-gaap:NetCashProvidedByUsedInInvestingActivities': 'investing_cash_flow',
             'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow',
             # Phase 4: Net Income for profit margin calculation
-            'us-gaap:NetIncomeLoss': 'net_income'
+            'us-gaap:NetIncomeLoss': 'net_income',
+            'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income'  # Older filings
         }
 
         # Extract all XBRL tagged values
         for gaap_tag, metric_name in GAAP_MAPPINGS.items():
-            value = self._extract_xbrl_value(soup, gaap_tag)
+            value = self._extract_xbrl_value(soup, gaap_tag, raw_content)
             if value is not None:
                 # Convert to billions (values are usually in millions)
                 vital_signs[f'{metric_name}_billion'] = value / 1000.0
@@ -303,49 +321,78 @@ class TargetFinancialAnalyzer:
 
         return vital_signs
 
-    def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str) -> Optional[float]:
+    def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str, raw_content: str = None) -> Optional[float]:
         """
         Extract numeric value from XBRL tag for the most recent period.
+
+        Supports both modern iXBRL format and legacy raw XML format.
 
         Args:
             soup: BeautifulSoup parsed HTML
             gaap_tag: US-GAAP taxonomy tag name (e.g., 'us-gaap:Revenues')
+            raw_content: Optional raw HTML/XML content for regex-based extraction
 
         Returns:
             Extracted numeric value in millions, or None if not found
         """
-        # Find all instances of this XBRL tag
+        # METHOD 1: Modern iXBRL format with ix:nonfraction wrapper
+        # Example: <ix:nonfraction name="us-gaap:Revenues" scale="6">106566</ix:nonfraction>
         tags = soup.find_all('ix:nonfraction', attrs={'name': gaap_tag})
 
-        # Also try with different casing (some filings use different formats)
+        # Try with different casing
         if not tags:
             tags = soup.find_all('ix:nonFraction', attrs={'name': gaap_tag})
 
-        if not tags:
-            return None
+        if tags:
+            # Found modern format - use existing logic
+            tag = tags[0]
+            text = tag.get_text().strip().replace(',', '').replace('$', '')
 
-        # For simplicity, take the first occurrence (usually most recent period)
-        # More sophisticated: parse contextRef to determine period
-        tag = tags[0]
-        text = tag.get_text().strip().replace(',', '').replace('$', '')
+            try:
+                value = float(text) if text else None
+                if value is None:
+                    return None
 
-        # Extract the numeric value
-        try:
-            value = float(text) if text else None
-            if value is None:
-                return None
+                # Check for scale attribute (e.g., scale="6" means multiply by 10^6)
+                scale = tag.get('scale')
+                if scale:
+                    scale_factor = int(scale)
+                    value = value * (10 ** scale_factor)
 
-            # Check for scale attribute (e.g., scale="6" means millions)
-            scale = tag.get('scale')
-            if scale:
-                scale_factor = int(scale)
-                # scale="6" means multiply by 10^6 (millions)
-                value = value * (10 ** scale_factor)
+                # Convert from dollars to millions
+                return value / 1_000_000
+            except (ValueError, TypeError):
+                pass
 
-            # Convert from dollars to millions
-            return value / 1_000_000
-        except (ValueError, TypeError):
-            return None
+        # METHOD 2: Legacy raw XML format (FY2015-FY2018)
+        # Example: <us-gaap:SalesRevenueNet contextRef="FD2015Q4YTD" decimals="-6">73785000000</us-gaap:SalesRevenueNet>
+        # BeautifulSoup doesn't preserve XML namespaces, so we use regex on raw content
+
+        if raw_content:
+            import re
+
+            # Build regex pattern to match the GAAP tag with contextRef
+            # Look for annual period context (Q4YTD or FY)
+            # Pattern: <us-gaap:TagName contextRef="...Q4YTD..." decimals="..." ...>VALUE</us-gaap:TagName>
+            pattern = rf'<{re.escape(gaap_tag)}\s+[^>]*contextRef="[^"]*(?:Q4YTD|FY)[^"]*"[^>]*decimals="([^"]*)"[^>]*>([0-9]+)</\s*{re.escape(gaap_tag)}\s*>'
+
+            matches = re.findall(pattern, raw_content)
+            if matches:
+                # Take the first match (usually the most recent period)
+                decimals_str, value_str = matches[0]
+                try:
+                    value = float(value_str)
+                    decimals = int(decimals_str)
+
+                    # decimals="-6" means value is in dollars, rounded to nearest million
+                    # We need to return in millions, so divide by 1,000,000
+                    # decimals="-3" means value is in dollars, rounded to nearest thousand
+                    # All values in the XML are in actual dollars, not pre-scaled
+                    return value / 1_000_000
+                except (ValueError, TypeError):
+                    pass
+
+        return None
 
     def _parse_period_to_fiscal(self, period: str) -> tuple:
         """

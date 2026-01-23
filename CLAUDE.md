@@ -425,7 +425,7 @@ self.risk_heatmap = {
   - Exports investment_thesis.json + console summary
 
 **Extended Scripts**:
-- `visualize_data.py` - 6 new charts added (total 12):
+- `visualize_data.py` - 6 new charts added (total 13):
   - Chart 2: Revenue Growth YoY (Phase 3 - dual-axis: revenue bars + YoY growth line)
   - Chart 3: Margin Analysis (Phase 3 - 3-line: Gross, Operating, Net Profit margins)
   - Chart 7: Margin bridge waterfall (FY2022 → Q3 2025)
@@ -434,10 +434,16 @@ self.risk_heatmap = {
   - Chart 11: Earnings Quality (Net Income vs Operating CF with Cash Conversion Ratio)
     - **Y-axis scaling fix**: Secondary Y-axis range [-150%, 650%] accommodates negative Q4 values (-104%, -99%) and extreme positive outliers (549%, 506%, 478%)
     - Negative ratios indicate Q4 periods where Operating CF was negative (calculated as Annual - Q1-Q2-Q3)
-  - Chart 12: Revenue & Net Income Long-Term Trajectory (NEW)
+  - Chart 12: Revenue & Net Income Long-Term Trajectory
     - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
     - Covers 5-10 year period with calculated Q4 data
     - Shows long-term trends and profit margin evolution
+  - Chart 13: Revenue & Net Income Annual Trajectory (NEW)
+    - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
+    - Uses ONLY annual fiscal year data from 10-K reports (no quarterly data)
+    - Covers 10-year period (FY2020-FY2024 currently, expandable to 10 years)
+    - Shows long-term trends without quarterly noise
+    - Complements Chart 12 which uses quarterly data with calculated Q4
 - `financial_analyzer.py` - Executive insights extraction:
   - extract_executive_insights() - Finds inflection points, top trends, warnings
   - export_executive_insights() - Exports executive_insights.json
@@ -462,7 +468,7 @@ self.risk_heatmap = {
 # Run analyzer (includes executive insights export - Phase 4)
 python3 financial_analyzer.py
 
-# Run visualizations (creates 12 charts including Phase 4)
+# Run visualizations (creates 13 charts including Phase 4)
 python3 visualize_data.py
 
 # Generate investment thesis (Phase 4)
@@ -497,7 +503,7 @@ python3 test_phase3_integration.py
 - All filings have fiscal_year and fiscal_quarter fields
 - 6+ filings have vs_year_ago comparisons
 - Risk heatmap shows shrink trend increasing
-- 12 interactive HTML charts generated (including new Revenue & Net Income Long-Term Trajectory)
+- 13 interactive HTML charts generated (including Chart 12 Revenue & Net Income Quarterly and Chart 13 Revenue & Net Income Annual)
 - 89/89 tests passed (98.9% - 1 expected limitation)
 
 ## Environment Setup
