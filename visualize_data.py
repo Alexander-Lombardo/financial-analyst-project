@@ -1100,6 +1100,250 @@ def create_expense_breakdown_chart(data):
     return fig
 
 
+def create_ebitda_bridge_waterfall(data):
+    """Chart 15: EBITDA Bridge Waterfall (Phase 7)
+
+    Waterfall chart showing how revenue flows down to EBITDA by subtracting
+    each major expense category: COGS, SG&A, Other Operating Expenses.
+    Shows quarterly data (Q1 2022 - Q3 2025) including calculated Q4.
+    """
+    periods = data['periods']
+
+    # Extract metrics
+    revenue = data['metrics']['revenue']['net_sales_billion']
+    cogs = data['metrics']['operating_expenses']['cost_of_sales_billion']
+    sga = data['metrics']['operating_expenses']['sga_expense_billion']
+    other_exp = data['metrics']['operating_expenses']['other_operating_expenses_billion']
+    da = data['metrics']['operating_expenses']['depreciation_amortization_billion']
+    ebitda = data['metrics']['operating_expenses']['ebitda_billion']
+
+    # Step 1: Collect quarterly data from 10-Q filings (2022 onwards)
+    quarterly_data = []
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            if all([revenue[i], cogs[i], sga[i], other_exp[i], da[i]]):
+                quarterly_data.append({
+                    'period': period['period'],
+                    'fiscal_year': period['fiscal_year'],
+                    'revenue': revenue[i],
+                    'cogs': cogs[i],
+                    'sga': sga[i],
+                    'other': other_exp[i],
+                    'da': da[i],
+                    'ebitda': ebitda[i] if ebitda[i] else revenue[i] - cogs[i] - sga[i] - other_exp[i] + da[i]
+                })
+
+    # Step 2: Calculate Q4 from annual 10-K reports
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1 = q2 = q3 = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1 = q
+                    elif 'Q2' in q['period']:
+                        q2 = q
+                    elif 'Q3' in q['period']:
+                        q3 = q
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if all([q1, q2, q3, revenue[i], cogs[i], sga[i], other_exp[i], da[i]]):
+                q4_revenue = revenue[i] - (q1['revenue'] + q2['revenue'] + q3['revenue'])
+                q4_cogs = cogs[i] - (q1['cogs'] + q2['cogs'] + q3['cogs'])
+                q4_sga = sga[i] - (q1['sga'] + q2['sga'] + q3['sga'])
+                q4_other = other_exp[i] - (q1['other'] + q2['other'] + q3['other'])
+                q4_da = da[i] - (q1['da'] + q2['da'] + q3['da'])
+                q4_ebitda = q4_revenue - q4_cogs - q4_sga - q4_other + q4_da
+
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'revenue': q4_revenue,
+                    'cogs': q4_cogs,
+                    'sga': q4_sga,
+                    'other': q4_other,
+                    'da': q4_da,
+                    'ebitda': q4_ebitda
+                })
+
+    # Step 3: Sort chronologically
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        quarter_map = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4}
+        for q_str, q_num in quarter_map.items():
+            if q_str in period:
+                return (year, q_num)
+        return (year, 0)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Create interactive waterfall charts for all quarters with dropdown
+    if not quarterly_data:
+        print("⚠️  No quarterly data available for EBITDA bridge")
+        return None
+
+    x_labels = [
+        'Revenue<br>(Starting Point)',
+        'Less: COGS<br>(Cost of Sales)',
+        'Less: SG&A<br>(Admin Expenses)',
+        'Less: Other<br>(Operating Exp)',
+        'Add Back: D&A<br>(Non-Cash)',
+        'EBITDA<br>(Final Result)'
+    ]
+
+    measure_types = [
+        'absolute',  # Revenue
+        'relative',  # -COGS
+        'relative',  # -SG&A
+        'relative',  # -Other
+        'relative',  # +D&A
+        'total'      # EBITDA
+    ]
+
+    # Create a figure with traces for each quarter
+    fig = go.Figure()
+
+    # Add a waterfall trace for each quarter
+    for idx, q in enumerate(quarterly_data):
+        # Calculate values
+        y_values = [
+            q['revenue'],
+            -q['cogs'],
+            -q['sga'],
+            -q['other'],
+            q['da'],
+            q['ebitda']
+        ]
+
+        # Calculate percentages of revenue
+        cogs_pct = (q['cogs'] / q['revenue']) * 100
+        sga_pct = (q['sga'] / q['revenue']) * 100
+        other_pct = (q['other'] / q['revenue']) * 100
+        da_pct = (q['da'] / q['revenue']) * 100
+        ebitda_pct = (q['ebitda'] / q['revenue']) * 100
+
+        # Create text labels with both dollar values and percentages
+        text_labels = [
+            f"${q['revenue']:.2f}B",
+            f"-${q['cogs']:.2f}B ({cogs_pct:.1f}%)",
+            f"-${q['sga']:.2f}B ({sga_pct:.1f}%)",
+            f"-${q['other']:.2f}B ({other_pct:.1f}%)",
+            f"+${q['da']:.2f}B ({da_pct:.1f}%)",
+            f"${q['ebitda']:.2f}B ({ebitda_pct:.1f}%)"
+        ]
+
+        # Add waterfall trace
+        fig.add_trace(go.Waterfall(
+            name=q['period'],
+            x=x_labels,
+            y=y_values,
+            measure=measure_types,
+            text=text_labels,
+            textposition="outside",
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+            increasing={"marker": {"color": "#27AE60"}},
+            decreasing={"marker": {"color": "#E74C3C"}},
+            totals={"marker": {"color": "#3498DB"}},
+            visible=(idx == len(quarterly_data) - 1)  # Only show latest quarter initially
+        ))
+
+    # Create dropdown menu buttons (reverse order for most recent first)
+    buttons = []
+    for idx, q in enumerate(reversed(quarterly_data)):
+        actual_idx = len(quarterly_data) - 1 - idx  # Map reversed index to actual data index
+        visible_array = [False] * len(quarterly_data)
+        visible_array[actual_idx] = True
+        buttons.append({
+            'label': q['period'],
+            'method': 'update',
+            'args': [
+                {'visible': visible_array},
+                {
+                    'title': {
+                        'text': f"Target: EBITDA Bridge Waterfall ({q['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'y': 0.97,
+                        'yanchor': 'top'
+                    }
+                }
+            ]
+        })
+
+    fig.update_layout(
+        title={
+            'text': f"Target: EBITDA Bridge Waterfall ({quarterly_data[-1]['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.97,
+            'yanchor': 'top'
+        },
+        xaxis={
+            'title': {
+                'text': "Flow: Revenue → Operating Expenses → EBITDA",
+                'font': {'size': 14, 'color': '#555'}
+            },
+            'tickfont': {'size': 12}
+        },
+        yaxis={
+            'title': {
+                'text': "$ Billions",
+                'font': {'size': 14}
+            },
+            'tickprefix': '$',
+            'ticksuffix': 'B',
+            'gridcolor': '#E5E5E5'
+        },
+        height=700,
+        hovermode='x unified',
+        showlegend=False,
+        plot_bgcolor='white',
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.17,
+            'xanchor': 'left',
+            'y': 1.12,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': '#BDBDBD',
+            'borderwidth': 1
+        }],
+        annotations=[
+            {
+                'text': 'Select Quarter:',
+                'x': 0.01,
+                'xref': 'paper',
+                'y': 1.12,
+                'yref': 'paper',
+                'align': 'left',
+                'showarrow': False,
+                'font': {'size': 12, 'color': '#333'}
+            },
+            {
+                'text': 'RED bars = expenses reducing profit  |  GREEN bar = non-cash D&A added back  |  BLUE bars = totals',
+                'x': 0.5,
+                'xref': 'paper',
+                'y': -0.15,
+                'yref': 'paper',
+                'xanchor': 'center',
+                'showarrow': False,
+                'font': {'size': 11, 'color': '#666'}
+            }
+        ],
+        margin=dict(t=120, b=100, l=80, r=40)
+    )
+
+    fig.write_html("output/chart_ebitda_bridge.html")
+    print("✅ Chart 15 created: output/chart_ebitda_bridge.html")
+    return fig
+
+
 def create_margin_bridge_waterfall(data):
     """Chart 6: Operating Margin Bridge (FY2022 → Q3 2025)
 
@@ -1315,12 +1559,13 @@ def main():
     create_earnings_quality_chart(data)  # Phase 4
     create_revenue_netincome_longterm_chart(data)  # Chart 12
     create_revenue_netincome_annual_chart(data)  # Chart 13
-    create_expense_breakdown_chart(data)  # NEW - Chart 14 (Phase 6)
+    create_expense_breakdown_chart(data)  # Chart 14 (Phase 6)
+    create_ebitda_bridge_waterfall(data)  # NEW - Chart 15 (Phase 7)
     create_margin_bridge_waterfall(data)
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 14 visualizations created in output/ directory")
+    print("\n✅ All 15 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -1332,7 +1577,8 @@ def main():
     print("     - chart_earnings_quality.html (Phase 4)")
     print("     - chart_revenue_netincome_longterm.html (Chart 12)")
     print("     - chart_revenue_netincome_annual.html (Chart 13)")
-    print("     - chart_expense_breakdown.html (NEW - Chart 14 - Phase 6)")
+    print("     - chart_expense_breakdown.html (Chart 14 - Phase 6)")
+    print("     - chart_ebitda_bridge.html (NEW - Chart 15 - Phase 7)")
     print("     - chart_margin_bridge.html (Phase 4)")
     print("     - chart_risk_trends.html (Phase 4)")
     print("     - chart_risk_heatmap_grid.html (Phase 4)")

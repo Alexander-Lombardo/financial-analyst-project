@@ -295,7 +295,10 @@ class TargetFinancialAnalyzer:
             'us-gaap:NetIncomeLoss': 'net_income',
             'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income',  # Older filings
             # Phase 6: SG&A expense for operating expense breakdown
-            'us-gaap:SellingGeneralAndAdministrativeExpense': 'sga_expense'
+            'us-gaap:SellingGeneralAndAdministrativeExpense': 'sga_expense',
+            # Phase 7: Depreciation & Amortization for EBITDA bridge
+            'us-gaap:DepreciationDepletionAndAmortization': 'depreciation_amortization',
+            'us-gaap:Depreciation': 'depreciation_amortization'  # Alternative tag
         }
 
         # Extract all XBRL tagged values
@@ -334,6 +337,17 @@ class TargetFinancialAnalyzer:
                                  vital_signs['sga_expense_billion'] -
                                  vital_signs['operating_income_billion'])
                 vital_signs['other_operating_expenses_billion'] = round(other_expenses, 3)
+
+        # Phase 7: EBITDA calculation
+        # EBITDA = Operating Income + Depreciation & Amortization
+        if 'operating_income_billion' in vital_signs and 'depreciation_amortization_billion' in vital_signs:
+            ebitda = vital_signs['operating_income_billion'] + vital_signs['depreciation_amortization_billion']
+            vital_signs['ebitda_billion'] = round(ebitda, 3)
+
+            # EBITDA margin
+            if 'net_sales_billion' in vital_signs:
+                ebitda_margin = (ebitda / vital_signs['net_sales_billion']) * 100
+                vital_signs['ebitda_margin_percent'] = round(ebitda_margin, 2)
 
         return vital_signs
 
@@ -1128,7 +1142,10 @@ class TargetFinancialAnalyzer:
                     'sga_expense_billion': [],
                     'sga_percent_of_revenue': [],
                     'other_operating_expenses_billion': [],
-                    'other_expenses_percent_of_revenue': []
+                    'other_expenses_percent_of_revenue': [],
+                    'depreciation_amortization_billion': [],  # Phase 7
+                    'ebitda_billion': [],  # Phase 7
+                    'ebitda_margin_percent': []  # Phase 7
                 }
             },
             'comparisons': {
@@ -1251,6 +1268,17 @@ class TargetFinancialAnalyzer:
                 timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue'].append(round(other_pct, 2))
             else:
                 timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue'].append(None)
+
+            # Phase 7: EBITDA metrics
+            timeseries_data['metrics']['operating_expenses']['depreciation_amortization_billion'].append(
+                vital.get('depreciation_amortization_billion')
+            )
+            timeseries_data['metrics']['operating_expenses']['ebitda_billion'].append(
+                vital.get('ebitda_billion')
+            )
+            timeseries_data['metrics']['operating_expenses']['ebitda_margin_percent'].append(
+                vital.get('ebitda_margin_percent')
+            )
 
             # Comparisons
             net_sales = vital.get('net_sales_billion')
