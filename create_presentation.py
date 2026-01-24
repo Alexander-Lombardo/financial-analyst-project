@@ -65,41 +65,45 @@ def create_target_presentation():
     # Slide 9: Cash Flows (Phase 3 Chart)
     add_cash_flows_slide(prs, timeseries_data)
 
-    # Slide 10: Q1 2025 Analysis
+    # Slide 10: Operating Expense Breakdown (Chart 14 - Phase 6)
+    add_expense_breakdown_slide(prs, timeseries_data)
+
+    # Slide 11: Q1 2025 Analysis
     add_quarter_slide(prs, data[14], data[10])
 
-    # Slide 11: Q2 2025 Analysis
+    # Slide 12: Q2 2025 Analysis
     add_quarter_slide(prs, data[15], data[10])
 
-    # Slide 12: Q3 2025 Analysis - RED FLAGS
+    # Slide 13: Q3 2025 Analysis - RED FLAGS
     add_q3_warning_slide(prs, data[16], data[10])
 
-    # Slide 13: Margin Bridge Analysis (Phase 4)
+    # Slide 14: Margin Bridge Analysis (Phase 4)
     add_margin_bridge_slide(prs, timeseries_data, full_data)
 
-    # Slide 14: Risk Heatmap (Phase 4)
+    # Slide 15: Risk Heatmap (Phase 4)
     add_risk_heatmap_slide(prs, full_data)
 
-    # Slide 15: Debt & Leverage Analysis
+    # Slide 16: Debt & Leverage Analysis
     add_debt_analysis_slide(prs)
 
-    # Slide 16: Key Risks & Recommendations
+    # Slide 17: Key Risks & Recommendations
     add_recommendations_slide(prs, data)
 
     # Save presentation
     output_path = 'output/Target_Financial_Analysis.pptx'
     prs.save(output_path)
     print(f"✅ Presentation created: {output_path}")
-    print("   16 slides total including:")
+    print("   17 slides total including:")
     print("     • Investment Thesis slide (Phase 4)")
     print("     • Revenue vs Inventory Growth (Phase 3)")
     print("     • Operating Margin Waterfall (Phase 3)")
     print("     • Inventory Efficiency (Phase 3)")
     print("     • Debt Health (Phase 3)")
     print("     • Cash Flows (Phase 3)")
+    print("     • Operating Expense Breakdown (Chart 14 - Phase 6)")
     print("     • Margin Bridge Analysis (Phase 4)")
     print("     • Risk Heatmap (Phase 4)")
-    print("     • Links to all 8 interactive Plotly charts ✅")
+    print("     • Links to all 14 interactive Plotly charts ✅")
     return output_path
 
 
@@ -903,6 +907,169 @@ def add_cash_flows_slide(prs, timeseries_data):
         else:
             p.text = "🚨 Negative operating cash flow requires immediate attention"
             p.font.color.rgb = RGBColor(255, 0, 0)
+        p.font.size = Pt(13)
+        p.font.bold = True
+
+
+def add_expense_breakdown_slide(prs, timeseries_data):
+    """Add Operating Expense Breakdown slide (Chart 14 - Phase 6)."""
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+
+    # Title
+    title_box = slide.shapes.add_textbox(
+        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
+    )
+    title_frame = title_box.text_frame
+    title = title_frame.paragraphs[0]
+    title.text = "Operating Expense Breakdown"
+    title.font.size = Pt(28)
+    title.font.bold = True
+
+    # Instruction text with hyperlink
+    instruction_box = slide.shapes.add_textbox(
+        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
+    )
+    instruction_frame = instruction_box.text_frame
+    p = instruction_frame.paragraphs[0]
+    p.text = "100% Stacked Bar Chart showing what's eating into margins:"
+    p.font.size = Pt(14)
+    p.space_after = Pt(6)
+
+    # Add clickable hyperlink
+    p = instruction_frame.add_paragraph()
+    p.text = "📊 Click to view: "
+    p.font.size = Pt(14)
+
+    # Get absolute path to the chart file
+    chart_path = Path("output/chart_expense_breakdown.html").resolve()
+
+    run = p.add_run()
+    run.text = "Operating Expense Breakdown Interactive Chart"
+    run.font.size = Pt(14)
+    run.font.color.rgb = RGBColor(0, 0, 255)
+    run.font.underline = True
+    run.hyperlink.address = str(chart_path)
+
+    p.space_after = Pt(12)
+
+    # Summary bullets with key insights
+    summary_box = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
+    )
+    summary_frame = summary_box.text_frame
+
+    # Get expense metrics
+    cogs_pct = timeseries_data['metrics']['operating_expenses']['cogs_percent_of_revenue']
+    sga_pct = timeseries_data['metrics']['operating_expenses']['sga_percent_of_revenue']
+    other_pct = timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue']
+    oi_pct = timeseries_data['metrics']['margins']['operating_margin_percent']
+    periods = timeseries_data['periods']
+
+    # Find latest quarterly data
+    latest_q_idx = None
+    for i in range(len(periods) - 1, -1, -1):
+        if periods[i]['filing_type'] == '10-Q' and all([cogs_pct[i], sga_pct[i], other_pct[i], oi_pct[i]]):
+            latest_q_idx = i
+            break
+
+    # Find FY2024 baseline
+    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
+
+    if latest_q_idx is not None and fy2024_idx is not None:
+        latest_period = periods[latest_q_idx]['period']
+
+        # Latest breakdown
+        latest_cogs = cogs_pct[latest_q_idx]
+        latest_sga = sga_pct[latest_q_idx]
+        latest_other = other_pct[latest_q_idx]
+        latest_oi = oi_pct[latest_q_idx]
+
+        # Baseline breakdown
+        baseline_cogs = cogs_pct[fy2024_idx]
+        baseline_sga = sga_pct[fy2024_idx]
+        baseline_oi = oi_pct[fy2024_idx]
+
+        p = summary_frame.paragraphs[0]
+        p.text = f"Revenue Breakdown ({latest_period}):"
+        p.font.size = Pt(16)
+        p.font.bold = True
+        p.space_after = Pt(8)
+
+        # Each expense component
+        p = summary_frame.add_paragraph()
+        p.text = f"• COGS: {latest_cogs:.2f}% of revenue"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(231, 76, 60)  # Red
+
+        p = summary_frame.add_paragraph()
+        p.text = f"• SG&A: {latest_sga:.2f}% of revenue"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(155, 89, 182)  # Purple
+
+        p = summary_frame.add_paragraph()
+        p.text = f"• Other Operating Expenses: {latest_other:.2f}% of revenue"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(243, 156, 18)  # Orange
+
+        p = summary_frame.add_paragraph()
+        p.text = f"• Operating Income: {latest_oi:.2f}% of revenue"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(39, 174, 96)  # Green
+        p.font.bold = True
+        p.space_after = Pt(12)
+
+        # Changes vs baseline
+        p = summary_frame.add_paragraph()
+        p.text = "Changes vs FY2024 Baseline:"
+        p.font.size = Pt(14)
+        p.font.bold = True
+        p.space_after = Pt(6)
+
+        sga_change = latest_sga - baseline_sga
+        cogs_change = latest_cogs - baseline_cogs
+        oi_change = latest_oi - baseline_oi
+
+        # SG&A trend
+        p = summary_frame.add_paragraph()
+        sga_emoji = "⚠️" if sga_change > 0 else "✅"
+        p.text = f"{sga_emoji} SG&A: {sga_change:+.2f}pp"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(255, 0, 0) if sga_change > 0 else RGBColor(0, 128, 0)
+        p.level = 1
+
+        # COGS trend
+        p = summary_frame.add_paragraph()
+        cogs_emoji = "⚠️" if cogs_change > 0 else "✅"
+        p.text = f"{cogs_emoji} COGS: {cogs_change:+.2f}pp"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(255, 0, 0) if cogs_change > 0 else RGBColor(0, 128, 0)
+        p.level = 1
+
+        # Operating Income trend
+        p = summary_frame.add_paragraph()
+        oi_emoji = "✅" if oi_change > 0 else "⚠️"
+        p.text = f"{oi_emoji} Operating Income: {oi_change:+.2f}pp"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(0, 128, 0) if oi_change > 0 else RGBColor(255, 0, 0)
+        p.font.bold = True
+        p.level = 1
+        p.space_after = Pt(12)
+
+        # Key insight
+        p = summary_frame.add_paragraph()
+        if sga_change > 0.5:
+            p.text = "🚨 SG&A growing faster than revenue - primary margin pressure"
+            p.font.color.rgb = RGBColor(255, 0, 0)
+        elif cogs_change > 0.5:
+            p.text = "⚠️ COGS efficiency deteriorating - supply chain or pricing pressure"
+            p.font.color.rgb = RGBColor(255, 140, 0)
+        elif oi_change > 0:
+            p.text = "✅ Operating margin expanding - effective cost management"
+            p.font.color.rgb = RGBColor(0, 128, 0)
+        else:
+            p.text = "Expense structure monitoring recommended"
+            p.font.color.rgb = RGBColor(100, 100, 100)
         p.font.size = Pt(13)
         p.font.bold = True
 

@@ -1,6 +1,181 @@
 {
   "filings": [
     {
+      "period": "FY2015",
+      "filing_type": "10-K",
+      "fiscal_year": 2015,
+      "fiscal_quarter": null,
+      "vital_signs": {
+        "net_sales_billion": 71.279,
+        "cost_of_sales_billion": 50.039,
+        "interest_expense_billion": 1.049,
+        "operating_cash_flow_billion": 6.52,
+        "investing_cash_flow_billion": 0.508,
+        "net_income_billion": 1.971,
+        "sga_expense_billion": 14.465,
+        "gross_margin_percent": 29.8,
+        "net_profit_margin_percent": 2.77,
+        "sga_percent_of_revenue": 20.29
+      },
+      "comparable_sales": {},
+      "inventory_metrics": {},
+      "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 6.52,
+        "operating_cash_flow_margin_percent": 9.15,
+        "investing_cash_flow_billion": 0.508
+      },
+      "strategic_promise": {
+        "top_priorities": [],
+        "top_risks": []
+      },
+      "risk_flags": []
+    },
+    {
+      "period": "FY2016",
+      "filing_type": "10-K",
+      "fiscal_year": 2016,
+      "fiscal_quarter": null,
+      "vital_signs": {
+        "net_sales_billion": 72.618,
+        "cost_of_sales_billion": 51.278,
+        "interest_expense_billion": 0.882,
+        "operating_cash_flow_billion": 4.465,
+        "investing_cash_flow_billion": 0.508,
+        "net_income_billion": 3.363,
+        "sga_expense_billion": 14.676,
+        "gross_margin_percent": 29.39,
+        "net_profit_margin_percent": 4.63,
+        "sga_percent_of_revenue": 20.21
+      },
+      "comparable_sales": {},
+      "inventory_metrics": {},
+      "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 4.465,
+        "operating_cash_flow_margin_percent": 6.15,
+        "investing_cash_flow_billion": 0.508
+      },
+      "strategic_promise": {
+        "top_priorities": [],
+        "top_risks": []
+      },
+      "risk_flags": []
+    },
+    {
+      "period": "FY2017",
+      "filing_type": "10-K",
+      "fiscal_year": 2017,
+      "fiscal_quarter": null,
+      "vital_signs": {
+        "net_sales_billion": 73.785,
+        "cost_of_sales_billion": 52.241,
+        "interest_expense_billion": 0.607,
+        "operating_cash_flow_billion": 5.958,
+        "investing_cash_flow_billion": 0.508,
+        "net_income_billion": 3.363,
+        "sga_expense_billion": 14.665,
+        "gross_margin_percent": 29.2,
+        "net_profit_margin_percent": 4.56,
+        "sga_percent_of_revenue": 19.88
+      },
+      "comparable_sales": {},
+      "inventory_metrics": {},
+      "debt_metrics": {},
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 5.958,
+        "operating_cash_flow_margin_percent": 8.07,
+        "investing_cash_flow_billion": 0.508
+      },
+      "strategic_promise": {
+        "top_priorities": [],
+        "top_risks": []
+      },
+      "risk_flags": []
+    },
+    {
+      "period": "FY2018",
+      "filing_type": "10-K",
+      "fiscal_year": 2018,
+      "fiscal_quarter": null,
+      "vital_signs": {
+        "net_sales_billion": 70.271,
+        "cost_of_sales_billion": 49.145,
+        "operating_income_billion": 4.864,
+        "interest_expense_billion": 0.991,
+        "operating_cash_flow_billion": 5.444,
+        "net_income_billion": 2.734,
+        "sga_expense_billion": 14.217,
+        "gross_margin_percent": 30.06,
+        "operating_margin_percent": 6.92,
+        "net_profit_margin_percent": 3.89,
+        "sga_percent_of_revenue": 20.23,
+        "other_operating_expenses_billion": 2.045
+      },
+      "comparable_sales": {},
+      "inventory_metrics": {},
+      "debt_metrics": {
+        "interest_coverage_ratio": 4.91,
+        "interest_expense_million": 991.0,
+        "operating_income_million": 4864.0
+      },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 5.444,
+        "operating_cash_flow_margin_percent": 7.75
+      },
+      "strategic_promise": {
+        "top_priorities": [],
+        "top_risks": []
+      },
+      "risk_flags": []
+    },
+    {
+      "period": "FY2019",
+      "filing_type": "10-K",
+      "fiscal_year": 2019,
+      "fiscal_quarter": null,
+      "vital_signs": {
+        "net_sales_billion": 77.13,
+        "cost_of_sales_billion": 54.864,
+        "operating_income_billion": 4.658,
+        "inventory_billion": 8.992,
+        "interest_expense_billion": 0.477,
+        "long_term_debt_billion": 2.205,
+        "operating_cash_flow_billion": 7.117,
+        "investing_cash_flow_billion": 2.944,
+        "financing_cash_flow_billion": 3.152,
+        "net_income_billion": 3.281,
+        "sga_expense_billion": 16.233,
+        "gross_margin_percent": 28.87,
+        "operating_margin_percent": 6.04,
+        "net_profit_margin_percent": 4.25,
+        "sga_percent_of_revenue": 21.05,
+        "other_operating_expenses_billion": 1.375
+      },
+      "comparable_sales": {},
+      "inventory_metrics": {
+        "inventory_turnover_ratio": 6.1,
+        "days_sales_of_inventory": 59.8
+      },
+      "debt_metrics": {
+        "interest_coverage_ratio": 9.77,
+        "interest_expense_million": 477.0,
+        "operating_income_million": 4658.0,
+        "total_debt_billion": 2.21
+      },
+      "cashflow_metrics": {
+        "operating_cash_flow_billion": 7.117,
+        "operating_cash_flow_margin_percent": 9.23,
+        "investing_cash_flow_billion": 2.944,
+        "financing_cash_flow_billion": 3.152
+      },
+      "strategic_promise": {
+        "top_priorities": [],
+        "top_risks": []
+      },
+      "risk_flags": []
+    },
+    {
       "period": "FY2020",
       "filing_type": "10-K",
       "fiscal_year": 2020,
@@ -15,8 +190,13 @@
         "operating_cash_flow_billion": 10.525,
         "investing_cash_flow_billion": 2.591,
         "financing_cash_flow_billion": 2.0,
+        "net_income_billion": 4.368,
+        "sga_expense_billion": 18.615,
         "gross_margin_percent": 28.38,
-        "operating_margin_percent": 7.08
+        "operating_margin_percent": 7.08,
+        "net_profit_margin_percent": 4.73,
+        "sga_percent_of_revenue": 20.15,
+        "other_operating_expenses_billion": 1.069
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -56,8 +236,13 @@
         "operating_cash_flow_billion": 8.625,
         "investing_cash_flow_billion": 3.154,
         "financing_cash_flow_billion": 8.071,
+        "net_income_billion": 6.946,
+        "sga_expense_billion": 19.752,
         "gross_margin_percent": 28.34,
-        "operating_margin_percent": 8.55
+        "operating_margin_percent": 8.55,
+        "net_profit_margin_percent": 6.64,
+        "sga_percent_of_revenue": 18.88,
+        "other_operating_expenses_billion": 0.95
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -99,9 +284,12 @@
         "investing_cash_flow_billion": 5.504,
         "financing_cash_flow_billion": 2.196,
         "net_income_billion": 2.78,
+        "sga_expense_billion": 20.658,
         "gross_margin_percent": 23.57,
         "operating_margin_percent": 3.58,
-        "net_profit_margin_percent": 2.58
+        "net_profit_margin_percent": 2.58,
+        "sga_percent_of_revenue": 19.2,
+        "other_operating_expenses_billion": 0.853
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -142,9 +330,12 @@
         "investing_cash_flow_billion": 0.948,
         "financing_cash_flow_billion": 2.457,
         "net_income_billion": 1.009,
+        "sga_expense_billion": 4.762,
         "gross_margin_percent": 25.65,
         "operating_margin_percent": 5.42,
         "net_profit_margin_percent": 4.06,
+        "sga_percent_of_revenue": 19.18,
+        "other_operating_expenses_billion": 0.261,
         "vs_baseline": {
           "operating_margin_change": 1.84,
           "operating_margin_trend": "improving",
@@ -189,9 +380,12 @@
         "investing_cash_flow_billion": 2.518,
         "financing_cash_flow_billion": 2.229,
         "net_income_billion": 0.183,
+        "sga_expense_billion": 5.002,
         "gross_margin_percent": 21.48,
         "operating_margin_percent": 1.25,
         "net_profit_margin_percent": 0.71,
+        "sga_percent_of_revenue": 19.5,
+        "other_operating_expenses_billion": 0.188,
         "vs_baseline": {
           "operating_margin_change": -2.33,
           "operating_margin_trend": "declining",
@@ -238,9 +432,12 @@
         "investing_cash_flow_billion": 4.303,
         "financing_cash_flow_billion": 1.206,
         "net_income_billion": 0.712,
+        "sga_expense_billion": 5.219,
         "gross_margin_percent": 24.66,
         "operating_margin_percent": 3.91,
         "net_profit_margin_percent": 2.73,
+        "sga_percent_of_revenue": 19.98,
+        "other_operating_expenses_billion": 0.201,
         "vs_baseline": {
           "operating_margin_change": 0.33,
           "operating_margin_trend": "improving",
@@ -287,9 +484,12 @@
         "investing_cash_flow_billion": 4.76,
         "financing_cash_flow_billion": 2.285,
         "net_income_billion": 4.138,
+        "sga_expense_billion": 21.554,
         "gross_margin_percent": 26.53,
         "operating_margin_percent": 5.39,
-        "net_profit_margin_percent": 3.91
+        "net_profit_margin_percent": 3.91,
+        "sga_percent_of_revenue": 20.37,
+        "other_operating_expenses_billion": 0.806
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -332,9 +532,12 @@
         "investing_cash_flow_billion": 1.602,
         "financing_cash_flow_billion": 0.571,
         "net_income_billion": 0.95,
+        "sga_expense_billion": 5.025,
         "gross_margin_percent": 26.3,
         "operating_margin_percent": 5.32,
         "net_profit_margin_percent": 3.81,
+        "sga_percent_of_revenue": 20.14,
+        "other_operating_expenses_billion": 0.209,
         "vs_baseline": {
           "operating_margin_change": -0.07,
           "operating_margin_trend": "declining",
@@ -384,9 +587,12 @@
         "investing_cash_flow_billion": 2.821,
         "financing_cash_flow_billion": 1.189,
         "net_income_billion": 0.835,
+        "sga_expense_billion": 5.184,
         "gross_margin_percent": 27.01,
         "operating_margin_percent": 4.91,
         "net_profit_margin_percent": 3.42,
+        "sga_percent_of_revenue": 21.26,
+        "other_operating_expenses_billion": 0.205,
         "vs_baseline": {
           "operating_margin_change": -0.48,
           "operating_margin_trend": "declining",
@@ -436,9 +642,12 @@
         "investing_cash_flow_billion": 3.91,
         "financing_cash_flow_billion": 1.741,
         "net_income_billion": 0.971,
+        "sga_expense_billion": 5.316,
         "gross_margin_percent": 27.42,
         "operating_margin_percent": 5.27,
         "net_profit_margin_percent": 3.88,
+        "sga_percent_of_revenue": 21.26,
+        "other_operating_expenses_billion": 0.222,
         "vs_baseline": {
           "operating_margin_change": -0.12,
           "operating_margin_trend": "declining",
@@ -489,9 +698,12 @@
         "investing_cash_flow_billion": 2.86,
         "financing_cash_flow_billion": 3.55,
         "net_income_billion": 4.091,
+        "sga_expense_billion": 21.969,
         "gross_margin_percent": 28.21,
         "operating_margin_percent": 5.22,
-        "net_profit_margin_percent": 3.84
+        "net_profit_margin_percent": 3.84,
+        "sga_percent_of_revenue": 20.62,
+        "other_operating_expenses_billion": 2.529
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -529,9 +741,12 @@
         "investing_cash_flow_billion": 0.671,
         "financing_cash_flow_billion": 0.631,
         "net_income_billion": 0.942,
+        "sga_expense_billion": 5.168,
         "gross_margin_percent": 27.73,
         "operating_margin_percent": 5.37,
         "net_profit_margin_percent": 3.9,
+        "sga_percent_of_revenue": 21.41,
+        "other_operating_expenses_billion": 0.23,
         "vs_baseline": {
           "operating_margin_change": 0.15,
           "operating_margin_trend": "improving",
@@ -582,9 +797,12 @@
         "investing_cash_flow_billion": 1.305,
         "financing_cash_flow_billion": 2.342,
         "net_income_billion": 1.192,
+        "sga_expense_billion": 5.392,
         "gross_margin_percent": 28.86,
         "operating_margin_percent": 6.53,
         "net_profit_margin_percent": 4.76,
+        "sga_percent_of_revenue": 21.55,
+        "other_operating_expenses_billion": 0.195,
         "vs_baseline": {
           "operating_margin_change": 1.31,
           "operating_margin_trend": "improving",
@@ -631,9 +849,12 @@
         "investing_cash_flow_billion": 1.942,
         "financing_cash_flow_billion": 2.508,
         "net_income_billion": 0.854,
+        "sga_expense_billion": 5.486,
         "gross_margin_percent": 27.16,
         "operating_margin_percent": 4.63,
         "net_profit_margin_percent": 3.39,
+        "sga_percent_of_revenue": 21.75,
+        "other_operating_expenses_billion": 0.199,
         "vs_baseline": {
           "operating_margin_change": -0.59,
           "operating_margin_trend": "declining",
@@ -681,9 +902,12 @@
         "investing_cash_flow_billion": 0.787,
         "financing_cash_flow_billion": 1.363,
         "net_income_billion": 1.036,
+        "sga_expense_billion": 4.591,
         "gross_margin_percent": 28.17,
         "operating_margin_percent": 6.17,
         "net_profit_margin_percent": 4.34,
+        "sga_percent_of_revenue": 19.25,
+        "other_operating_expenses_billion": 0.655,
         "vs_baseline": {
           "operating_margin_change": 0.95,
           "operating_margin_trend": "improving",
@@ -732,9 +956,12 @@
         "investing_cash_flow_billion": 1.853,
         "financing_cash_flow_billion": 0.926,
         "net_income_billion": 0.935,
+        "sga_expense_billion": 5.359,
         "gross_margin_percent": 28.99,
         "operating_margin_percent": 5.22,
         "net_profit_margin_percent": 3.71,
+        "sga_percent_of_revenue": 21.26,
+        "other_operating_expenses_billion": 0.632,
         "vs_baseline": {
           "operating_margin_change": 0.0,
           "operating_margin_trend": "declining",
@@ -782,9 +1009,12 @@
         "investing_cash_flow_billion": 2.79,
         "financing_cash_flow_billion": 1.635,
         "net_income_billion": 0.689,
+        "sga_expense_billion": 5.536,
         "gross_margin_percent": 28.23,
         "operating_margin_percent": 3.75,
         "net_profit_margin_percent": 2.73,
+        "sga_percent_of_revenue": 21.91,
+        "other_operating_expenses_billion": 0.649,
         "vs_baseline": {
           "operating_margin_change": -1.47,
           "operating_margin_trend": "declining",

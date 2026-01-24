@@ -293,7 +293,9 @@ class TargetFinancialAnalyzer:
             'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow',
             # Phase 4: Net Income for profit margin calculation
             'us-gaap:NetIncomeLoss': 'net_income',
-            'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income'  # Older filings
+            'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income',  # Older filings
+            # Phase 6: SG&A expense for operating expense breakdown
+            'us-gaap:SellingGeneralAndAdministrativeExpense': 'sga_expense'
         }
 
         # Extract all XBRL tagged values
@@ -318,6 +320,20 @@ class TargetFinancialAnalyzer:
         if 'net_income_billion' in vital_signs and 'net_sales_billion' in vital_signs:
             net_profit_margin = (vital_signs['net_income_billion'] / vital_signs['net_sales_billion']) * 100
             vital_signs['net_profit_margin_percent'] = round(net_profit_margin, 2)
+
+        # Phase 6: SG&A metrics
+        if 'sga_expense_billion' in vital_signs and 'net_sales_billion' in vital_signs:
+            sga_percent = (vital_signs['sga_expense_billion'] / vital_signs['net_sales_billion']) * 100
+            vital_signs['sga_percent_of_revenue'] = round(sga_percent, 2)
+
+            # Calculate Other Operating Expenses (derived)
+            # Other = Net Sales - COGS - SG&A - Operating Income
+            if 'cost_of_sales_billion' in vital_signs and 'operating_income_billion' in vital_signs:
+                other_expenses = (vital_signs['net_sales_billion'] -
+                                 vital_signs['cost_of_sales_billion'] -
+                                 vital_signs['sga_expense_billion'] -
+                                 vital_signs['operating_income_billion'])
+                vital_signs['other_operating_expenses_billion'] = round(other_expenses, 3)
 
         return vital_signs
 
@@ -1105,6 +1121,14 @@ class TargetFinancialAnalyzer:
                     'financing_cash_flow_billion': [],
                     'operating_cash_flow_margin_percent': [],
                     'net_income_billion': []  # For earnings quality analysis
+                },
+                'operating_expenses': {
+                    'cost_of_sales_billion': [],
+                    'cogs_percent_of_revenue': [],
+                    'sga_expense_billion': [],
+                    'sga_percent_of_revenue': [],
+                    'other_operating_expenses_billion': [],
+                    'other_expenses_percent_of_revenue': []
                 }
             },
             'comparisons': {
@@ -1200,6 +1224,33 @@ class TargetFinancialAnalyzer:
             timeseries_data['metrics']['cash_flows']['net_income_billion'].append(
                 vital.get('net_income_billion')
             )
+
+            # Operating expenses (Phase 6)
+            timeseries_data['metrics']['operating_expenses']['cost_of_sales_billion'].append(
+                vital.get('cost_of_sales_billion')
+            )
+            timeseries_data['metrics']['operating_expenses']['sga_expense_billion'].append(
+                vital.get('sga_expense_billion')
+            )
+            timeseries_data['metrics']['operating_expenses']['sga_percent_of_revenue'].append(
+                vital.get('sga_percent_of_revenue')
+            )
+            timeseries_data['metrics']['operating_expenses']['other_operating_expenses_billion'].append(
+                vital.get('other_operating_expenses_billion')
+            )
+
+            # Calculate COGS and Other percentages
+            if vital.get('cost_of_sales_billion') and vital.get('net_sales_billion'):
+                cogs_pct = (vital['cost_of_sales_billion'] / vital['net_sales_billion']) * 100
+                timeseries_data['metrics']['operating_expenses']['cogs_percent_of_revenue'].append(round(cogs_pct, 2))
+            else:
+                timeseries_data['metrics']['operating_expenses']['cogs_percent_of_revenue'].append(None)
+
+            if vital.get('other_operating_expenses_billion') and vital.get('net_sales_billion'):
+                other_pct = (vital['other_operating_expenses_billion'] / vital['net_sales_billion']) * 100
+                timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue'].append(round(other_pct, 2))
+            else:
+                timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue'].append(None)
 
             # Comparisons
             net_sales = vital.get('net_sales_billion')

@@ -899,6 +899,207 @@ def create_revenue_netincome_annual_chart(data):
     return fig
 
 
+def create_expense_breakdown_chart(data):
+    """Chart 14: Operating Expense Breakdown (100% Stacked Bar)
+
+    Shows what percentage of revenue goes to:
+    - COGS (Cost of Goods Sold)
+    - SG&A (Selling, General & Administrative)
+    - Other Operating Expenses
+    - Operating Income (profit)
+
+    100% stacked format makes it easy to identify margin compression trends.
+    """
+    periods = data['periods']
+
+    # Extract base metrics
+    revenue = data['metrics']['revenue']['net_sales_billion']
+    cogs = data['metrics']['operating_expenses']['cost_of_sales_billion']
+    sga = data['metrics']['operating_expenses']['sga_expense_billion']
+    other_exp = data['metrics']['operating_expenses']['other_operating_expenses_billion']
+
+    # Step 1: Collect quarterly data from 10-Q filings (2022 onwards)
+    quarterly_data = []
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            # Derive operating income to ensure stack = 100%
+            if all([revenue[i], cogs[i], sga[i], other_exp[i]]):
+                oi = revenue[i] - cogs[i] - sga[i] - other_exp[i]
+
+                quarterly_data.append({
+                    'period': period['period'],
+                    'fiscal_year': period['fiscal_year'],
+                    'revenue': revenue[i],
+                    'cogs': cogs[i],
+                    'sga': sga[i],
+                    'other': other_exp[i],
+                    'operating_income': oi
+                })
+
+    # Step 2: Calculate Q4 from annual 10-K reports
+    # Q4 = Annual Total - (Q1 + Q2 + Q3)
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+            annual_revenue = revenue[i]
+            annual_cogs = cogs[i]
+            annual_sga = sga[i]
+            annual_other = other_exp[i]
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1 = q2 = q3 = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1 = q
+                    elif 'Q2' in q['period']:
+                        q2 = q
+                    elif 'Q3' in q['period']:
+                        q3 = q
+
+            # Calculate Q4 = Annual - Q1 - Q2 - Q3
+            if all([q1, q2, q3, annual_revenue, annual_cogs, annual_sga, annual_other]):
+                q4_revenue = annual_revenue - (q1['revenue'] + q2['revenue'] + q3['revenue'])
+                q4_cogs = annual_cogs - (q1['cogs'] + q2['cogs'] + q3['cogs'])
+                q4_sga = annual_sga - (q1['sga'] + q2['sga'] + q3['sga'])
+                q4_other = annual_other - (q1['other'] + q2['other'] + q3['other'])
+                q4_oi = q4_revenue - q4_cogs - q4_sga - q4_other
+
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'revenue': q4_revenue,
+                    'cogs': q4_cogs,
+                    'sga': q4_sga,
+                    'other': q4_other,
+                    'operating_income': q4_oi
+                })
+
+    # Step 3: Sort chronologically
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        quarter_map = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4}
+        for q_str, q_num in quarter_map.items():
+            if q_str in period:
+                return (year, q_num)
+        return (year, 0)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Step 4: Calculate percentages for 100% stacked bar
+    quarterly_periods = []
+    cogs_pct = []
+    sga_pct = []
+    other_pct = []
+    oi_pct = []
+
+    for q in quarterly_data:
+        quarterly_periods.append(q['period'])
+
+        # Calculate percentages (each component as % of revenue)
+        if q['revenue'] and q['revenue'] > 0:
+            cogs_pct.append(round((q['cogs'] / q['revenue']) * 100, 2))
+            sga_pct.append(round((q['sga'] / q['revenue']) * 100, 2))
+            other_pct.append(round((q['other'] / q['revenue']) * 100, 2))
+            oi_pct.append(round((q['operating_income'] / q['revenue']) * 100, 2))
+        else:
+            cogs_pct.append(None)
+            sga_pct.append(None)
+            other_pct.append(None)
+            oi_pct.append(None)
+
+    # Step 5: Create stacked bar chart
+    fig = go.Figure()
+
+    # Stack order (bottom to top): Operating Income, Other, SG&A, COGS
+
+    # Bottom: Operating Income (green - what's left as profit)
+    fig.add_trace(go.Bar(
+        x=quarterly_periods,
+        y=oi_pct,
+        name='Operating Income %',
+        marker_color='#27AE60',  # Green
+        hovertemplate='<b>Operating Income</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
+    ))
+
+    # Second layer: Other Operating Expenses (orange)
+    fig.add_trace(go.Bar(
+        x=quarterly_periods,
+        y=other_pct,
+        name='Other Operating Expenses %',
+        marker_color='#F39C12',  # Orange
+        hovertemplate='<b>Other Expenses</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
+    ))
+
+    # Third layer: SG&A (purple)
+    fig.add_trace(go.Bar(
+        x=quarterly_periods,
+        y=sga_pct,
+        name='SG&A Expenses %',
+        marker_color='#9B59B6',  # Purple
+        hovertemplate='<b>SG&A</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
+    ))
+
+    # Top layer: COGS (red - largest expense)
+    fig.add_trace(go.Bar(
+        x=quarterly_periods,
+        y=cogs_pct,
+        name='Cost of Sales (COGS) %',
+        marker_color='#E74C3C',  # Red
+        hovertemplate='<b>COGS</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
+    ))
+
+    # Step 6: Configure layout
+    fig.update_layout(
+        barmode='stack',  # 100% stacked bars
+        title={
+            'text': "Target: Operating Expense Breakdown (% of Revenue)<br><sub>Quarterly Breakdown: Q1 2022 - Q3 2025</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.96,  # Moved down from 0.98
+            'yanchor': 'top'
+        },
+        xaxis_title="Quarter",
+        yaxis_title="% of Net Sales",
+        yaxis=dict(
+            range=[-5, 105],  # Allow negative values for bad quarters
+            ticksuffix='%',
+            zeroline=True,
+            zerolinewidth=2,
+            zerolinecolor='black'
+        ),
+        hovermode='x unified',
+        height=750,  # Increased from 700 for even more spacing
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.10,  # Decreased from 1.12 to move legend down
+            xanchor="right",
+            x=1,
+            traceorder='reversed'  # Show stack order: COGS at top of legend
+        ),
+        bargap=0.15,  # Space between bars
+        font=dict(size=12),
+        margin=dict(t=140, b=80)  # Increased top margin, added bottom margin
+    )
+
+    # Add annotation explaining the chart
+    fig.add_annotation(
+        text="Each bar = 100% of Revenue. Wider Operating Income (green) = better margins.",
+        xref="paper", yref="paper",
+        x=0.5, y=-0.12,
+        showarrow=False,
+        font=dict(size=10, color='gray'),
+        xanchor='center'
+    )
+
+    # Step 7: Export
+    fig.write_html("output/chart_expense_breakdown.html")
+    print("✅ Chart 14 created: output/chart_expense_breakdown.html")
+    return fig
+
+
 def create_margin_bridge_waterfall(data):
     """Chart 6: Operating Margin Bridge (FY2022 → Q3 2025)
 
@@ -1103,7 +1304,7 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 13 charts (7 from Phase 3 + 4 from Phase 4 + 2 new)
+    # Create all 14 charts (7 from Phase 3 + 4 from Phase 4 + 2 new + 1 Phase 6)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
     create_margin_analysis_chart(data)
@@ -1112,13 +1313,14 @@ def main():
     create_debt_health_chart(data)
     create_cash_flows_chart(data)
     create_earnings_quality_chart(data)  # Phase 4
-    create_revenue_netincome_longterm_chart(data)  # NEW - Chart 12
-    create_revenue_netincome_annual_chart(data)  # NEW - Chart 13
+    create_revenue_netincome_longterm_chart(data)  # Chart 12
+    create_revenue_netincome_annual_chart(data)  # Chart 13
+    create_expense_breakdown_chart(data)  # NEW - Chart 14 (Phase 6)
     create_margin_bridge_waterfall(data)
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 13 visualizations created in output/ directory")
+    print("\n✅ All 14 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -1129,7 +1331,8 @@ def main():
     print("     - chart_cash_flows.html")
     print("     - chart_earnings_quality.html (Phase 4)")
     print("     - chart_revenue_netincome_longterm.html (Chart 12)")
-    print("     - chart_revenue_netincome_annual.html (NEW - Chart 13)")
+    print("     - chart_revenue_netincome_annual.html (Chart 13)")
+    print("     - chart_expense_breakdown.html (NEW - Chart 14 - Phase 6)")
     print("     - chart_margin_bridge.html (Phase 4)")
     print("     - chart_risk_trends.html (Phase 4)")
     print("     - chart_risk_heatmap_grid.html (Phase 4)")
