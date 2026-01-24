@@ -155,6 +155,9 @@ class TargetFinancialAnalyzer:
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
 
+        # Pillar 2: Calculate liquidity metrics
+        liquidity_metrics = self._calculate_liquidity_metrics(vital_signs, period)
+
         # Phase 3: Calculate cash flow metrics
         cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
 
@@ -173,6 +176,7 @@ class TargetFinancialAnalyzer:
             "comparable_sales": comp_sales,
             "inventory_metrics": inventory_metrics,
             "debt_metrics": debt_metrics,
+            "liquidity_metrics": liquidity_metrics,
             "cashflow_metrics": cashflow_metrics,
             "strategic_promise": strategic_promise,
             "risk_flags": []
@@ -199,6 +203,9 @@ class TargetFinancialAnalyzer:
         # Phase 2: Calculate inventory and debt metrics
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
+
+        # Pillar 2: Calculate liquidity metrics
+        liquidity_metrics = self._calculate_liquidity_metrics(vital_signs, period)
 
         # Phase 3: Calculate cash flow metrics
         cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
@@ -237,6 +244,7 @@ class TargetFinancialAnalyzer:
             "comparable_sales": comp_sales,
             "inventory_metrics": inventory_metrics,
             "debt_metrics": debt_metrics,
+            "liquidity_metrics": liquidity_metrics,
             "cashflow_metrics": cashflow_metrics,
             "risk_flags": risk_flags
         }
@@ -298,7 +306,17 @@ class TargetFinancialAnalyzer:
             'us-gaap:SellingGeneralAndAdministrativeExpense': 'sga_expense',
             # Phase 7: Depreciation & Amortization for EBITDA bridge
             'us-gaap:DepreciationDepletionAndAmortization': 'depreciation_amortization',
-            'us-gaap:Depreciation': 'depreciation_amortization'  # Alternative tag
+            'us-gaap:Depreciation': 'depreciation_amortization',  # Alternative tag
+            # Pillar 2: Balance Sheet items for Liquidity & Solvency analysis
+            'us-gaap:AssetsCurrent': 'current_assets',
+            'us-gaap:LiabilitiesCurrent': 'current_liabilities',
+            'us-gaap:CashCashEquivalentsAndShortTermInvestments': 'cash_and_equivalents',
+            'us-gaap:CashAndCashEquivalentsAtCarryingValue': 'cash_and_equivalents',  # Fallback
+            'us-gaap:AccountsAndOtherReceivablesNetCurrent': 'current_receivables',
+            'us-gaap:AccountsReceivableNetCurrent': 'current_receivables',  # Fallback
+            'us-gaap:StockholdersEquity': 'stockholders_equity',
+            'us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest': 'stockholders_equity',  # Fallback
+            'us-gaap:Assets': 'total_assets'
         }
 
         # Extract all XBRL tagged values
@@ -374,25 +392,41 @@ class TargetFinancialAnalyzer:
             tags = soup.find_all('ix:nonFraction', attrs={'name': gaap_tag})
 
         if tags:
-            # Found modern format - use existing logic
-            tag = tags[0]
-            text = tag.get_text().strip().replace(',', '').replace('$', '')
+            # Iterate through all tags to find first valid numeric value
+            # (SEC filings often have multiple tags: segments, prior year, N/A values)
+            for tag in tags:
+                text = tag.get_text().strip().replace(',', '').replace('$', '')
 
-            try:
-                value = float(text) if text else None
-                if value is None:
-                    return None
+                # Skip non-numeric values (em dash, "N/A", etc.)
+                if not text or text in ['—', '–', 'N/A', 'n/a', '-']:
+                    continue
 
-                # Check for scale attribute (e.g., scale="6" means multiply by 10^6)
-                scale = tag.get('scale')
-                if scale:
-                    scale_factor = int(scale)
-                    value = value * (10 ** scale_factor)
+                try:
+                    value = float(text)
+                    if value is None:
+                        continue
 
-                # Convert from dollars to millions
-                return value / 1_000_000
-            except (ValueError, TypeError):
-                pass
+                    # Check for scale attribute (e.g., scale="6" means multiply by 10^6)
+                    scale = tag.get('scale')
+                    if scale:
+                        scale_factor = int(scale)
+                        value = value * (10 ** scale_factor)
+
+                    # Convert from dollars to millions
+                    value_in_millions = value / 1_000_000
+
+                    # Skip unreasonably small values (likely segment data or prior year)
+                    # For Target (100B+ revenue company), debt values < 100M are likely not consolidated totals
+                    if value_in_millions < 100:
+                        continue
+
+                    return value_in_millions
+                except (ValueError, TypeError):
+                    # This tag has invalid numeric format, try next tag
+                    continue
+
+            # If we got here, no valid numeric values found in any tag
+            # Fall through to METHOD 2 (legacy XML format)
 
         # METHOD 2: Legacy raw XML format (FY2015-FY2018)
         # Example: <us-gaap:SalesRevenueNet contextRef="FD2015Q4YTD" decimals="-6">73785000000</us-gaap:SalesRevenueNet>
@@ -561,8 +595,132 @@ class TargetFinancialAnalyzer:
         if long_term_debt is not None:
             total_debt = long_term_debt + short_term_debt
             debt_metrics['total_debt_billion'] = round(total_debt, 2)
+        else:
+            total_debt = None
+
+        # Pillar 2: Capital Structure & Solvency ratios
+        stockholders_equity = vital_signs.get('stockholders_equity_billion')
+        total_assets = vital_signs.get('total_assets_billion')
+        ebitda = vital_signs.get('ebitda_billion')  # Phase 7 metric
+        net_income = vital_signs.get('net_income_billion')  # Phase 3 metric
+
+        total_debt_billion = debt_metrics.get('total_debt_billion')
+
+        if total_debt_billion and stockholders_equity:
+            # 1. Debt-to-Equity Ratio = Total Debt / Stockholders' Equity
+            debt_to_equity = total_debt_billion / stockholders_equity
+            debt_metrics['debt_to_equity_ratio'] = round(debt_to_equity, 2)
+
+            # Retail benchmark: <1.0 is conservative, 1.0-2.0 is moderate, >2.0 is aggressive
+            if debt_to_equity < 1.0:
+                debt_metrics['leverage_profile'] = 'conservative'
+            elif debt_to_equity <= 2.0:
+                debt_metrics['leverage_profile'] = 'moderate'
+            else:
+                debt_metrics['leverage_profile'] = 'aggressive'
+
+        if total_debt_billion and total_assets:
+            # 2. Debt-to-Assets Ratio = Total Debt / Total Assets
+            debt_to_assets = total_debt_billion / total_assets
+            debt_metrics['debt_to_assets_ratio'] = round(debt_to_assets, 2)
+
+        if stockholders_equity and total_assets:
+            # 3. Equity Ratio = Stockholders' Equity / Total Assets
+            equity_ratio = stockholders_equity / total_assets
+            debt_metrics['equity_ratio'] = round(equity_ratio, 2)
+
+        if total_debt_billion and ebitda:
+            # 4. Debt-to-EBITDA Ratio = Total Debt / EBITDA
+            # Measures how many years of EBITDA needed to pay off debt
+            # Benchmark: <3.0 is healthy, 3.0-5.0 is moderate, >5.0 is risky
+            debt_to_ebitda = total_debt_billion / ebitda
+            debt_metrics['debt_to_ebitda_ratio'] = round(debt_to_ebitda, 2)
+
+            if debt_to_ebitda < 3.0:
+                debt_metrics['debt_to_ebitda_health'] = 'healthy'
+            elif debt_to_ebitda <= 5.0:
+                debt_metrics['debt_to_ebitda_health'] = 'moderate'
+            else:
+                debt_metrics['debt_to_ebitda_health'] = 'risky'
+
+        # Pillar 2: Return on Equity and Assets
+        if net_income and stockholders_equity:
+            # 5. ROE = (Net Income / Stockholders' Equity) × 100%
+            roe = (net_income / stockholders_equity) * 100
+            debt_metrics['return_on_equity_percent'] = round(roe, 2)
+
+        if net_income and total_assets:
+            # 6. ROA = (Net Income / Total Assets) × 100%
+            roa = (net_income / total_assets) * 100
+            debt_metrics['return_on_assets_percent'] = round(roa, 2)
 
         return debt_metrics
+
+    def _calculate_liquidity_metrics(self, vital_signs: Dict, period: str) -> Dict:
+        """
+        Calculate short-term liquidity ratios and working capital (Pillar 2).
+
+        Metrics:
+        - Current Ratio = Current Assets / Current Liabilities
+          Target: >1.5 (retail industry benchmark)
+        - Quick Ratio = (Cash + Receivables) / Current Liabilities
+          Target: >1.0 (acid test of immediate liquidity)
+        - Working Capital = Current Assets - Current Liabilities
+          Positive indicates ability to cover short-term obligations
+
+        Args:
+            vital_signs: Dict containing current_assets, current_liabilities,
+                         cash_and_equivalents, current_receivables
+            period: Period label (e.g., "Q1 2025")
+
+        Returns:
+            Dict with liquidity_metrics or empty dict if data unavailable
+        """
+        liquidity_metrics = {}
+
+        # Extract required data (values already in billions from vital_signs)
+        current_assets = vital_signs.get('current_assets_billion')
+        current_liabilities = vital_signs.get('current_liabilities_billion')
+        cash = vital_signs.get('cash_and_equivalents_billion')
+        receivables = vital_signs.get('current_receivables_billion', 0)  # May not exist
+
+        if not current_assets or not current_liabilities:
+            return {}  # Insufficient data
+
+        # 1. Current Ratio = Current Assets / Current Liabilities
+        current_ratio = current_assets / current_liabilities
+        liquidity_metrics['current_ratio'] = round(current_ratio, 2)
+
+        # Health flag (retail benchmark: >1.5 is healthy)
+        if current_ratio >= 1.5:
+            liquidity_metrics['current_ratio_health'] = 'healthy'
+        elif current_ratio >= 1.0:
+            liquidity_metrics['current_ratio_health'] = 'adequate'
+        else:
+            liquidity_metrics['current_ratio_health'] = 'warning'
+
+        # 2. Quick Ratio (Acid Test) = (Cash + Receivables) / Current Liabilities
+        if cash is not None:
+            quick_assets = cash + receivables
+            quick_ratio = quick_assets / current_liabilities
+            liquidity_metrics['quick_ratio'] = round(quick_ratio, 2)
+
+            # Health flag (benchmark: >1.0 is healthy)
+            if quick_ratio >= 1.0:
+                liquidity_metrics['quick_ratio_health'] = 'healthy'
+            elif quick_ratio >= 0.8:
+                liquidity_metrics['quick_ratio_health'] = 'adequate'
+            else:
+                liquidity_metrics['quick_ratio_health'] = 'warning'
+
+        # 3. Working Capital = Current Assets - Current Liabilities (in billions)
+        working_capital = current_assets - current_liabilities
+        liquidity_metrics['working_capital_billion'] = round(working_capital, 2)
+
+        # Trend flag (positive is healthy)
+        liquidity_metrics['working_capital_trend'] = 'positive' if working_capital > 0 else 'negative'
+
+        return liquidity_metrics
 
     def _extract_quarter_number(self, period: str) -> Optional[str]:
         """
@@ -1123,7 +1281,26 @@ class TargetFinancialAnalyzer:
                 },
                 'debt': {
                     'total_debt_billion': [],
-                    'interest_coverage_ratio': []
+                    'interest_coverage_ratio': [],
+                    # Pillar 2: Solvency ratios
+                    'debt_to_equity_ratio': [],
+                    'leverage_profile': [],
+                    'debt_to_assets_ratio': [],
+                    'equity_ratio': [],
+                    'debt_to_ebitda_ratio': [],
+                    'debt_to_ebitda_health': [],
+                    'return_on_equity_percent': [],
+                    'return_on_assets_percent': []
+                },
+                'liquidity': {
+                    'current_ratio': [],
+                    'current_ratio_health': [],
+                    'quick_ratio': [],
+                    'quick_ratio_health': [],
+                    'working_capital_billion': [],
+                    'working_capital_trend': [],
+                    'current_assets_billion': [],
+                    'current_liabilities_billion': []
                 },
                 'comparable_sales': {
                     'total_change_percent': [],
@@ -1169,6 +1346,7 @@ class TargetFinancialAnalyzer:
             vital = filing['vital_signs']
             inv_metrics = filing.get('inventory_metrics', {})
             debt_metrics = filing.get('debt_metrics', {})
+            liquidity_metrics = filing.get('liquidity_metrics', {})
             comp_sales = filing.get('comparable_sales', {})
             cashflow_metrics = filing.get('cashflow_metrics', {})
 
@@ -1215,6 +1393,58 @@ class TargetFinancialAnalyzer:
             )
             timeseries_data['metrics']['debt']['interest_coverage_ratio'].append(
                 debt_metrics.get('interest_coverage_ratio')
+            )
+
+            # Pillar 2: Solvency ratios
+            timeseries_data['metrics']['debt']['debt_to_equity_ratio'].append(
+                debt_metrics.get('debt_to_equity_ratio')
+            )
+            timeseries_data['metrics']['debt']['leverage_profile'].append(
+                debt_metrics.get('leverage_profile')
+            )
+            timeseries_data['metrics']['debt']['debt_to_assets_ratio'].append(
+                debt_metrics.get('debt_to_assets_ratio')
+            )
+            timeseries_data['metrics']['debt']['equity_ratio'].append(
+                debt_metrics.get('equity_ratio')
+            )
+            timeseries_data['metrics']['debt']['debt_to_ebitda_ratio'].append(
+                debt_metrics.get('debt_to_ebitda_ratio')
+            )
+            timeseries_data['metrics']['debt']['debt_to_ebitda_health'].append(
+                debt_metrics.get('debt_to_ebitda_health')
+            )
+            timeseries_data['metrics']['debt']['return_on_equity_percent'].append(
+                debt_metrics.get('return_on_equity_percent')
+            )
+            timeseries_data['metrics']['debt']['return_on_assets_percent'].append(
+                debt_metrics.get('return_on_assets_percent')
+            )
+
+            # Pillar 2: Liquidity metrics
+            timeseries_data['metrics']['liquidity']['current_ratio'].append(
+                liquidity_metrics.get('current_ratio')
+            )
+            timeseries_data['metrics']['liquidity']['current_ratio_health'].append(
+                liquidity_metrics.get('current_ratio_health')
+            )
+            timeseries_data['metrics']['liquidity']['quick_ratio'].append(
+                liquidity_metrics.get('quick_ratio')
+            )
+            timeseries_data['metrics']['liquidity']['quick_ratio_health'].append(
+                liquidity_metrics.get('quick_ratio_health')
+            )
+            timeseries_data['metrics']['liquidity']['working_capital_billion'].append(
+                liquidity_metrics.get('working_capital_billion')
+            )
+            timeseries_data['metrics']['liquidity']['working_capital_trend'].append(
+                liquidity_metrics.get('working_capital_trend')
+            )
+            timeseries_data['metrics']['liquidity']['current_assets_billion'].append(
+                vital.get('current_assets_billion')
+            )
+            timeseries_data['metrics']['liquidity']['current_liabilities_billion'].append(
+                vital.get('current_liabilities_billion')
             )
 
             # Comparable sales

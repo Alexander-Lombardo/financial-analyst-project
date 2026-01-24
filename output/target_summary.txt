@@ -91,6 +91,11 @@ Vital Signs:
   net_income_billion: 3.281
   sga_expense_billion: 16.233
   depreciation_amortization_billion: 2.591
+  current_assets_billion: 12.902
+  current_liabilities_billion: 14.487
+  cash_and_equivalents_billion: 2.577
+  stockholders_equity_billion: 11.833
+  total_assets_billion: 42.779
   gross_margin_percent: 28.87
   operating_margin_percent: 6.04
   net_profit_margin_percent: 4.25
@@ -116,6 +121,12 @@ Vital Signs:
   net_income_billion: 4.368
   sga_expense_billion: 18.615
   depreciation_amortization_billion: 2.5
+  current_assets_billion: 20.756
+  current_liabilities_billion: 20.125
+  cash_and_equivalents_billion: 8.511
+  current_receivables_billion: 0.631
+  stockholders_equity_billion: 14.44
+  total_assets_billion: 51.248
   gross_margin_percent: 28.38
   operating_margin_percent: 7.08
   net_profit_margin_percent: 4.73
@@ -141,6 +152,12 @@ Vital Signs:
   net_income_billion: 6.946
   sga_expense_billion: 19.752
   depreciation_amortization_billion: 2.6
+  current_assets_billion: 21.573
+  current_liabilities_billion: 21.747
+  cash_and_equivalents_billion: 5.911
+  current_receivables_billion: 0.835
+  stockholders_equity_billion: 12.827
+  total_assets_billion: 53.811
   gross_margin_percent: 28.34
   operating_margin_percent: 8.55
   net_profit_margin_percent: 6.64
@@ -159,12 +176,19 @@ Vital Signs:
   operating_income_billion: 3.848
   inventory_billion: 13.499
   interest_expense_billion: 0.478
+  long_term_debt_billion: 4.582
   operating_cash_flow_billion: 4.018
   investing_cash_flow_billion: 5.504
   financing_cash_flow_billion: 2.196
   net_income_billion: 2.78
   sga_expense_billion: 20.658
   depreciation_amortization_billion: 2.7
+  current_assets_billion: 17.846
+  current_liabilities_billion: 19.5
+  cash_and_equivalents_billion: 2.229
+  current_receivables_billion: 1.169
+  stockholders_equity_billion: 11.232
+  total_assets_billion: 53.335
   gross_margin_percent: 23.57
   operating_margin_percent: 3.58
   net_profit_margin_percent: 2.58
@@ -189,6 +213,11 @@ Vital Signs:
   net_income_billion: 1.009
   sga_expense_billion: 4.762
   depreciation_amortization_billion: 0.679
+  current_assets_billion: 17.953
+  current_liabilities_billion: 20.724
+  cash_and_equivalents_billion: 1.112
+  stockholders_equity_billion: 10.774
+  total_assets_billion: 50.842
   gross_margin_percent: 25.65
   operating_margin_percent: 5.42
   net_profit_margin_percent: 4.06
@@ -216,12 +245,17 @@ Vital Signs:
   operating_income_billion: 0.321
   inventory_billion: 15.32
   interest_expense_billion: 0.112
-  operating_cash_flow_billion: 0.047
+  operating_cash_flow_billion: 3.422
   investing_cash_flow_billion: 2.518
   financing_cash_flow_billion: 2.229
   net_income_billion: 0.183
   sga_expense_billion: 5.002
   depreciation_amortization_billion: 1.329
+  current_assets_billion: 18.453
+  current_liabilities_billion: 22.445
+  cash_and_equivalents_billion: 1.117
+  stockholders_equity_billion: 10.592
+  total_assets_billion: 52.47
   gross_margin_percent: 21.48
   operating_margin_percent: 1.25
   net_profit_margin_percent: 0.71
@@ -257,6 +291,11 @@ Vital Signs:
   net_income_billion: 0.712
   sga_expense_billion: 5.219
   depreciation_amortization_billion: 2.004
+  current_assets_billion: 20.393
+  current_liabilities_billion: 23.783
+  cash_and_equivalents_billion: 0.954
+  stockholders_equity_billion: 11.019
+  total_assets_billion: 55.615
   gross_margin_percent: 24.66
   operating_margin_percent: 3.91
   net_profit_margin_percent: 2.73
@@ -292,6 +331,12 @@ Vital Signs:
   net_income_billion: 4.138
   sga_expense_billion: 21.554
   depreciation_amortization_billion: 2.8
+  current_assets_billion: 17.498
+  current_liabilities_billion: 19.304
+  cash_and_equivalents_billion: 3.805
+  current_receivables_billion: 0.891
+  stockholders_equity_billion: 13.432
+  total_assets_billion: 55.356
   gross_margin_percent: 26.53
   operating_margin_percent: 5.39
   net_profit_margin_percent: 3.91
@@ -316,6 +361,11 @@ Vital Signs:
   net_income_billion: 0.95
   sga_expense_billion: 5.025
   depreciation_amortization_billion: 0.667
+  current_assets_billion: 15.773
+  current_liabilities_billion: 17.867
+  cash_and_equivalents_billion: 1.321
+  stockholders_equity_billion: 11.605
+  total_assets_billion: 52.15
   gross_margin_percent: 26.3
   operating_margin_percent: 5.32
   net_profit_margin_percent: 3.81
@@ -350,6 +400,11 @@ Vital Signs:
   net_income_billion: 0.835
   sga_expense_billion: 5.184
   depreciation_amortization_billion: 1.35
+  current_assets_billion: 16.098
+  current_liabilities_billion: 19.332
+  cash_and_equivalents_billion: 1.617
+  stockholders_equity_billion: 11.99
+  total_assets_billion: 53.206
   gross_margin_percent: 27.01
   operating_margin_percent: 4.91
   net_profit_margin_percent: 3.42
@@ -384,6 +439,11 @@ Vital Signs:
   net_income_billion: 0.971
   sga_expense_billion: 5.316
   depreciation_amortization_billion: 2.072
+  current_assets_billion: 18.599
+  current_liabilities_billion: 21.502
+  cash_and_equivalents_billion: 1.91
+  stockholders_equity_billion: 12.514
+  total_assets_billion: 56.229
   gross_margin_percent: 27.42
   operating_margin_percent: 5.27
   net_profit_margin_percent: 3.88
@@ -411,12 +471,19 @@ Vital Signs:
   cost_of_sales_billion: 76.502
   operating_income_billion: 5.566
   inventory_billion: 12.74
+  long_term_debt_billion: 1.0
   operating_cash_flow_billion: 7.367
   investing_cash_flow_billion: 2.86
   financing_cash_flow_billion: 3.55
   net_income_billion: 4.091
   sga_expense_billion: 21.969
   depreciation_amortization_billion: 3.0
+  current_assets_billion: 19.454
+  current_liabilities_billion: 20.799
+  cash_and_equivalents_billion: 4.762
+  current_receivables_billion: 0.998
+  stockholders_equity_billion: 14.666
+  total_assets_billion: 57.769
   gross_margin_percent: 28.21
   operating_margin_percent: 5.22
   net_profit_margin_percent: 3.84
@@ -441,6 +508,11 @@ Vital Signs:
   net_income_billion: 0.942
   sga_expense_billion: 5.168
   depreciation_amortization_billion: 0.718
+  current_assets_billion: 17.078
+  current_liabilities_billion: 19.859
+  cash_and_equivalents_billion: 3.604
+  stockholders_equity_billion: 13.84
+  total_assets_billion: 55.117
   gross_margin_percent: 27.73
   operating_margin_percent: 5.37
   net_profit_margin_percent: 3.9
@@ -473,6 +545,11 @@ Vital Signs:
   net_income_billion: 1.192
   sga_expense_billion: 5.392
   depreciation_amortization_billion: 1.461
+  current_assets_billion: 17.918
+  current_liabilities_billion: 19.984
+  cash_and_equivalents_billion: 3.497
+  stockholders_equity_billion: 14.429
+  total_assets_billion: 55.995
   gross_margin_percent: 28.86
   operating_margin_percent: 6.53
   net_profit_margin_percent: 4.76
@@ -505,6 +582,11 @@ Vital Signs:
   net_income_billion: 0.854
   sga_expense_billion: 5.486
   depreciation_amortization_billion: 2.215
+  current_assets_billion: 20.554
+  current_liabilities_billion: 21.792
+  cash_and_equivalents_billion: 3.433
+  stockholders_equity_billion: 14.489
+  total_assets_billion: 58.531
   gross_margin_percent: 27.16
   operating_margin_percent: 4.63
   net_profit_margin_percent: 3.39
@@ -538,6 +620,11 @@ Vital Signs:
   net_income_billion: 1.036
   sga_expense_billion: 4.591
   depreciation_amortization_billion: 0.787
+  current_assets_billion: 17.759
+  current_liabilities_billion: 18.991
+  cash_and_equivalents_billion: 2.887
+  stockholders_equity_billion: 14.947
+  total_assets_billion: 56.185
   gross_margin_percent: 28.17
   operating_margin_percent: 6.17
   net_profit_margin_percent: 4.34
@@ -571,6 +658,11 @@ Vital Signs:
   net_income_billion: 0.935
   sga_expense_billion: 5.359
   depreciation_amortization_billion: 1.558
+  current_assets_billion: 19.034
+  current_liabilities_billion: 19.223
+  cash_and_equivalents_billion: 4.341
+  stockholders_equity_billion: 15.42
+  total_assets_billion: 57.851
   gross_margin_percent: 28.99
   operating_margin_percent: 5.22
   net_profit_margin_percent: 3.71
@@ -604,6 +696,11 @@ Vital Signs:
   net_income_billion: 0.689
   sga_expense_billion: 5.536
   depreciation_amortization_billion: 2.331
+  current_assets_billion: 20.702
+  current_liabilities_billion: 21.242
+  cash_and_equivalents_billion: 3.822
+  stockholders_equity_billion: 15.501
+  total_assets_billion: 59.991
   gross_margin_percent: 28.23
   operating_margin_percent: 3.75
   net_profit_margin_percent: 2.73

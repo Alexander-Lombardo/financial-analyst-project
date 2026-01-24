@@ -21,6 +21,7 @@
       "comparable_sales": {},
       "inventory_metrics": {},
       "debt_metrics": {},
+      "liquidity_metrics": {},
       "cashflow_metrics": {
         "operating_cash_flow_billion": 6.52,
         "operating_cash_flow_margin_percent": 9.15,
@@ -53,6 +54,7 @@
       "comparable_sales": {},
       "inventory_metrics": {},
       "debt_metrics": {},
+      "liquidity_metrics": {},
       "cashflow_metrics": {
         "operating_cash_flow_billion": 4.465,
         "operating_cash_flow_margin_percent": 6.15,
@@ -85,6 +87,7 @@
       "comparable_sales": {},
       "inventory_metrics": {},
       "debt_metrics": {},
+      "liquidity_metrics": {},
       "cashflow_metrics": {
         "operating_cash_flow_billion": 5.958,
         "operating_cash_flow_margin_percent": 8.07,
@@ -125,6 +128,7 @@
         "interest_expense_million": 991.0,
         "operating_income_million": 4864.0
       },
+      "liquidity_metrics": {},
       "cashflow_metrics": {
         "operating_cash_flow_billion": 5.444,
         "operating_cash_flow_margin_percent": 7.75
@@ -153,6 +157,11 @@
         "net_income_billion": 3.281,
         "sga_expense_billion": 16.233,
         "depreciation_amortization_billion": 2.591,
+        "current_assets_billion": 12.902,
+        "current_liabilities_billion": 14.487,
+        "cash_and_equivalents_billion": 2.577,
+        "stockholders_equity_billion": 11.833,
+        "total_assets_billion": 42.779,
         "gross_margin_percent": 28.87,
         "operating_margin_percent": 6.04,
         "net_profit_margin_percent": 4.25,
@@ -170,7 +179,23 @@
         "interest_coverage_ratio": 9.77,
         "interest_expense_million": 477.0,
         "operating_income_million": 4658.0,
-        "total_debt_billion": 2.21
+        "total_debt_billion": 2.21,
+        "debt_to_equity_ratio": 0.19,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.05,
+        "equity_ratio": 0.28,
+        "debt_to_ebitda_ratio": 0.3,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 27.73,
+        "return_on_assets_percent": 7.67
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.89,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.18,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.59,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 7.117,
@@ -202,6 +227,12 @@
         "net_income_billion": 4.368,
         "sga_expense_billion": 18.615,
         "depreciation_amortization_billion": 2.5,
+        "current_assets_billion": 20.756,
+        "current_liabilities_billion": 20.125,
+        "cash_and_equivalents_billion": 8.511,
+        "current_receivables_billion": 0.631,
+        "stockholders_equity_billion": 14.44,
+        "total_assets_billion": 51.248,
         "gross_margin_percent": 28.38,
         "operating_margin_percent": 7.08,
         "net_profit_margin_percent": 4.73,
@@ -219,7 +250,23 @@
         "interest_coverage_ratio": 6.69,
         "interest_expense_million": 977.0,
         "operating_income_million": 6539.0,
-        "total_debt_billion": 3.61
+        "total_debt_billion": 3.61,
+        "debt_to_equity_ratio": 0.25,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.07,
+        "equity_ratio": 0.28,
+        "debt_to_ebitda_ratio": 0.4,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 30.25,
+        "return_on_assets_percent": 8.52
+      },
+      "liquidity_metrics": {
+        "current_ratio": 1.03,
+        "current_ratio_health": "adequate",
+        "quick_ratio": 0.45,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": 0.63,
+        "working_capital_trend": "positive"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 10.525,
@@ -251,6 +298,12 @@
         "net_income_billion": 6.946,
         "sga_expense_billion": 19.752,
         "depreciation_amortization_billion": 2.6,
+        "current_assets_billion": 21.573,
+        "current_liabilities_billion": 21.747,
+        "cash_and_equivalents_billion": 5.911,
+        "current_receivables_billion": 0.835,
+        "stockholders_equity_billion": 12.827,
+        "total_assets_billion": 53.811,
         "gross_margin_percent": 28.34,
         "operating_margin_percent": 8.55,
         "net_profit_margin_percent": 6.64,
@@ -268,7 +321,23 @@
         "interest_coverage_ratio": 21.25,
         "interest_expense_million": 421.0,
         "operating_income_million": 8946.0,
-        "total_debt_billion": 4.54
+        "total_debt_billion": 4.54,
+        "debt_to_equity_ratio": 0.35,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.08,
+        "equity_ratio": 0.24,
+        "debt_to_ebitda_ratio": 0.39,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 54.15,
+        "return_on_assets_percent": 12.91
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.99,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.31,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -0.17,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 8.625,
@@ -295,12 +364,19 @@
         "operating_income_billion": 3.848,
         "inventory_billion": 13.499,
         "interest_expense_billion": 0.478,
+        "long_term_debt_billion": 4.582,
         "operating_cash_flow_billion": 4.018,
         "investing_cash_flow_billion": 5.504,
         "financing_cash_flow_billion": 2.196,
         "net_income_billion": 2.78,
         "sga_expense_billion": 20.658,
         "depreciation_amortization_billion": 2.7,
+        "current_assets_billion": 17.846,
+        "current_liabilities_billion": 19.5,
+        "cash_and_equivalents_billion": 2.229,
+        "current_receivables_billion": 1.169,
+        "stockholders_equity_billion": 11.232,
+        "total_assets_billion": 53.335,
         "gross_margin_percent": 23.57,
         "operating_margin_percent": 3.58,
         "net_profit_margin_percent": 2.58,
@@ -317,7 +393,24 @@
       "debt_metrics": {
         "interest_coverage_ratio": 8.05,
         "interest_expense_million": 478.0,
-        "operating_income_million": 3848.0
+        "operating_income_million": 3848.0,
+        "total_debt_billion": 4.58,
+        "debt_to_equity_ratio": 0.41,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.09,
+        "equity_ratio": 0.21,
+        "debt_to_ebitda_ratio": 0.7,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 24.75,
+        "return_on_assets_percent": 5.21
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.92,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.17,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.65,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 4.018,
@@ -350,6 +443,11 @@
         "net_income_billion": 1.009,
         "sga_expense_billion": 4.762,
         "depreciation_amortization_billion": 0.679,
+        "current_assets_billion": 17.953,
+        "current_liabilities_billion": 20.724,
+        "cash_and_equivalents_billion": 1.112,
+        "stockholders_equity_billion": 10.774,
+        "total_assets_billion": 50.842,
         "gross_margin_percent": 25.65,
         "operating_margin_percent": 5.42,
         "net_profit_margin_percent": 4.06,
@@ -374,7 +472,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 12.02,
         "interest_expense_million": 112.0,
-        "operating_income_million": 1346.0
+        "operating_income_million": 1346.0,
+        "equity_ratio": 0.21,
+        "return_on_equity_percent": 9.37,
+        "return_on_assets_percent": 1.98
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.87,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.05,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -2.77,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 1.394,
@@ -397,12 +506,17 @@
         "operating_income_billion": 0.321,
         "inventory_billion": 15.32,
         "interest_expense_billion": 0.112,
-        "operating_cash_flow_billion": 0.047,
+        "operating_cash_flow_billion": 3.422,
         "investing_cash_flow_billion": 2.518,
         "financing_cash_flow_billion": 2.229,
         "net_income_billion": 0.183,
         "sga_expense_billion": 5.002,
         "depreciation_amortization_billion": 1.329,
+        "current_assets_billion": 18.453,
+        "current_liabilities_billion": 22.445,
+        "cash_and_equivalents_billion": 1.117,
+        "stockholders_equity_billion": 10.592,
+        "total_assets_billion": 52.47,
         "gross_margin_percent": 21.48,
         "operating_margin_percent": 1.25,
         "net_profit_margin_percent": 0.71,
@@ -428,11 +542,22 @@
       "debt_metrics": {
         "interest_coverage_ratio": 2.87,
         "interest_expense_million": 112.0,
-        "operating_income_million": 321.0
+        "operating_income_million": 321.0,
+        "equity_ratio": 0.2,
+        "return_on_equity_percent": 1.73,
+        "return_on_assets_percent": 0.35
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.82,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.05,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -3.99,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
-        "operating_cash_flow_billion": 0.047,
-        "operating_cash_flow_margin_percent": 0.18,
+        "operating_cash_flow_billion": 3.422,
+        "operating_cash_flow_margin_percent": 13.34,
         "investing_cash_flow_billion": 2.518,
         "financing_cash_flow_billion": 2.229
       },
@@ -458,6 +583,11 @@
         "net_income_billion": 0.712,
         "sga_expense_billion": 5.219,
         "depreciation_amortization_billion": 2.004,
+        "current_assets_billion": 20.393,
+        "current_liabilities_billion": 23.783,
+        "cash_and_equivalents_billion": 0.954,
+        "stockholders_equity_billion": 11.019,
+        "total_assets_billion": 55.615,
         "gross_margin_percent": 24.66,
         "operating_margin_percent": 3.91,
         "net_profit_margin_percent": 2.73,
@@ -482,7 +612,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 8.18,
         "interest_expense_million": 125.0,
-        "operating_income_million": 1022.0
+        "operating_income_million": 1022.0,
+        "equity_ratio": 0.2,
+        "return_on_equity_percent": 6.46,
+        "return_on_assets_percent": 1.28
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.86,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.04,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -3.39,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 0.552,
@@ -513,6 +654,12 @@
         "net_income_billion": 4.138,
         "sga_expense_billion": 21.554,
         "depreciation_amortization_billion": 2.8,
+        "current_assets_billion": 17.498,
+        "current_liabilities_billion": 19.304,
+        "cash_and_equivalents_billion": 3.805,
+        "current_receivables_billion": 0.891,
+        "stockholders_equity_billion": 13.432,
+        "total_assets_billion": 55.356,
         "gross_margin_percent": 26.53,
         "operating_margin_percent": 5.39,
         "net_profit_margin_percent": 3.91,
@@ -530,7 +677,23 @@
         "interest_coverage_ratio": 11.37,
         "interest_expense_million": 502.0,
         "operating_income_million": 5707.0,
-        "total_debt_billion": 4.67
+        "total_debt_billion": 4.67,
+        "debt_to_equity_ratio": 0.35,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.08,
+        "equity_ratio": 0.24,
+        "debt_to_ebitda_ratio": 0.55,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 30.81,
+        "return_on_assets_percent": 7.48
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.91,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.24,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.81,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 8.621,
@@ -564,6 +727,11 @@
         "net_income_billion": 0.95,
         "sga_expense_billion": 5.025,
         "depreciation_amortization_billion": 0.667,
+        "current_assets_billion": 15.773,
+        "current_liabilities_billion": 17.867,
+        "cash_and_equivalents_billion": 1.321,
+        "stockholders_equity_billion": 11.605,
+        "total_assets_billion": 52.15,
         "gross_margin_percent": 26.3,
         "operating_margin_percent": 5.32,
         "net_profit_margin_percent": 3.81,
@@ -592,7 +760,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 9.03,
         "interest_expense_million": 147.0,
-        "operating_income_million": 1328.0
+        "operating_income_million": 1328.0,
+        "equity_ratio": 0.22,
+        "return_on_equity_percent": 8.19,
+        "return_on_assets_percent": 1.82
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.88,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.07,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -2.09,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 1.265,
@@ -622,6 +801,11 @@
         "net_income_billion": 0.835,
         "sga_expense_billion": 5.184,
         "depreciation_amortization_billion": 1.35,
+        "current_assets_billion": 16.098,
+        "current_liabilities_billion": 19.332,
+        "cash_and_equivalents_billion": 1.617,
+        "stockholders_equity_billion": 11.99,
+        "total_assets_billion": 53.206,
         "gross_margin_percent": 27.01,
         "operating_margin_percent": 4.91,
         "net_profit_margin_percent": 3.42,
@@ -650,7 +834,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 8.49,
         "interest_expense_million": 141.0,
-        "operating_income_million": 1197.0
+        "operating_income_million": 1197.0,
+        "equity_ratio": 0.23,
+        "return_on_equity_percent": 6.96,
+        "return_on_assets_percent": 1.57
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.83,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.08,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -3.23,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 3.398,
@@ -680,6 +875,11 @@
         "net_income_billion": 0.971,
         "sga_expense_billion": 5.316,
         "depreciation_amortization_billion": 2.072,
+        "current_assets_billion": 18.599,
+        "current_liabilities_billion": 21.502,
+        "cash_and_equivalents_billion": 1.91,
+        "stockholders_equity_billion": 12.514,
+        "total_assets_billion": 56.229,
         "gross_margin_percent": 27.42,
         "operating_margin_percent": 5.27,
         "net_profit_margin_percent": 3.88,
@@ -710,7 +910,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 12.31,
         "interest_expense_million": 107.0,
-        "operating_income_million": 1317.0
+        "operating_income_million": 1317.0,
+        "equity_ratio": 0.22,
+        "return_on_equity_percent": 7.76,
+        "return_on_assets_percent": 1.73
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.86,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.09,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -2.9,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 5.332,
@@ -733,12 +944,19 @@
         "cost_of_sales_billion": 76.502,
         "operating_income_billion": 5.566,
         "inventory_billion": 12.74,
+        "long_term_debt_billion": 1.0,
         "operating_cash_flow_billion": 7.367,
         "investing_cash_flow_billion": 2.86,
         "financing_cash_flow_billion": 3.55,
         "net_income_billion": 4.091,
         "sga_expense_billion": 21.969,
         "depreciation_amortization_billion": 3.0,
+        "current_assets_billion": 19.454,
+        "current_liabilities_billion": 20.799,
+        "cash_and_equivalents_billion": 4.762,
+        "current_receivables_billion": 0.998,
+        "stockholders_equity_billion": 14.666,
+        "total_assets_billion": 57.769,
         "gross_margin_percent": 28.21,
         "operating_margin_percent": 5.22,
         "net_profit_margin_percent": 3.84,
@@ -752,7 +970,25 @@
         "inventory_turnover_ratio": 6.0,
         "days_sales_of_inventory": 60.8
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "total_debt_billion": 1.0,
+        "debt_to_equity_ratio": 0.07,
+        "leverage_profile": "conservative",
+        "debt_to_assets_ratio": 0.02,
+        "equity_ratio": 0.25,
+        "debt_to_ebitda_ratio": 0.12,
+        "debt_to_ebitda_health": "healthy",
+        "return_on_equity_percent": 27.89,
+        "return_on_assets_percent": 7.08
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.94,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.28,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.34,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 7.367,
         "operating_cash_flow_margin_percent": 6.91,
@@ -785,6 +1021,11 @@
         "net_income_billion": 0.942,
         "sga_expense_billion": 5.168,
         "depreciation_amortization_billion": 0.718,
+        "current_assets_billion": 17.078,
+        "current_liabilities_billion": 19.859,
+        "cash_and_equivalents_billion": 3.604,
+        "stockholders_equity_billion": 13.84,
+        "total_assets_billion": 55.117,
         "gross_margin_percent": 27.73,
         "operating_margin_percent": 5.37,
         "net_profit_margin_percent": 3.9,
@@ -816,7 +1057,18 @@
       "debt_metrics": {
         "interest_coverage_ratio": 12.23,
         "interest_expense_million": 106.0,
-        "operating_income_million": 1296.0
+        "operating_income_million": 1296.0,
+        "equity_ratio": 0.25,
+        "return_on_equity_percent": 6.81,
+        "return_on_assets_percent": 1.71
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.86,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.18,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -2.78,
+        "working_capital_trend": "negative"
       },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 1.101,
@@ -844,6 +1096,11 @@
         "net_income_billion": 1.192,
         "sga_expense_billion": 5.392,
         "depreciation_amortization_billion": 1.461,
+        "current_assets_billion": 17.918,
+        "current_liabilities_billion": 19.984,
+        "cash_and_equivalents_billion": 3.497,
+        "stockholders_equity_billion": 14.429,
+        "total_assets_billion": 55.995,
         "gross_margin_percent": 28.86,
         "operating_margin_percent": 6.53,
         "net_profit_margin_percent": 4.76,
@@ -872,7 +1129,19 @@
         "inventory_turnover_ratio": 1.41,
         "days_sales_of_inventory": 258.5
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "equity_ratio": 0.26,
+        "return_on_equity_percent": 8.26,
+        "return_on_assets_percent": 2.13
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.9,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.17,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -2.07,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 3.339,
         "operating_cash_flow_margin_percent": 13.34,
@@ -899,6 +1168,11 @@
         "net_income_billion": 0.854,
         "sga_expense_billion": 5.486,
         "depreciation_amortization_billion": 2.215,
+        "current_assets_billion": 20.554,
+        "current_liabilities_billion": 21.792,
+        "cash_and_equivalents_billion": 3.433,
+        "stockholders_equity_billion": 14.489,
+        "total_assets_billion": 58.531,
         "gross_margin_percent": 27.16,
         "operating_margin_percent": 4.63,
         "net_profit_margin_percent": 3.39,
@@ -928,7 +1202,19 @@
         "inventory_turnover_ratio": 1.21,
         "days_sales_of_inventory": 301.2
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "equity_ratio": 0.25,
+        "return_on_equity_percent": 5.89,
+        "return_on_assets_percent": 1.46
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.94,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.16,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.24,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 4.078,
         "operating_cash_flow_margin_percent": 16.16,
@@ -955,6 +1241,11 @@
         "net_income_billion": 1.036,
         "sga_expense_billion": 4.591,
         "depreciation_amortization_billion": 0.787,
+        "current_assets_billion": 17.759,
+        "current_liabilities_billion": 18.991,
+        "cash_and_equivalents_billion": 2.887,
+        "stockholders_equity_billion": 14.947,
+        "total_assets_billion": 56.185,
         "gross_margin_percent": 28.17,
         "operating_margin_percent": 6.17,
         "net_profit_margin_percent": 4.34,
@@ -984,7 +1275,19 @@
         "inventory_turnover_ratio": 1.31,
         "days_sales_of_inventory": 278.1
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "equity_ratio": 0.27,
+        "return_on_equity_percent": 6.93,
+        "return_on_assets_percent": 1.84
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.94,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.15,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -1.23,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 0.275,
         "operating_cash_flow_margin_percent": 1.15,
@@ -1012,6 +1315,11 @@
         "net_income_billion": 0.935,
         "sga_expense_billion": 5.359,
         "depreciation_amortization_billion": 1.558,
+        "current_assets_billion": 19.034,
+        "current_liabilities_billion": 19.223,
+        "cash_and_equivalents_billion": 4.341,
+        "stockholders_equity_billion": 15.42,
+        "total_assets_billion": 57.851,
         "gross_margin_percent": 28.99,
         "operating_margin_percent": 5.22,
         "net_profit_margin_percent": 3.71,
@@ -1040,7 +1348,19 @@
         "inventory_turnover_ratio": 1.39,
         "days_sales_of_inventory": 262.6
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "equity_ratio": 0.27,
+        "return_on_equity_percent": 6.06,
+        "return_on_assets_percent": 1.62
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.99,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.23,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -0.19,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 2.358,
         "operating_cash_flow_margin_percent": 9.35,
@@ -1068,6 +1388,11 @@
         "net_income_billion": 0.689,
         "sga_expense_billion": 5.536,
         "depreciation_amortization_billion": 2.331,
+        "current_assets_billion": 20.702,
+        "current_liabilities_billion": 21.242,
+        "cash_and_equivalents_billion": 3.822,
+        "stockholders_equity_billion": 15.501,
+        "total_assets_billion": 59.991,
         "gross_margin_percent": 28.23,
         "operating_margin_percent": 3.75,
         "net_profit_margin_percent": 2.73,
@@ -1096,7 +1421,19 @@
         "inventory_turnover_ratio": 1.22,
         "days_sales_of_inventory": 299.8
       },
-      "debt_metrics": {},
+      "debt_metrics": {
+        "equity_ratio": 0.26,
+        "return_on_equity_percent": 4.44,
+        "return_on_assets_percent": 1.15
+      },
+      "liquidity_metrics": {
+        "current_ratio": 0.97,
+        "current_ratio_health": "warning",
+        "quick_ratio": 0.18,
+        "quick_ratio_health": "warning",
+        "working_capital_billion": -0.54,
+        "working_capital_trend": "negative"
+      },
       "cashflow_metrics": {
         "operating_cash_flow_billion": 3.485,
         "operating_cash_flow_margin_percent": 13.79,
