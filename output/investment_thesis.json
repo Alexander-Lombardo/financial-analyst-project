@@ -1,0 +1,39 @@
+{
+  "company": "Target Corporation",
+  "ticker": "TGT",
+  "analysis_date": "Q3 2025",
+  "current_state": {
+    "latest_operating_margin": 3.75,
+    "margin_change_3yr": -3.33,
+    "margin_trend": "declining",
+    "latest_revenue_billion": 25.27,
+    "latest_period": "Q3 2025",
+    "fy2020_baseline_margin": 7.08
+  },
+  "risk_factors": [
+    {
+      "factor": "Shrink/Theft",
+      "severity": "High",
+      "trend": "Increasing",
+      "evidence": "22 mentions across 8 periods, avg 2.8/period"
+    }
+  ],
+  "opportunities": [
+    {
+      "factor": "Digital Sales Growth",
+      "potential": "High",
+      "evidence": "Digital comp sales up 2.4% in latest quarter"
+    }
+  ],
+  "recommendation": {
+    "rating": "Hold",
+    "rationale": "Balanced risk/opportunity profile with execution uncertainty",
+    "confidence": "Medium",
+    "catalysts": [
+      "Digital Sales Growth"
+    ],
+    "headwinds": [
+      "Shrink/Theft"
+    ]
+  }
+}

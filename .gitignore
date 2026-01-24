@@ -54,7 +54,6 @@ data/Target 10Q/*.zip
 output/*.pdf
 *.log
 
-# Sensitive data - DO NOT COMMIT SEC FILINGS
-# (Remove this if you want to include sample data)
-# data/Target 10Q/*.htm
-# data/Target 10Q/**/*.htm
+# SEC EDGAR Downloaded Filings - DO NOT COMMIT
+# These are large files that can be re-downloaded automatically
+data/Target 10Q/sec-edgar-filings/
