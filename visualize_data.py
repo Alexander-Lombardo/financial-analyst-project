@@ -1527,6 +1527,429 @@ def create_risk_heatmap_grid():
     return fig
 
 
+def create_current_ratio_gauge(data):
+    """
+    Chart 16: Current Ratio Gauge - Pillar 2 Liquidity Analysis.
+
+    Shows Current Ratio as gauge with health zones and dropdown to switch between quarters:
+    - Red (<1.0): Cannot cover current liabilities
+    - Yellow (1.0-1.5): Adequate liquidity
+    - Green (>1.5): Healthy liquidity (retail benchmark)
+    """
+    # Extract balance sheet data for Q4 calculation
+    liquidity_metrics = data['metrics'].get('liquidity', {})
+    current_ratios = liquidity_metrics.get('current_ratio', [])
+    current_assets = liquidity_metrics.get('current_assets_billion', [])
+    current_liabilities = liquidity_metrics.get('current_liabilities_billion', [])
+    periods = data['periods']
+
+    if not current_ratios or all(cr is None for cr in current_ratios):
+        print("⚠️  Skipping Current Ratio Gauge: No liquidity data available")
+        return None
+
+    # Step 1: Collect quarterly data from 10-Q filings (2022 onwards)
+    quarterly_data = []
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            if current_assets[i] and current_liabilities[i]:
+                quarterly_data.append({
+                    'period': period['period'],
+                    'fiscal_year': period['fiscal_year'],
+                    'current_assets': current_assets[i],
+                    'current_liabilities': current_liabilities[i],
+                    'current_ratio': current_ratios[i]
+                })
+
+    # Step 2: Add Q4 from annual 10-K reports
+    # NOTE: Current Assets and Current Liabilities are point-in-time balance sheet items,
+    # NOT cumulative like income statement items. The annual 10-K value IS the Q4 end value.
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+            annual_ca = current_assets[i]
+            annual_cl = current_liabilities[i]
+            annual_ratio = current_ratios[i]
+
+            # For balance sheet items, the FY (year-end) value equals Q4 end value
+            if annual_ca and annual_cl and annual_ratio:
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'current_assets': annual_ca,
+                    'current_liabilities': annual_cl,
+                    'current_ratio': annual_ratio
+                })
+
+    if not quarterly_data:
+        print("⚠️  Skipping Current Ratio Gauge: No valid quarterly data")
+        return None
+
+    # Sort chronologically (Q1 2022, Q2 2022, ..., Q4 2024, Q1 2025, ...)
+    quarterly_data.sort(key=lambda x: (x['fiscal_year'], 1 if 'Q1' in x['period'] else 2 if 'Q2' in x['period'] else 3 if 'Q3' in x['period'] else 4))
+
+    # Step 3: Create figure with multiple indicator traces (one per period)
+    fig = go.Figure()
+
+    for idx, period_data in enumerate(quarterly_data):
+        period = period_data['period']
+        ratio = period_data['current_ratio']
+
+        # Create gauge indicator for this period
+        fig.add_trace(go.Indicator(
+            mode="gauge+number+delta",
+            value=ratio,
+            delta={
+                'reference': 1.5,
+                'increasing': {'color': 'green'},
+                'decreasing': {'color': 'red'},
+                'font': {'size': 24}  # Smaller delta font
+            },
+            title={'text': f"Current Ratio ({period})", 'font': {'size': 18}},
+            number={'font': {'size': 48}},
+            gauge={
+                'axis': {'range': [None, 3.0], 'tickwidth': 1, 'tickfont': {'size': 14}},
+                'bar': {'color': "darkblue"},
+                'steps': [
+                    {'range': [0, 1.0], 'color': '#ffcccc'},    # Red - Warning
+                    {'range': [1.0, 1.5], 'color': '#ffffcc'},  # Yellow - Adequate
+                    {'range': [1.5, 3.0], 'color': '#ccffcc'}   # Green - Healthy
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': 1.5
+                }
+            },
+            domain={'x': [0, 1], 'y': [0, 1]},
+            visible=(idx == len(quarterly_data) - 1)  # Show most recent by default
+        ))
+
+    # Create dropdown menu buttons (reverse order for most recent first)
+    buttons = []
+    for idx, period_data in enumerate(reversed(quarterly_data)):
+        actual_idx = len(quarterly_data) - 1 - idx
+        visible_array = [False] * len(quarterly_data)
+        visible_array[actual_idx] = True
+
+        buttons.append({
+            'label': period_data['period'],
+            'method': 'update',
+            'args': [
+                {'visible': visible_array},
+                {
+                    'title': {
+                        'text': f"Target: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'y': 0.95,
+                        'yanchor': 'top',
+                        'font': {'size': 20}
+                    }
+                }
+            ]
+        })
+
+    # Initial layout
+    fig.update_layout(
+        title={
+            'text': f"Target: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top',
+            'font': {'size': 20}
+        },
+        height=550,
+        margin=dict(t=140, b=80, l=60, r=60),
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.17,
+            'xanchor': 'left',
+            'y': 1.15,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': '#BDBDBD',
+            'borderwidth': 1
+        }],
+        annotations=[
+            {
+                'text': 'Select Quarter:',
+                'x': 0.01,
+                'xref': 'paper',
+                'y': 1.15,
+                'yref': 'paper',
+                'align': 'left',
+                'showarrow': False,
+                'font': {'size': 12, 'color': '#333'}
+            }
+        ]
+    )
+
+    fig.write_html("output/chart_current_ratio_gauge.html")
+    print("✅ Chart 16 created: output/chart_current_ratio_gauge.html")
+    return fig
+
+
+def create_capital_structure_donut(data):
+    """
+    Chart 17: Capital Structure Donut - Pillar 2 Solvency Analysis.
+
+    Shows most recent split between Total Debt and Stockholders' Equity.
+    Center displays Debt-to-Equity ratio.
+    """
+    debt_metrics = data['metrics'].get('debt', {})
+    total_debts = debt_metrics.get('total_debt_billion', [])
+    periods = [p['period'] for p in data['periods']]
+
+    # Need to extract stockholders equity from detailed analysis JSON
+    detailed_path = Path("output/target_analysis.json")
+    if not detailed_path.exists():
+        print("⚠️  Skipping Capital Structure Donut: target_analysis.json not found")
+        return None
+
+    with open(detailed_path, 'r') as f:
+        detailed_data = json.load(f)
+
+    # Collect ALL 10-K filings with complete balance sheet data
+    fiscal_year_data = []
+
+    for filing in detailed_data['filings']:
+        if filing['filing_type'] == '10-K':
+            vital = filing.get('vital_signs', {})
+            debt_m = filing.get('debt_metrics', {})
+
+            total_debt = debt_m.get('total_debt_billion')
+            stockholders_equity = vital.get('stockholders_equity_billion')
+            de_ratio = debt_m.get('debt_to_equity_ratio')
+
+            if total_debt and stockholders_equity and de_ratio:
+                fiscal_year_data.append({
+                    'period': filing['period'],
+                    'fiscal_year': filing.get('fiscal_year', 0),
+                    'total_debt': total_debt,
+                    'stockholders_equity': stockholders_equity,
+                    'de_ratio': de_ratio
+                })
+
+    if not fiscal_year_data:
+        print("⚠️  Skipping Capital Structure Donut: No balance sheet data available")
+        return None
+
+    # Sort chronologically
+    fiscal_year_data.sort(key=lambda x: x['fiscal_year'])
+
+    # Create figure with multiple Pie traces (one per fiscal year)
+    fig = go.Figure()
+
+    for idx, fy_data in enumerate(fiscal_year_data):
+        fig.add_trace(go.Pie(
+            labels=['Total Debt', 'Stockholders\' Equity'],
+            values=[fy_data['total_debt'], fy_data['stockholders_equity']],
+            hole=0.5,
+            domain={'x': [0.05, 0.75], 'y': [0.1, 0.9]},  # Fixed position - centered, leaving right side for dropdown
+            marker=dict(colors=['#ff6666', '#66cc66']),
+            textinfo='label+percent',
+            textposition='outside',
+            automargin=False,  # Prevent automatic margin adjustments
+            pull=[0, 0],  # No slice separation
+            hovertemplate='<b>%{label}</b><br>$%{value:.2f}B<br>%{percent}<extra></extra>',
+            visible=(idx == len(fiscal_year_data) - 1),  # Show most recent by default
+            name=fy_data['period']
+        ))
+
+    # Create dropdown menu buttons (newest first)
+    buttons = []
+    for i in range(len(fiscal_year_data) - 1, -1, -1):
+        fy_data = fiscal_year_data[i]
+        visible_array = [False] * len(fiscal_year_data)
+        visible_array[i] = True
+
+        buttons.append({
+            'label': fy_data['period'],
+            'method': 'update',
+            'args': [
+                {
+                    'visible': visible_array,
+                    'textinfo': ['label+percent'],
+                    'textposition': ['outside']
+                },
+                {
+                    'title': {
+                        'text': f"Target: Capital Structure ({fy_data['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center'
+                    },
+                    'annotations': [
+                        {
+                            'text': 'Select Fiscal Year:',
+                            'x': 1.02,
+                            'xref': 'paper',
+                            'y': 0.95,
+                            'yref': 'paper',
+                            'xanchor': 'left',
+                            'showarrow': False,
+                            'font': {'size': 12, 'color': '#333'}
+                        },
+                        {
+                            'text': f"D/E Ratio<br><b>{fy_data['de_ratio']:.2f}</b>",
+                            'x': 0.4,
+                            'y': 0.5,
+                            'font_size': 16,
+                            'showarrow': False
+                        }
+                    ]
+                }
+            ]
+        })
+
+    # Initial layout (most recent period)
+    most_recent = fiscal_year_data[-1]
+
+    fig.update_layout(
+        title={
+            'text': f"Target: Capital Structure ({most_recent['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        autosize=False,  # Disable automatic resizing
+        width=800,  # Fixed width
+        height=600,  # Increased from 550 to accommodate dropdown
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.15,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(t=100, b=100, l=60, r=200),  # Reduced top margin, increased right margin for dropdown
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 1.02,
+            'xanchor': 'left',
+            'y': 0.9,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': '#BDBDBD',
+            'borderwidth': 1
+        }],
+        annotations=[
+            {
+                'text': 'Select Fiscal Year:',
+                'x': 1.02,
+                'xref': 'paper',
+                'y': 0.95,
+                'yref': 'paper',
+                'xanchor': 'left',
+                'showarrow': False,
+                'font': {'size': 12, 'color': '#333'}
+            },
+            {
+                'text': f"D/E Ratio<br><b>{most_recent['de_ratio']:.2f}</b>",
+                'x': 0.4,
+                'y': 0.5,
+                'font_size': 16,
+                'showarrow': False
+            }
+        ]
+    )
+
+    fig.write_html("output/chart_capital_structure_donut.html")
+    print("✅ Chart 17 created: output/chart_capital_structure_donut.html")
+    return fig
+
+
+def create_debt_to_ebitda_trend(data):
+    """
+    Chart 18: Debt-to-EBITDA Trend - Pillar 2 Solvency Analysis.
+
+    Shows quarterly Debt-to-EBITDA ratio trend with color-coded health zones:
+    - Green (<3.0x): Healthy leverage
+    - Yellow (3.0-5.0x): Moderate leverage
+    - Red (>5.0x): Risky leverage
+    """
+    debt_metrics = data['metrics'].get('debt', {})
+    debt_to_ebitda = debt_metrics.get('debt_to_ebitda_ratio', [])
+    periods = [p['period'] for p in data['periods']]
+
+    if not debt_to_ebitda or all(d is None for d in debt_to_ebitda):
+        print("⚠️  Skipping Debt-to-EBITDA Trend: No data available")
+        return None
+
+    # Create period labels and filter out None values
+    valid_data = [(p, d) for p, d in zip(periods, debt_to_ebitda) if d is not None]
+    if not valid_data:
+        print("⚠️  Skipping Debt-to-EBITDA Trend: No valid data points")
+        return None
+
+    period_labels, ratios = zip(*valid_data)
+
+    # Color-code markers based on health thresholds
+    marker_colors = []
+    for ratio in ratios:
+        if ratio < 3.0:
+            marker_colors.append('#66cc66')  # Green - Healthy
+        elif ratio <= 5.0:
+            marker_colors.append('#ffcc66')  # Yellow - Moderate
+        else:
+            marker_colors.append('#ff6666')  # Red - Risky
+
+    # Create line chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=list(period_labels),
+        y=list(ratios),
+        mode='lines+markers',
+        name='Debt-to-EBITDA',
+        line=dict(color='#4472C4', width=3),
+        marker=dict(
+            size=10,
+            color=marker_colors,
+            line=dict(color='white', width=2)
+        ),
+        hovertemplate='<b>%{x}</b><br>Debt-to-EBITDA: %{y:.2f}x<extra></extra>'
+    ))
+
+    # Add reference lines
+    fig.add_hline(
+        y=3.0,
+        line_dash="dash",
+        line_color="green",
+        annotation_text="Healthy Threshold (3.0x)",
+        annotation_position="right"
+    )
+
+    fig.add_hline(
+        y=5.0,
+        line_dash="dash",
+        line_color="red",
+        annotation_text="Risky Threshold (5.0x)",
+        annotation_position="right"
+    )
+
+    fig.update_layout(
+        title={
+            'text': "Target: Debt-to-EBITDA Trend<br><sub>Lower is better - Shows how many years of EBITDA needed to repay debt</sub>",
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title="Period",
+        yaxis_title="Debt-to-EBITDA Ratio (x)",
+        height=500,
+        hovermode='x unified',
+        showlegend=True
+    )
+
+    fig.write_html("output/chart_debt_to_ebitda_trend.html")
+    print("✅ Chart 18 created: output/chart_debt_to_ebitda_trend.html")
+    return fig
+
+
 def main():
     """Generate all Plotly visualizations."""
     print("📊 Generating Plotly visualizations from time-series data...")
@@ -1548,7 +1971,7 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 14 charts (7 from Phase 3 + 4 from Phase 4 + 2 new + 1 Phase 6)
+    # Create all 18 charts (7 from Phase 3 + 4 from Phase 4 + 2 new + 1 Phase 6 + 1 Phase 7 + 3 Pillar 2)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
     create_margin_analysis_chart(data)
@@ -1560,12 +1983,17 @@ def main():
     create_revenue_netincome_longterm_chart(data)  # Chart 12
     create_revenue_netincome_annual_chart(data)  # Chart 13
     create_expense_breakdown_chart(data)  # Chart 14 (Phase 6)
-    create_ebitda_bridge_waterfall(data)  # NEW - Chart 15 (Phase 7)
+    create_ebitda_bridge_waterfall(data)  # Chart 15 (Phase 7)
     create_margin_bridge_waterfall(data)
     create_risk_trends_chart()
     create_risk_heatmap_grid()
 
-    print("\n✅ All 15 visualizations created in output/ directory")
+    # Pillar 2: Liquidity & Solvency visualizations
+    create_current_ratio_gauge(data)  # Chart 16
+    create_capital_structure_donut(data)  # Chart 17
+    create_debt_to_ebitda_trend(data)  # Chart 18
+
+    print("\n✅ All 18 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -1578,10 +2006,13 @@ def main():
     print("     - chart_revenue_netincome_longterm.html (Chart 12)")
     print("     - chart_revenue_netincome_annual.html (Chart 13)")
     print("     - chart_expense_breakdown.html (Chart 14 - Phase 6)")
-    print("     - chart_ebitda_bridge.html (NEW - Chart 15 - Phase 7)")
+    print("     - chart_ebitda_bridge.html (Chart 15 - Phase 7)")
     print("     - chart_margin_bridge.html (Phase 4)")
     print("     - chart_risk_trends.html (Phase 4)")
     print("     - chart_risk_heatmap_grid.html (Phase 4)")
+    print("     - chart_current_ratio_gauge.html (Chart 16 - Pillar 2)")
+    print("     - chart_capital_structure_donut.html (Chart 17 - Pillar 2)")
+    print("     - chart_debt_to_ebitda_trend.html (Chart 18 - Pillar 2)")
 
 
 if __name__ == "__main__":
