@@ -906,13 +906,21 @@ self.risk_heatmap = {
    - Output: `output/chart_capital_structure_donut.html`
 
 7. **Chart 18: Debt-to-EBITDA Trend** (`create_debt_to_ebitda_trend()`):
-   - Chart Type: Plotly Scatter (Line with markers)
+   - Chart Type: Plotly Scatter (Line with markers and text labels)
    - Color-Coded Markers:
      - Green: ratio <3.0 (healthy)
      - Yellow: ratio 3.0-5.0 (moderate)
      - Red: ratio >5.0 (risky)
    - Reference Lines: Dashed green at 3.0x, Dashed red at 5.0x
+   - Annotations: Left-positioned with white backgrounds and colored borders (no overlap)
+   - Legend: Bottom horizontal orientation with 4 entries (main line + 3 color zones)
+   - Data Labels: Exact ratio values displayed on each marker
    - Output: `output/chart_debt_to_ebitda_trend.html`
+   - UI Improvements (daedca5):
+     - Fixed label overlap at top right
+     - Added legend for color-coded health zones
+     - Enhanced layout with better spacing and margins
+     - Data point text labels for easy reading
 
 8. **Test Suite** - `test_pillar2_liquidity_solvency.py` (25 test cases):
    - Extraction Tests (5): Balance sheet data extraction, sanity checks, coverage
@@ -1275,15 +1283,25 @@ All 18 interactive Plotly charts created by `visualize_data.py`:
   - Clean layout with legend at bottom
 
 ### Chart 18: Debt-to-EBITDA Trend (Pillar 2)
-- **Type**: Plotly Scatter (Line with markers)
+- **Type**: Plotly Scatter (Line with markers and text labels)
 - **Purpose**: Track leverage trend over time - shows if company becoming more/less risky
 - **File**: `chart_debt_to_ebitda_trend.html`
-- **Data**: All quarterly periods with debt and EBITDA data
+- **Data**: All quarterly periods with debt and EBITDA data (6 fiscal years: FY2019-FY2024)
 - **Color-Coded Markers**:
   - Green: ratio <3.0x (healthy leverage)
   - Yellow: ratio 3.0-5.0x (moderate leverage)
   - Red: ratio >5.0x (risky leverage)
-- **Features**: Reference lines at 3.0x (healthy threshold) and 5.0x (risky threshold)
+- **Features**:
+  - Reference lines at 3.0x (healthy threshold) and 5.0x (risky threshold)
+  - Annotations positioned on left side with white backgrounds and colored borders
+  - Data point text labels showing exact ratio values (e.g., "0.35x")
+  - Legend at bottom explaining color-coded health zones
+  - Height: 550px for better readability
+- **UI Improvements** (daedca5):
+  - Fixed label overlap by moving reference line annotations to left side (x=0.02)
+  - Added legend entries for Healthy/Moderate/Risky zones with colored markers
+  - Enhanced subtitle with "(Healthy: <3.0x)" context
+  - Data values displayed on each marker for easy reading
 
 ## Key Learnings
 
