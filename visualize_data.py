@@ -1904,8 +1904,11 @@ def create_debt_to_ebitda_trend(data):
     fig.add_trace(go.Scatter(
         x=list(period_labels),
         y=list(ratios),
-        mode='lines+markers',
+        mode='lines+markers+text',
         name='Debt-to-EBITDA',
+        text=[f"{r:.2f}x" for r in ratios],
+        textposition="top center",
+        textfont=dict(size=10),
         line=dict(color='#4472C4', width=3),
         marker=dict(
             size=10,
@@ -1915,34 +1918,88 @@ def create_debt_to_ebitda_trend(data):
         hovertemplate='<b>%{x}</b><br>Debt-to-EBITDA: %{y:.2f}x<extra></extra>'
     ))
 
-    # Add reference lines
-    fig.add_hline(
-        y=3.0,
-        line_dash="dash",
-        line_color="green",
-        annotation_text="Healthy Threshold (3.0x)",
-        annotation_position="right"
-    )
+    # Add legend entries for color-coded health zones
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode='markers',
+        marker=dict(size=10, color='#66cc66', line=dict(color='white', width=2)),
+        name='Healthy (<3.0x)',
+        showlegend=True
+    ))
 
-    fig.add_hline(
-        y=5.0,
-        line_dash="dash",
-        line_color="red",
-        annotation_text="Risky Threshold (5.0x)",
-        annotation_position="right"
-    )
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode='markers',
+        marker=dict(size=10, color='#ffcc66', line=dict(color='white', width=2)),
+        name='Moderate (3.0-5.0x)',
+        showlegend=True
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode='markers',
+        marker=dict(size=10, color='#ff6666', line=dict(color='white', width=2)),
+        name='Risky (>5.0x)',
+        showlegend=True
+    ))
+
+    # Add reference lines (without annotations - we'll add them separately)
+    fig.add_hline(y=3.0, line_dash="dash", line_color="green", line_width=1)
+    fig.add_hline(y=5.0, line_dash="dash", line_color="red", line_width=1)
 
     fig.update_layout(
         title={
-            'text': "Target: Debt-to-EBITDA Trend<br><sub>Lower is better - Shows how many years of EBITDA needed to repay debt</sub>",
+            'text': "Target: Debt-to-EBITDA Trend<br><sub>Lower is better - Shows how many years of EBITDA needed to repay debt (Healthy: <3.0x)</sub>",
             'x': 0.5,
-            'xanchor': 'center'
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
         },
-        xaxis_title="Period",
+        xaxis_title="Fiscal Year",
         yaxis_title="Debt-to-EBITDA Ratio (x)",
-        height=500,
+        height=550,
         hovermode='x unified',
-        showlegend=True
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(t=100, b=120, l=80, r=40),
+        annotations=[
+            dict(
+                text="Healthy Threshold (3.0x)",
+                x=0.02,
+                y=3.0,
+                xref="paper",
+                yref="y",
+                xanchor="left",
+                yanchor="middle",
+                showarrow=False,
+                bgcolor="white",
+                bordercolor="green",
+                borderwidth=1,
+                borderpad=4,
+                font=dict(size=10)
+            ),
+            dict(
+                text="Risky Threshold (5.0x)",
+                x=0.02,
+                y=5.0,
+                xref="paper",
+                yref="y",
+                xanchor="left",
+                yanchor="middle",
+                showarrow=False,
+                bgcolor="white",
+                bordercolor="red",
+                borderwidth=1,
+                borderpad=4,
+                font=dict(size=10)
+            )
+        ]
     )
 
     fig.write_html("output/chart_debt_to_ebitda_trend.html")
