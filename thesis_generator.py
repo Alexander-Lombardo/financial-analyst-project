@@ -32,20 +32,35 @@ class ThesisGenerator:
         revenues = self.timeseries['metrics']['revenue']['net_sales_billion']
         periods = self.timeseries['periods']
 
+        # Find FY2020 index
+        fy2020_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2020'), None)
+
         # Get FY2020 and latest
-        fy2020_margin = margins[0]  # FY2020
+        fy2020_margin = margins[fy2020_idx] if fy2020_idx is not None else None
         latest_margin = [m for m in margins if m is not None][-1]
 
-        # Margin trend
-        margin_trend = "declining" if latest_margin < fy2020_margin else "improving"
+        # Margin trend (only if we have FY2020 data)
+        if fy2020_margin is not None:
+            margin_trend = "declining" if latest_margin < fy2020_margin else "improving"
+        else:
+            # Fallback: use earliest available margin
+            earliest_margin = next((m for m in margins if m is not None), None)
+            margin_trend = "declining" if earliest_margin and latest_margin < earliest_margin else "improving"
 
         # Latest revenue
         latest_revenue = [r for r in revenues if r is not None][-1]
         latest_period = [p for p in periods][-1]['period']
 
+        # Calculate margin change (use FY2020 if available, else earliest available)
+        if fy2020_margin is not None:
+            margin_change_3yr = round(latest_margin - fy2020_margin, 2)
+        else:
+            earliest_margin = next((m for m in margins if m is not None), 0)
+            margin_change_3yr = round(latest_margin - earliest_margin, 2)
+
         return {
             'latest_operating_margin': latest_margin,
-            'margin_change_3yr': round(latest_margin - fy2020_margin, 2),
+            'margin_change_3yr': margin_change_3yr,
             'margin_trend': margin_trend,
             'latest_revenue_billion': latest_revenue,
             'latest_period': latest_period,
@@ -135,10 +150,13 @@ class ThesisGenerator:
 
         # Opportunity 3: Inventory efficiency improvement
         inv_turnover = self.timeseries['metrics']['inventory']['inventory_turnover_ratio']
-        recent_turnover = [t for t in inv_turnover if t is not None][-1]
-        baseline_turnover = inv_turnover[0]  # FY2020
+        periods = self.timeseries['periods']
+        fy2020_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2020'), None)
 
-        if recent_turnover > baseline_turnover:
+        recent_turnover = [t for t in inv_turnover if t is not None][-1]
+        baseline_turnover = inv_turnover[fy2020_idx] if fy2020_idx is not None else next((t for t in inv_turnover if t is not None), None)
+
+        if baseline_turnover and recent_turnover > baseline_turnover:
             opportunities.append({
                 'factor': 'Inventory Efficiency',
                 'potential': 'Medium',
