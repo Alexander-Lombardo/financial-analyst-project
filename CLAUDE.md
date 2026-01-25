@@ -1151,7 +1151,7 @@ for i, period in enumerate(data['periods']):
 
 ## Complete Chart Catalog
 
-All 18 interactive Plotly charts created by `visualize_data.py`:
+All 19 interactive Plotly charts created by `visualize_data.py`:
 
 ### Chart 1: Revenue vs Inventory Growth (Phase 3)
 - **Type**: Dual-axis line chart
@@ -1302,6 +1302,50 @@ All 18 interactive Plotly charts created by `visualize_data.py`:
   - Added legend entries for Healthy/Moderate/Risky zones with colored markers
   - Enhanced subtitle with "(Healthy: <3.0x)" context
   - Data values displayed on each marker for easy reading
+
+### Chart 19: DuPont Analysis Breakdown (Pillar 3)
+- **Type**: Grouped bar chart with dropdown menu for quarter selection
+- **Purpose**: Decompose ROE into its three multiplicative components to understand what drives profitability
+- **File**: `chart_dupont_analysis.html`
+- **Data**: 15 quarters (Q1 2022 - Q3 2025) from 10-Q filings only, with calculated Q4 periods
+- **Formula**: ROE = Profit Margin × Asset Turnover × Financial Leverage
+- **Components**:
+  - Profit Margin (%) = Net Income / Revenue × 100 (Blue bars)
+  - Asset Turnover (x) = Revenue / Total Assets (Orange bars)
+  - Financial Leverage (x) = Total Assets / Stockholders' Equity (Purple bars)
+  - ROE (%) = Return on Equity (Green bars - final result)
+- **Q4 Calculation Method**:
+  - Income statement items (Revenue, Net Income): Q4 = Annual - (Q1 + Q2 + Q3)
+  - Balance sheet items (Total Assets, Equity): Q4 = FY year-end values directly from 10-K
+  - Calculated for FY2022, FY2023, FY2024 (Q4 2022: ROE=7.81%, Q4 2023: ROE=10.28%, Q4 2024: ROE=7.50%)
+- **Features**:
+  - **Quarterly-only data**: Filters to 10-Q filings only (excludes annual FY periods to avoid scale distortion)
+  - **Fixed Y-axis scaling**: Range [0, 11.31] consistent across all 15 periods for proper visual comparison
+  - **Dropdown menu**: Switch between quarters (most recent first)
+  - **Value labels**: Each bar displays exact value with appropriate unit (% or x)
+  - **Y-axis persistence**: Range preserved when switching periods via dropdown (critical bug fix)
+- **Color Scheme**:
+  - Blue (#3498db): Profit Margin and ROE (profitability metrics)
+  - Orange (#e67e22): Asset Turnover (efficiency metric)
+  - Purple (#9b59b6): Financial Leverage (capital structure metric)
+  - Green (#27ae60): ROE result (final return metric)
+- **Business Insights**:
+  - Answers "What drives Target's ROE - margins, efficiency, or leverage?"
+  - Shows if ROE changes driven by improving margins vs better asset utilization vs increased leverage
+  - Quarterly granularity reveals seasonal patterns (Q4 typically lower ROE due to holiday promotions)
+  - Fixed Y-axis enables direct comparison: "Q3 2024 ROE dropped to 4.44% from Q2 2024's 5.12%"
+- **Implementation Details** (commit f32156d):
+  - Location: `visualize_data.py` lines 2010-2271
+  - Data filtering: `if period['filing_type'] != '10-Q': continue` ensures quarterly-only data
+  - Fixed range calculation: `y_max = max(all_values) * 1.1` across all periods
+  - Dropdown args preserve range: `'yaxis': {'range': [y_min, y_max]}`
+  - Q4 back-calculation: Total Assets = Annual Revenue / Annual Asset Turnover, Stockholders Equity = Total Assets / Annual Financial Leverage
+- **Key Design Decisions**:
+  1. **Quarterly-only filtering**: Removes annual FY periods to prevent Y-axis distortion (annual ROE ~25-50%, quarterly ROE ~5-10%)
+  2. **Q4 calculation**: Enables complete 15-quarter view with calculated Q4 2022, Q4 2023, Q4 2024
+  3. **Fixed Y-axis**: User-requested fix to enable proper visual comparison across periods
+  4. **Grouped bars**: Shows all 4 components side-by-side for easy ratio interpretation
+  5. **Formula in subtitle**: Reinforces that ROE is multiplicative product of 3 components
 
 ## Key Learnings
 
