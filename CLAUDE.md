@@ -1056,14 +1056,40 @@ python3 test_pillar2_liquidity_solvency.py
 - ✅ All 3 Pillar 2 charts created (gauge, donut, trend)
 - ✅ All 25/25 tests pass (100% success rate)
 
+### Pillar 3 Verification
+Test Operational Efficiency Analysis:
+```bash
+# Pillar 3: Comprehensive test suite (10 tests)
+python3 test_pillar3_operational_efficiency.py
+```
+
+**Expected results**:
+- ✅ Accounts Payable extracted for 18/22 periods (81.8% coverage)
+- ✅ Asset Turnover calculated for 22/22 periods (100% coverage, range: 1.68 - 2.02)
+- ✅ DSO calculated for 5/22 periods (22.7% coverage - receivables only in annual 10-K filings)
+- ✅ DPO calculated for 18/22 periods (81.8% coverage, normalized range: 56.8 - 75.4 days)
+- ✅ CCC calculated correctly for 5 annual periods (CCC = DSI + DSO - DPO, range: 31.4 - 71.2 days)
+- ✅ DuPont components calculated for all periods with balance sheet data
+- ✅ DuPont formula validated: ROE = PM × AT × FL (±1% tolerance)
+- ✅ All 2 Pillar 3 charts created (DuPont Analysis, Cash Conversion Cycle)
+- ✅ All 10/10 tests pass (100% success rate)
+
+**Chart 20 Enhancement (Flexible Quarterly/Annual Data Detection)**:
+- Chart 20 now intelligently detects quarterly receivables availability
+- **For Target**: Uses annual data (5 periods: FY2020-FY2024) because receivables not reported in 10-Q filings
+- **For other companies**: If receivables available in 10-Q (≥8 quarters), automatically uses quarterly data with calculated Q4
+- Console output shows data source: "Using X periods (receivables available/only in 10-K filings)"
+- Chart subtitle displays data frequency: "Annual data: FY2020 - FY2024" or "Quarterly data: Q1 2022 - Q3 2025"
+- Makes the tool reusable across companies with different reporting practices
+
 **Overall Expected Results**:
 - 22 total filings (10 10-Ks + 12 10-Qs)
 - FY2024 net_sales_billion ~106.6B
-- All filings have inventory_metrics, debt_metrics, cashflow_metrics, liquidity_metrics (where applicable)
+- All filings have inventory_metrics, debt_metrics, cashflow_metrics, liquidity_metrics, efficiency_metrics (where applicable)
 - All filings have fiscal_year and fiscal_quarter fields
 - 6+ filings have vs_year_ago comparisons
 - Risk heatmap shows shrink trend increasing
-- 18 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2)
+- 20 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3)
 - All test suites pass
 
 ## Environment Setup

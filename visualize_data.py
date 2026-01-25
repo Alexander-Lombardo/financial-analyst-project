@@ -2266,6 +2266,326 @@ def create_dupont_analysis_breakdown(data):
     return fig
 
 
+def _detect_ccc_data_availability(data):
+    """
+    Detect if quarterly CCC data is available for charting.
+
+    This function scans all periods to determine whether the company reports
+    receivables in quarterly 10-Q filings (enabling quarterly CCC visualization)
+    or only in annual 10-K filings (requiring fallback to annual visualization).
+
+    Returns:
+        dict: {
+            'quarterly_count': int - Number of quarterly periods with complete CCC
+            'annual_count': int - Number of annual periods with complete CCC
+            'use_quarterly': bool - True if quarterly data sufficient (>=8 quarters)
+            'message': str - Info message about data source for console output
+        }
+    """
+    quarterly_count = 0
+    annual_count = 0
+
+    for i, period in enumerate(data['periods']):
+        # Get CCC components
+        dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
+        dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
+        dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
+
+        # Check if all components present (required for complete CCC calculation)
+        if all(v is not None for v in [dsi, dso, dpo]):
+            if period['filing_type'] == '10-Q':
+                quarterly_count += 1
+            elif period['filing_type'] == '10-K':
+                annual_count += 1
+
+    # Decision: Use quarterly if at least 8 quarters available (2 years of data)
+    # This threshold ensures sufficient data for meaningful trend analysis
+    use_quarterly = quarterly_count >= 8
+
+    if use_quarterly:
+        message = f"Using {quarterly_count} quarterly periods (receivables available in 10-Q filings)"
+    else:
+        message = f"Using {annual_count} annual periods (receivables only in 10-K filings)"
+
+    return {
+        'quarterly_count': quarterly_count,
+        'annual_count': annual_count,
+        'use_quarterly': use_quarterly,
+        'message': message
+    }
+
+
+def create_cash_conversion_cycle_chart(data):
+    """
+    Chart 20: Cash Conversion Cycle Trend (Pillar 3: Operational Efficiency)
+
+    Shows the number of days it takes to convert resource inputs into cash.
+    Formula: CCC = DSI + DSO - DPO
+
+    Intelligently selects quarterly or annual data based on availability:
+    - Quarterly data (15 periods): If receivables reported in 10-Q filings (>=8 quarters)
+    - Annual data (5-10 periods): If receivables only in 10-K filings
+
+    Lower CCC is better - indicates faster cash conversion.
+
+    Args:
+        data: Time-series data dictionary from target_timeseries.json
+
+    Returns:
+        Plotly Figure object
+    """
+    import plotly.graph_objects as go
+
+    # Step 1: Detect data availability
+    availability = _detect_ccc_data_availability(data)
+    use_quarterly = availability['use_quarterly']
+
+    print(f"\n📊 Chart 20 Data Detection: {availability['message']}")
+
+    # Step 2: Collect periods based on availability
+    periods = []
+    dsi_values = []
+    dso_values = []
+    dpo_values = []
+    ccc_values = []
+
+    if use_quarterly:
+        # QUARTERLY APPROACH: Collect Q1-Q3 from 10-Q filings
+        quarterly_data = []
+
+        for i, period in enumerate(data['periods']):
+            if period['filing_type'] == '10-Q':
+                period_label = period.get('period')
+
+                # Get values
+                dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
+                dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
+                dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
+                ccc = data['metrics']['efficiency'].get('cash_conversion_cycle_days', [None])[i]
+
+                # Only include if all values present
+                if all(v is not None for v in [dsi, dso, dpo, ccc]):
+                    quarterly_data.append({
+                        'period': period_label,
+                        'fiscal_year': period.get('fiscal_year'),
+                        'fiscal_quarter': period.get('fiscal_quarter'),
+                        'dsi': dsi,
+                        'dso': dso,
+                        'dpo': dpo,
+                        'ccc': ccc
+                    })
+
+        # CALCULATE Q4 from annual 10-K reports
+        for i, period in enumerate(data['periods']):
+            if period['filing_type'] == '10-K':
+                fy = period.get('fiscal_year')
+
+                # Get annual raw values for Q4 calculation
+                annual_revenue = data['metrics']['revenue'].get('net_sales_billion', [None])[i]
+                annual_cogs = data['metrics']['revenue'].get('cost_of_sales_billion', [None])[i]
+                annual_inventory = data['metrics']['inventory'].get('inventory_billion', [None])[i]
+
+                # Check for current_receivables_billion - this is the key field needed for DSO
+                annual_receivables = None
+                if 'liquidity' in data['metrics'] and 'current_receivables_billion' in data['metrics']['liquidity']:
+                    annual_receivables = data['metrics']['liquidity'].get('current_receivables_billion', [None])[i]
+
+                # Fallback: check if receivables is in efficiency metrics
+                if annual_receivables is None:
+                    annual_receivables = data['metrics'].get('efficiency', {}).get('current_receivables_billion', [None])[i] if isinstance(data['metrics'].get('efficiency'), dict) else None
+
+                # Check for current_payables_billion
+                annual_payables = None
+                if 'liquidity' in data['metrics'] and 'current_payables_billion' in data['metrics']['liquidity']:
+                    annual_payables = data['metrics']['liquidity'].get('current_payables_billion', [None])[i]
+
+                # Fallback: check if payables is in efficiency metrics
+                if annual_payables is None:
+                    annual_payables = data['metrics'].get('efficiency', {}).get('current_payables_billion', [None])[i] if isinstance(data['metrics'].get('efficiency'), dict) else None
+
+                # Find Q1, Q2, Q3 for this fiscal year
+                q1 = q2 = q3 = None
+                for q in quarterly_data:
+                    if q['fiscal_year'] == fy:
+                        if q['fiscal_quarter'] == 1:
+                            q1 = q
+                        elif q['fiscal_quarter'] == 2:
+                            q2 = q
+                        elif q['fiscal_quarter'] == 3:
+                            q3 = q
+
+                # Calculate Q4 if all quarters present and balance sheet data available
+                if all([q1, q2, q3]) and all(v is not None for v in [annual_revenue, annual_cogs, annual_inventory, annual_receivables, annual_payables]):
+                    # Q4 DSI: Uses annual COGS and year-end inventory
+                    # Formula: DSI = 365 / (COGS / Inventory) = (365 * Inventory) / COGS
+                    q4_dsi = (365 * annual_inventory) / annual_cogs if annual_cogs > 0 else None
+
+                    # Q4 DSO: Uses annual revenue and year-end receivables
+                    # Formula: DSO = 365 / (Revenue / Receivables) = (365 * Receivables) / Revenue
+                    q4_dso = (365 * annual_receivables) / annual_revenue if annual_revenue > 0 else None
+
+                    # Q4 DPO: Uses annual COGS and year-end payables
+                    # Formula: DPO = 365 / (COGS / Payables) = (365 * Payables) / COGS
+                    q4_dpo = (365 * annual_payables) / annual_cogs if annual_cogs > 0 else None
+
+                    # Q4 CCC
+                    if all(v is not None for v in [q4_dsi, q4_dso, q4_dpo]):
+                        q4_ccc = q4_dsi + q4_dso - q4_dpo
+
+                        quarterly_data.append({
+                            'period': f'Q4 {fy}',
+                            'fiscal_year': fy,
+                            'fiscal_quarter': 4,
+                            'dsi': q4_dsi,
+                            'dso': q4_dso,
+                            'dpo': q4_dpo,
+                            'ccc': q4_ccc
+                        })
+
+        # Sort chronologically
+        quarterly_data.sort(key=lambda x: (x['fiscal_year'], x['fiscal_quarter']))
+
+        # Extract lists for plotting
+        for q in quarterly_data:
+            periods.append(q['period'])
+            dsi_values.append(q['dsi'])
+            dso_values.append(q['dso'])
+            dpo_values.append(q['dpo'])
+            ccc_values.append(q['ccc'])
+
+    else:
+        # ANNUAL APPROACH: Use 10-K filings only (fallback for companies without quarterly receivables)
+        for i, period in enumerate(data['periods']):
+            if period['filing_type'] != '10-K':
+                continue
+
+            period_label = f"FY{period.get('fiscal_year')}"
+
+            # Get values
+            dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
+            dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
+            dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
+            ccc = data['metrics']['efficiency'].get('cash_conversion_cycle_days', [None])[i]
+
+            # Only include if all values present
+            if all(v is not None for v in [dsi, dso, dpo, ccc]):
+                periods.append(period_label)
+                dsi_values.append(dsi)
+                dso_values.append(dso)
+                dpo_values.append(dpo)
+                ccc_values.append(ccc)
+
+    # Create figure
+    fig = go.Figure()
+
+    # Line 1: DSI (Days Sales of Inventory)
+    fig.add_trace(go.Scatter(
+        x=periods,
+        y=dsi_values,
+        mode='lines+markers',
+        name='DSI (Days in Inventory)',
+        line=dict(color='#e74c3c', width=3),
+        marker=dict(size=8, line=dict(color='white', width=2)),
+        hovertemplate='<b>DSI</b>: %{y:.1f} days<extra></extra>'
+    ))
+
+    # Line 2: DSO (Days Sales Outstanding)
+    fig.add_trace(go.Scatter(
+        x=periods,
+        y=dso_values,
+        mode='lines+markers',
+        name='DSO (Days to Collect Receivables)',
+        line=dict(color='#f39c12', width=3),
+        marker=dict(size=8, line=dict(color='white', width=2)),
+        hovertemplate='<b>DSO</b>: %{y:.1f} days<extra></extra>'
+    ))
+
+    # Line 3: DPO (Days Payables Outstanding)
+    fig.add_trace(go.Scatter(
+        x=periods,
+        y=dpo_values,
+        mode='lines+markers',
+        name='DPO (Days to Pay Suppliers)',
+        line=dict(color='#3498db', width=3),
+        marker=dict(size=8, line=dict(color='white', width=2)),
+        hovertemplate='<b>DPO</b>: %{y:.1f} days<extra></extra>'
+    ))
+
+    # Line 4: CCC (Cash Conversion Cycle)
+    fig.add_trace(go.Scatter(
+        x=periods,
+        y=ccc_values,
+        mode='lines+markers',
+        name='CCC (Total Cycle)',
+        line=dict(color='#27ae60', width=4, dash='solid'),
+        marker=dict(size=10, line=dict(color='white', width=2)),
+        hovertemplate='<b>CCC</b>: %{y:.1f} days<extra></extra>'
+    ))
+
+    # Add reference line at 60 days (retail industry benchmark)
+    fig.add_hline(
+        y=60,
+        line_dash="dash",
+        line_color="gray",
+        annotation_text="Retail Benchmark (60 days)",
+        annotation_position="right"  # Changed from left to right to avoid cut-off
+    )
+
+    # Add reference line at 0 (for context)
+    fig.add_hline(
+        y=0,
+        line_dash="dot",
+        line_color="black",
+        opacity=0.3
+    )
+
+    # Determine data frequency for subtitle
+    data_freq = "Quarterly" if use_quarterly else "Annual"
+    period_range = f"{periods[0]} - {periods[-1]}" if periods else "N/A"
+
+    # Layout
+    fig.update_layout(
+        title={
+            'text': f"Target: Cash Conversion Cycle Trend<br><sub>Lower is better - Shows days to convert resources into cash (CCC = DSI + DSO - DPO)<br>{data_freq} data: {period_range}</sub>",
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis=dict(
+            title="Fiscal Year",
+            tickangle=0,  # Keep horizontal (only 5 labels, should fit with 1000px width)
+            tickmode='linear'  # Show all 5 labels explicitly
+        ),
+        yaxis_title="Days",
+        height=600,
+        width=1000,  # Increase from default ~700px to 1000px for better spacing
+        hovermode='x unified',
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(t=100, b=120, l=100, r=100)  # Balanced margins to center chart and prevent cut-off
+    )
+
+    # Save chart with config to center it properly
+    output_path = 'output/chart_cash_conversion_cycle.html'
+    config = {
+        'displayModeBar': True,
+        'responsive': True
+    }
+    fig.write_html(output_path, config=config)
+
+    # Console output with data source information
+    print(f"✅ Chart 20 created: {output_path}")
+    print(f"   Data source: {availability['message']}")
+    print(f"   Periods displayed: {len(periods)}")
+
+    return fig
+
+
 def main():
     """Generate all Plotly visualizations."""
     print("📊 Generating Plotly visualizations from time-series data...")
@@ -2311,8 +2631,9 @@ def main():
 
     # Pillar 3: Operational Efficiency visualizations
     create_dupont_analysis_breakdown(data)  # Chart 19
+    create_cash_conversion_cycle_chart(data)  # Chart 20
 
-    print("\n✅ All 19 visualizations created in output/ directory")
+    print("\n✅ All 20 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -2333,6 +2654,7 @@ def main():
     print("     - chart_capital_structure_donut.html (Chart 17 - Pillar 2)")
     print("     - chart_debt_to_ebitda_trend.html (Chart 18 - Pillar 2)")
     print("     - chart_dupont_analysis.html (Chart 19 - Pillar 3)")
+    print("     - chart_cash_conversion_cycle.html (Chart 20 - Pillar 3)")
 
 
 if __name__ == "__main__":

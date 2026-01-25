@@ -16,7 +16,9 @@
         "depreciation_amortization_billion": 1.996,
         "gross_margin_percent": 29.8,
         "net_profit_margin_percent": 2.77,
-        "sga_percent_of_revenue": 20.29
+        "sga_percent_of_revenue": 20.29,
+        "fiscal_year": 2015,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {},
@@ -27,6 +29,7 @@
         "operating_cash_flow_margin_percent": 9.15,
         "investing_cash_flow_billion": 0.508
       },
+      "efficiency_metrics": {},
       "strategic_promise": {
         "top_priorities": [],
         "top_risks": []
@@ -49,7 +52,9 @@
         "depreciation_amortization_billion": 2.129,
         "gross_margin_percent": 29.39,
         "net_profit_margin_percent": 4.63,
-        "sga_percent_of_revenue": 20.21
+        "sga_percent_of_revenue": 20.21,
+        "fiscal_year": 2016,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {},
@@ -60,6 +65,7 @@
         "operating_cash_flow_margin_percent": 6.15,
         "investing_cash_flow_billion": 0.508
       },
+      "efficiency_metrics": {},
       "strategic_promise": {
         "top_priorities": [],
         "top_risks": []
@@ -82,7 +88,9 @@
         "depreciation_amortization_billion": 2.213,
         "gross_margin_percent": 29.2,
         "net_profit_margin_percent": 4.56,
-        "sga_percent_of_revenue": 19.88
+        "sga_percent_of_revenue": 19.88,
+        "fiscal_year": 2017,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {},
@@ -93,6 +101,7 @@
         "operating_cash_flow_margin_percent": 8.07,
         "investing_cash_flow_billion": 0.508
       },
+      "efficiency_metrics": {},
       "strategic_promise": {
         "top_priorities": [],
         "top_risks": []
@@ -119,7 +128,9 @@
         "sga_percent_of_revenue": 20.23,
         "other_operating_expenses_billion": 2.045,
         "ebitda_billion": 7.169,
-        "ebitda_margin_percent": 10.2
+        "ebitda_margin_percent": 10.2,
+        "fiscal_year": 2018,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {},
@@ -133,6 +144,7 @@
         "operating_cash_flow_billion": 5.444,
         "operating_cash_flow_margin_percent": 7.75
       },
+      "efficiency_metrics": {},
       "strategic_promise": {
         "top_priorities": [],
         "top_risks": []
@@ -160,6 +172,7 @@
         "current_assets_billion": 12.902,
         "current_liabilities_billion": 14.487,
         "cash_and_equivalents_billion": 2.577,
+        "current_payables_billion": 9.92,
         "stockholders_equity_billion": 11.833,
         "total_assets_billion": 42.779,
         "gross_margin_percent": 28.87,
@@ -168,7 +181,9 @@
         "sga_percent_of_revenue": 21.05,
         "other_operating_expenses_billion": 1.375,
         "ebitda_billion": 7.249,
-        "ebitda_margin_percent": 9.4
+        "ebitda_margin_percent": 9.4,
+        "fiscal_year": 2019,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -187,6 +202,9 @@
         "debt_to_ebitda_ratio": 0.3,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 27.73,
+        "dupont_asset_turnover": 1.8,
+        "dupont_financial_leverage": 3.62,
+        "dupont_roe_validation": 27.69,
         "return_on_assets_percent": 7.67
       },
       "liquidity_metrics": {
@@ -202,6 +220,12 @@
         "operating_cash_flow_margin_percent": 9.23,
         "investing_cash_flow_billion": 2.944,
         "financing_cash_flow_billion": 3.152
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.8,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.53,
+        "days_payable_outstanding": 66.0
       },
       "strategic_promise": {
         "top_priorities": [],
@@ -231,6 +255,7 @@
         "current_liabilities_billion": 20.125,
         "cash_and_equivalents_billion": 8.511,
         "current_receivables_billion": 0.631,
+        "current_payables_billion": 12.859,
         "stockholders_equity_billion": 14.44,
         "total_assets_billion": 51.248,
         "gross_margin_percent": 28.38,
@@ -239,7 +264,9 @@
         "sga_percent_of_revenue": 20.15,
         "other_operating_expenses_billion": 1.069,
         "ebitda_billion": 9.039,
-        "ebitda_margin_percent": 9.78
+        "ebitda_margin_percent": 9.78,
+        "fiscal_year": 2020,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -258,6 +285,9 @@
         "debt_to_ebitda_ratio": 0.4,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 30.25,
+        "dupont_asset_turnover": 1.8,
+        "dupont_financial_leverage": 3.55,
+        "dupont_roe_validation": 30.22,
         "return_on_assets_percent": 8.52
       },
       "liquidity_metrics": {
@@ -273,6 +303,16 @@
         "operating_cash_flow_margin_percent": 11.39,
         "investing_cash_flow_billion": 2.591,
         "financing_cash_flow_billion": 2.0
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.8,
+        "asset_turnover_health": "Healthy",
+        "receivables_turnover_ratio": 146.43,
+        "days_sales_outstanding": 2.5,
+        "payables_turnover_ratio": 5.15,
+        "days_payable_outstanding": 70.9,
+        "cash_conversion_cycle_days": -9.6,
+        "ccc_health": "Healthy"
       },
       "strategic_promise": {
         "top_priorities": [],
@@ -302,6 +342,7 @@
         "current_liabilities_billion": 21.747,
         "cash_and_equivalents_billion": 5.911,
         "current_receivables_billion": 0.835,
+        "current_payables_billion": 15.478,
         "stockholders_equity_billion": 12.827,
         "total_assets_billion": 53.811,
         "gross_margin_percent": 28.34,
@@ -310,7 +351,9 @@
         "sga_percent_of_revenue": 18.88,
         "other_operating_expenses_billion": 0.95,
         "ebitda_billion": 11.546,
-        "ebitda_margin_percent": 11.04
+        "ebitda_margin_percent": 11.04,
+        "fiscal_year": 2021,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -329,6 +372,9 @@
         "debt_to_ebitda_ratio": 0.39,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 54.15,
+        "dupont_asset_turnover": 1.94,
+        "dupont_financial_leverage": 4.2,
+        "dupont_roe_validation": 54.1,
         "return_on_assets_percent": 12.91
       },
       "liquidity_metrics": {
@@ -344,6 +390,16 @@
         "operating_cash_flow_margin_percent": 8.24,
         "investing_cash_flow_billion": 3.154,
         "financing_cash_flow_billion": 8.071
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.94,
+        "asset_turnover_health": "Healthy",
+        "receivables_turnover_ratio": 125.28,
+        "days_sales_outstanding": 2.9,
+        "payables_turnover_ratio": 4.84,
+        "days_payable_outstanding": 75.4,
+        "cash_conversion_cycle_days": -4.8,
+        "ccc_health": "Healthy"
       },
       "strategic_promise": {
         "top_priorities": [
@@ -375,6 +431,7 @@
         "current_liabilities_billion": 19.5,
         "cash_and_equivalents_billion": 2.229,
         "current_receivables_billion": 1.169,
+        "current_payables_billion": 13.487,
         "stockholders_equity_billion": 11.232,
         "total_assets_billion": 53.335,
         "gross_margin_percent": 23.57,
@@ -383,7 +440,9 @@
         "sga_percent_of_revenue": 19.2,
         "other_operating_expenses_billion": 0.853,
         "ebitda_billion": 6.548,
-        "ebitda_margin_percent": 6.09
+        "ebitda_margin_percent": 6.09,
+        "fiscal_year": 2022,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -402,6 +461,9 @@
         "debt_to_ebitda_ratio": 0.7,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 24.75,
+        "dupont_asset_turnover": 2.02,
+        "dupont_financial_leverage": 4.75,
+        "dupont_roe_validation": 24.76,
         "return_on_assets_percent": 5.21
       },
       "liquidity_metrics": {
@@ -417,6 +479,16 @@
         "operating_cash_flow_margin_percent": 3.73,
         "investing_cash_flow_billion": 5.504,
         "financing_cash_flow_billion": 2.196
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 2.02,
+        "asset_turnover_health": "Healthy",
+        "receivables_turnover_ratio": 92.03,
+        "days_sales_outstanding": 4.0,
+        "payables_turnover_ratio": 6.1,
+        "days_payable_outstanding": 59.9,
+        "cash_conversion_cycle_days": 4.0,
+        "ccc_health": "Healthy"
       },
       "strategic_promise": {
         "top_priorities": [
@@ -446,6 +518,7 @@
         "current_assets_billion": 17.953,
         "current_liabilities_billion": 20.724,
         "cash_and_equivalents_billion": 1.112,
+        "current_payables_billion": 14.053,
         "stockholders_equity_billion": 10.774,
         "total_assets_billion": 50.842,
         "gross_margin_percent": 25.65,
@@ -455,6 +528,8 @@
         "other_operating_expenses_billion": 0.261,
         "ebitda_billion": 2.025,
         "ebitda_margin_percent": 8.16,
+        "fiscal_year": 2022,
+        "fiscal_quarter": 1,
         "vs_baseline": {
           "operating_margin_change": 1.84,
           "operating_margin_trend": "improving",
@@ -466,8 +541,8 @@
         "total_change_percent": 3.3
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.22,
-        "days_sales_of_inventory": 298.2
+        "inventory_turnover_ratio": 4.9,
+        "days_sales_of_inventory": 74.6
       },
       "debt_metrics": {
         "interest_coverage_ratio": 12.02,
@@ -475,6 +550,9 @@
         "operating_income_million": 1346.0,
         "equity_ratio": 0.21,
         "return_on_equity_percent": 9.37,
+        "dupont_asset_turnover": 0.49,
+        "dupont_financial_leverage": 4.72,
+        "dupont_roe_validation": 9.39,
         "return_on_assets_percent": 1.98
       },
       "liquidity_metrics": {
@@ -490,6 +568,12 @@
         "operating_cash_flow_margin_percent": 5.61,
         "investing_cash_flow_billion": 0.948,
         "financing_cash_flow_billion": 2.457
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.95,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.25,
+        "days_payable_outstanding": 69.5
       },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
@@ -515,6 +599,7 @@
         "current_assets_billion": 18.453,
         "current_liabilities_billion": 22.445,
         "cash_and_equivalents_billion": 1.117,
+        "current_payables_billion": 14.891,
         "stockholders_equity_billion": 10.592,
         "total_assets_billion": 52.47,
         "gross_margin_percent": 21.48,
@@ -524,6 +609,8 @@
         "other_operating_expenses_billion": 0.188,
         "ebitda_billion": 1.65,
         "ebitda_margin_percent": 6.43,
+        "fiscal_year": 2022,
+        "fiscal_quarter": 2,
         "vs_baseline": {
           "operating_margin_change": -2.33,
           "operating_margin_trend": "declining",
@@ -536,8 +623,8 @@
         "total_change_percent": 2.6
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.31,
-        "days_sales_of_inventory": 277.6
+        "inventory_turnover_ratio": 5.26,
+        "days_sales_of_inventory": 69.4
       },
       "debt_metrics": {
         "interest_coverage_ratio": 2.87,
@@ -545,6 +632,9 @@
         "operating_income_million": 321.0,
         "equity_ratio": 0.2,
         "return_on_equity_percent": 1.73,
+        "dupont_asset_turnover": 0.49,
+        "dupont_financial_leverage": 4.95,
+        "dupont_roe_validation": 1.72,
         "return_on_assets_percent": 0.35
       },
       "liquidity_metrics": {
@@ -560,6 +650,12 @@
         "operating_cash_flow_margin_percent": 13.34,
         "investing_cash_flow_billion": 2.518,
         "financing_cash_flow_billion": 2.229
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.96,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.41,
+        "days_payable_outstanding": 67.5
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -586,6 +682,7 @@
         "current_assets_billion": 20.393,
         "current_liabilities_billion": 23.783,
         "cash_and_equivalents_billion": 0.954,
+        "current_payables_billion": 15.438,
         "stockholders_equity_billion": 11.019,
         "total_assets_billion": 55.615,
         "gross_margin_percent": 24.66,
@@ -595,6 +692,8 @@
         "other_operating_expenses_billion": 0.201,
         "ebitda_billion": 3.026,
         "ebitda_margin_percent": 11.58,
+        "fiscal_year": 2022,
+        "fiscal_quarter": 3,
         "vs_baseline": {
           "operating_margin_change": 0.33,
           "operating_margin_trend": "improving",
@@ -606,8 +705,8 @@
         "total_change_percent": 2.7
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.15,
-        "days_sales_of_inventory": 317.5
+        "inventory_turnover_ratio": 4.6,
+        "days_sales_of_inventory": 79.4
       },
       "debt_metrics": {
         "interest_coverage_ratio": 8.18,
@@ -615,6 +714,9 @@
         "operating_income_million": 1022.0,
         "equity_ratio": 0.2,
         "return_on_equity_percent": 6.46,
+        "dupont_asset_turnover": 0.47,
+        "dupont_financial_leverage": 5.05,
+        "dupont_roe_validation": 6.48,
         "return_on_assets_percent": 1.28
       },
       "liquidity_metrics": {
@@ -630,6 +732,12 @@
         "operating_cash_flow_margin_percent": 2.11,
         "investing_cash_flow_billion": 4.303,
         "financing_cash_flow_billion": 1.206
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.88,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.1,
+        "days_payable_outstanding": 71.6
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -658,6 +766,7 @@
         "current_liabilities_billion": 19.304,
         "cash_and_equivalents_billion": 3.805,
         "current_receivables_billion": 0.891,
+        "current_payables_billion": 12.098,
         "stockholders_equity_billion": 13.432,
         "total_assets_billion": 55.356,
         "gross_margin_percent": 26.53,
@@ -666,7 +775,9 @@
         "sga_percent_of_revenue": 20.37,
         "other_operating_expenses_billion": 0.806,
         "ebitda_billion": 8.507,
-        "ebitda_margin_percent": 8.04
+        "ebitda_margin_percent": 8.04,
+        "fiscal_year": 2023,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -685,6 +796,9 @@
         "debt_to_ebitda_ratio": 0.55,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 30.81,
+        "dupont_asset_turnover": 1.91,
+        "dupont_financial_leverage": 4.12,
+        "dupont_roe_validation": 30.77,
         "return_on_assets_percent": 7.48
       },
       "liquidity_metrics": {
@@ -700,6 +814,16 @@
         "operating_cash_flow_margin_percent": 8.15,
         "investing_cash_flow_billion": 4.76,
         "financing_cash_flow_billion": 2.285
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.91,
+        "asset_turnover_health": "Healthy",
+        "receivables_turnover_ratio": 118.75,
+        "days_sales_outstanding": 3.1,
+        "payables_turnover_ratio": 6.43,
+        "days_payable_outstanding": 56.8,
+        "cash_conversion_cycle_days": 2.1,
+        "ccc_health": "Healthy"
       },
       "strategic_promise": {
         "top_priorities": [
@@ -730,6 +854,7 @@
         "current_assets_billion": 15.773,
         "current_liabilities_billion": 17.867,
         "cash_and_equivalents_billion": 1.321,
+        "current_payables_billion": 11.935,
         "stockholders_equity_billion": 11.605,
         "total_assets_billion": 52.15,
         "gross_margin_percent": 26.3,
@@ -739,6 +864,8 @@
         "other_operating_expenses_billion": 0.209,
         "ebitda_billion": 1.995,
         "ebitda_margin_percent": 8.0,
+        "fiscal_year": 2023,
+        "fiscal_quarter": 1,
         "vs_baseline": {
           "operating_margin_change": -0.07,
           "operating_margin_trend": "declining",
@@ -754,8 +881,8 @@
       },
       "comparable_sales": {},
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.46,
-        "days_sales_of_inventory": 250.5
+        "inventory_turnover_ratio": 5.83,
+        "days_sales_of_inventory": 62.6
       },
       "debt_metrics": {
         "interest_coverage_ratio": 9.03,
@@ -763,6 +890,9 @@
         "operating_income_million": 1328.0,
         "equity_ratio": 0.22,
         "return_on_equity_percent": 8.19,
+        "dupont_asset_turnover": 0.48,
+        "dupont_financial_leverage": 4.49,
+        "dupont_roe_validation": 8.21,
         "return_on_assets_percent": 1.82
       },
       "liquidity_metrics": {
@@ -778,6 +908,12 @@
         "operating_cash_flow_margin_percent": 5.07,
         "investing_cash_flow_billion": 1.602,
         "financing_cash_flow_billion": 0.571
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.91,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 6.16,
+        "days_payable_outstanding": 59.2
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -804,6 +940,7 @@
         "current_assets_billion": 16.098,
         "current_liabilities_billion": 19.332,
         "cash_and_equivalents_billion": 1.617,
+        "current_payables_billion": 12.278,
         "stockholders_equity_billion": 11.99,
         "total_assets_billion": 53.206,
         "gross_margin_percent": 27.01,
@@ -813,6 +950,8 @@
         "other_operating_expenses_billion": 0.205,
         "ebitda_billion": 2.547,
         "ebitda_margin_percent": 10.45,
+        "fiscal_year": 2023,
+        "fiscal_quarter": 2,
         "vs_baseline": {
           "operating_margin_change": -0.48,
           "operating_margin_trend": "declining",
@@ -828,8 +967,8 @@
       },
       "comparable_sales": {},
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.4,
-        "days_sales_of_inventory": 260.1
+        "inventory_turnover_ratio": 5.61,
+        "days_sales_of_inventory": 65.0
       },
       "debt_metrics": {
         "interest_coverage_ratio": 8.49,
@@ -837,6 +976,9 @@
         "operating_income_million": 1197.0,
         "equity_ratio": 0.23,
         "return_on_equity_percent": 6.96,
+        "dupont_asset_turnover": 0.46,
+        "dupont_financial_leverage": 4.44,
+        "dupont_roe_validation": 6.99,
         "return_on_assets_percent": 1.57
       },
       "liquidity_metrics": {
@@ -852,6 +994,12 @@
         "operating_cash_flow_margin_percent": 13.94,
         "investing_cash_flow_billion": 2.821,
         "financing_cash_flow_billion": 1.189
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.83,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.8,
+        "days_payable_outstanding": 62.9
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -878,6 +1026,7 @@
         "current_assets_billion": 18.599,
         "current_liabilities_billion": 21.502,
         "cash_and_equivalents_billion": 1.91,
+        "current_payables_billion": 14.291,
         "stockholders_equity_billion": 12.514,
         "total_assets_billion": 56.229,
         "gross_margin_percent": 27.42,
@@ -887,6 +1036,8 @@
         "other_operating_expenses_billion": 0.222,
         "ebitda_billion": 3.389,
         "ebitda_margin_percent": 13.55,
+        "fiscal_year": 2023,
+        "fiscal_quarter": 3,
         "vs_baseline": {
           "operating_margin_change": -0.12,
           "operating_margin_trend": "declining",
@@ -904,8 +1055,8 @@
         "total_change_percent": 4.9
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.23,
-        "days_sales_of_inventory": 296.3
+        "inventory_turnover_ratio": 4.93,
+        "days_sales_of_inventory": 74.1
       },
       "debt_metrics": {
         "interest_coverage_ratio": 12.31,
@@ -913,6 +1064,9 @@
         "operating_income_million": 1317.0,
         "equity_ratio": 0.22,
         "return_on_equity_percent": 7.76,
+        "dupont_asset_turnover": 0.44,
+        "dupont_financial_leverage": 4.49,
+        "dupont_roe_validation": 7.67,
         "return_on_assets_percent": 1.73
       },
       "liquidity_metrics": {
@@ -928,6 +1082,12 @@
         "operating_cash_flow_margin_percent": 21.32,
         "investing_cash_flow_billion": 3.91,
         "financing_cash_flow_billion": 1.741
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.78,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.08,
+        "days_payable_outstanding": 71.9
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -955,6 +1115,7 @@
         "current_liabilities_billion": 20.799,
         "cash_and_equivalents_billion": 4.762,
         "current_receivables_billion": 0.998,
+        "current_payables_billion": 13.053,
         "stockholders_equity_billion": 14.666,
         "total_assets_billion": 57.769,
         "gross_margin_percent": 28.21,
@@ -963,7 +1124,9 @@
         "sga_percent_of_revenue": 20.62,
         "other_operating_expenses_billion": 2.529,
         "ebitda_billion": 8.566,
-        "ebitda_margin_percent": 8.04
+        "ebitda_margin_percent": 8.04,
+        "fiscal_year": 2024,
+        "fiscal_quarter": null
       },
       "comparable_sales": {},
       "inventory_metrics": {
@@ -979,6 +1142,9 @@
         "debt_to_ebitda_ratio": 0.12,
         "debt_to_ebitda_health": "healthy",
         "return_on_equity_percent": 27.89,
+        "dupont_asset_turnover": 1.84,
+        "dupont_financial_leverage": 3.94,
+        "dupont_roe_validation": 27.84,
         "return_on_assets_percent": 7.08
       },
       "liquidity_metrics": {
@@ -994,6 +1160,16 @@
         "operating_cash_flow_margin_percent": 6.91,
         "investing_cash_flow_billion": 2.86,
         "financing_cash_flow_billion": 3.55
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.84,
+        "asset_turnover_health": "Healthy",
+        "receivables_turnover_ratio": 106.78,
+        "days_sales_outstanding": 3.4,
+        "payables_turnover_ratio": 5.86,
+        "days_payable_outstanding": 62.3,
+        "cash_conversion_cycle_days": 1.9,
+        "ccc_health": "Healthy"
       },
       "strategic_promise": {
         "top_priorities": [
@@ -1024,6 +1200,7 @@
         "current_assets_billion": 17.078,
         "current_liabilities_billion": 19.859,
         "cash_and_equivalents_billion": 3.604,
+        "current_payables_billion": 11.561,
         "stockholders_equity_billion": 13.84,
         "total_assets_billion": 55.117,
         "gross_margin_percent": 27.73,
@@ -1033,6 +1210,8 @@
         "other_operating_expenses_billion": 0.23,
         "ebitda_billion": 2.014,
         "ebitda_margin_percent": 8.34,
+        "fiscal_year": 2024,
+        "fiscal_quarter": 1,
         "vs_baseline": {
           "operating_margin_change": 0.15,
           "operating_margin_trend": "improving",
@@ -1051,8 +1230,8 @@
         "digital_change_percent": 1.4
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.49,
-        "days_sales_of_inventory": 245.4
+        "inventory_turnover_ratio": 5.95,
+        "days_sales_of_inventory": 61.3
       },
       "debt_metrics": {
         "interest_coverage_ratio": 12.23,
@@ -1060,6 +1239,9 @@
         "operating_income_million": 1296.0,
         "equity_ratio": 0.25,
         "return_on_equity_percent": 6.81,
+        "dupont_asset_turnover": 0.44,
+        "dupont_financial_leverage": 3.98,
+        "dupont_roe_validation": 6.83,
         "return_on_assets_percent": 1.71
       },
       "liquidity_metrics": {
@@ -1075,6 +1257,12 @@
         "operating_cash_flow_margin_percent": 4.56,
         "investing_cash_flow_billion": 0.671,
         "financing_cash_flow_billion": 0.631
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.75,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 6.04,
+        "days_payable_outstanding": 60.5
       },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
@@ -1099,6 +1287,7 @@
         "current_assets_billion": 17.918,
         "current_liabilities_billion": 19.984,
         "cash_and_equivalents_billion": 3.497,
+        "current_payables_billion": 12.595,
         "stockholders_equity_billion": 14.429,
         "total_assets_billion": 55.995,
         "gross_margin_percent": 28.86,
@@ -1108,6 +1297,8 @@
         "other_operating_expenses_billion": 0.195,
         "ebitda_billion": 3.096,
         "ebitda_margin_percent": 12.37,
+        "fiscal_year": 2024,
+        "fiscal_quarter": 2,
         "vs_baseline": {
           "operating_margin_change": 1.31,
           "operating_margin_trend": "improving",
@@ -1126,12 +1317,15 @@
         "digital_change_percent": 8.7
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.41,
-        "days_sales_of_inventory": 258.5
+        "inventory_turnover_ratio": 5.65,
+        "days_sales_of_inventory": 64.6
       },
       "debt_metrics": {
         "equity_ratio": 0.26,
         "return_on_equity_percent": 8.26,
+        "dupont_asset_turnover": 0.45,
+        "dupont_financial_leverage": 3.88,
+        "dupont_roe_validation": 8.31,
         "return_on_assets_percent": 2.13
       },
       "liquidity_metrics": {
@@ -1147,6 +1341,12 @@
         "operating_cash_flow_margin_percent": 13.34,
         "investing_cash_flow_billion": 1.305,
         "financing_cash_flow_billion": 2.342
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.79,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.65,
+        "days_payable_outstanding": 64.6
       },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
@@ -1171,6 +1371,7 @@
         "current_assets_billion": 20.554,
         "current_liabilities_billion": 21.792,
         "cash_and_equivalents_billion": 3.433,
+        "current_payables_billion": 14.419,
         "stockholders_equity_billion": 14.489,
         "total_assets_billion": 58.531,
         "gross_margin_percent": 27.16,
@@ -1180,6 +1381,8 @@
         "other_operating_expenses_billion": 0.199,
         "ebitda_billion": 3.383,
         "ebitda_margin_percent": 13.41,
+        "fiscal_year": 2024,
+        "fiscal_quarter": 3,
         "vs_baseline": {
           "operating_margin_change": -0.59,
           "operating_margin_trend": "declining",
@@ -1199,12 +1402,15 @@
         "digital_change_percent": 10.8
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.21,
-        "days_sales_of_inventory": 301.2
+        "inventory_turnover_ratio": 4.85,
+        "days_sales_of_inventory": 75.3
       },
       "debt_metrics": {
         "equity_ratio": 0.25,
         "return_on_equity_percent": 5.89,
+        "dupont_asset_turnover": 0.43,
+        "dupont_financial_leverage": 4.04,
+        "dupont_roe_validation": 5.89,
         "return_on_assets_percent": 1.46
       },
       "liquidity_metrics": {
@@ -1220,6 +1426,12 @@
         "operating_cash_flow_margin_percent": 16.16,
         "investing_cash_flow_billion": 1.942,
         "financing_cash_flow_billion": 2.508
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.72,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.1,
+        "days_payable_outstanding": 71.6
       },
       "risk_flags": [
         "Increased markdown/promotional activity noted"
@@ -1244,6 +1456,7 @@
         "current_assets_billion": 17.759,
         "current_liabilities_billion": 18.991,
         "cash_and_equivalents_billion": 2.887,
+        "current_payables_billion": 11.823,
         "stockholders_equity_billion": 14.947,
         "total_assets_billion": 56.185,
         "gross_margin_percent": 28.17,
@@ -1253,6 +1466,8 @@
         "other_operating_expenses_billion": 0.655,
         "ebitda_billion": 2.259,
         "ebitda_margin_percent": 9.47,
+        "fiscal_year": 2025,
+        "fiscal_quarter": 1,
         "vs_baseline": {
           "operating_margin_change": 0.95,
           "operating_margin_trend": "improving",
@@ -1272,12 +1487,15 @@
         "digital_change_percent": 4.7
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.31,
-        "days_sales_of_inventory": 278.1
+        "inventory_turnover_ratio": 5.25,
+        "days_sales_of_inventory": 69.5
       },
       "debt_metrics": {
         "equity_ratio": 0.27,
         "return_on_equity_percent": 6.93,
+        "dupont_asset_turnover": 0.42,
+        "dupont_financial_leverage": 3.76,
+        "dupont_roe_validation": 6.85,
         "return_on_assets_percent": 1.84
       },
       "liquidity_metrics": {
@@ -1293,6 +1511,12 @@
         "operating_cash_flow_margin_percent": 1.15,
         "investing_cash_flow_billion": 0.787,
         "financing_cash_flow_billion": 1.363
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.7,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.79,
+        "days_payable_outstanding": 63.0
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -1318,6 +1542,7 @@
         "current_assets_billion": 19.034,
         "current_liabilities_billion": 19.223,
         "cash_and_equivalents_billion": 4.341,
+        "current_payables_billion": 12.019,
         "stockholders_equity_billion": 15.42,
         "total_assets_billion": 57.851,
         "gross_margin_percent": 28.99,
@@ -1327,6 +1552,8 @@
         "other_operating_expenses_billion": 0.632,
         "ebitda_billion": 2.875,
         "ebitda_margin_percent": 11.4,
+        "fiscal_year": 2025,
+        "fiscal_quarter": 2,
         "vs_baseline": {
           "operating_margin_change": 0.0,
           "operating_margin_trend": "declining",
@@ -1345,12 +1572,15 @@
         "digital_change_percent": 4.3
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.39,
-        "days_sales_of_inventory": 262.6
+        "inventory_turnover_ratio": 5.56,
+        "days_sales_of_inventory": 65.7
       },
       "debt_metrics": {
         "equity_ratio": 0.27,
         "return_on_equity_percent": 6.06,
+        "dupont_asset_turnover": 0.44,
+        "dupont_financial_leverage": 3.75,
+        "dupont_roe_validation": 6.12,
         "return_on_assets_percent": 1.62
       },
       "liquidity_metrics": {
@@ -1366,6 +1596,12 @@
         "operating_cash_flow_margin_percent": 9.35,
         "investing_cash_flow_billion": 1.853,
         "financing_cash_flow_billion": 0.926
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.74,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.96,
+        "days_payable_outstanding": 61.3
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",
@@ -1391,6 +1627,7 @@
         "current_assets_billion": 20.702,
         "current_liabilities_billion": 21.242,
         "cash_and_equivalents_billion": 3.822,
+        "current_payables_billion": 13.792,
         "stockholders_equity_billion": 15.501,
         "total_assets_billion": 59.991,
         "gross_margin_percent": 28.23,
@@ -1400,6 +1637,8 @@
         "other_operating_expenses_billion": 0.649,
         "ebitda_billion": 3.279,
         "ebitda_margin_percent": 12.98,
+        "fiscal_year": 2025,
+        "fiscal_quarter": 3,
         "vs_baseline": {
           "operating_margin_change": -1.47,
           "operating_margin_trend": "declining",
@@ -1418,12 +1657,15 @@
         "digital_change_percent": 2.4
       },
       "inventory_metrics": {
-        "inventory_turnover_ratio": 1.22,
-        "days_sales_of_inventory": 299.8
+        "inventory_turnover_ratio": 4.87,
+        "days_sales_of_inventory": 74.9
       },
       "debt_metrics": {
         "equity_ratio": 0.26,
         "return_on_equity_percent": 4.44,
+        "dupont_asset_turnover": 0.42,
+        "dupont_financial_leverage": 3.87,
+        "dupont_roe_validation": 4.44,
         "return_on_assets_percent": 1.15
       },
       "liquidity_metrics": {
@@ -1439,6 +1681,12 @@
         "operating_cash_flow_margin_percent": 13.79,
         "investing_cash_flow_billion": 2.79,
         "financing_cash_flow_billion": 1.635
+      },
+      "efficiency_metrics": {
+        "asset_turnover_ratio": 1.68,
+        "asset_turnover_health": "Healthy",
+        "payables_turnover_ratio": 5.26,
+        "days_payable_outstanding": 69.4
       },
       "risk_flags": [
         "Shrink/theft mentioned in MD&A",

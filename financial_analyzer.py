@@ -151,6 +151,11 @@ class TargetFinancialAnalyzer:
         vital_signs = self._extract_vital_signs(soup, is_annual=True, raw_content=html_content)
         comp_sales = self._extract_comparable_sales(soup, is_annual=True)
 
+        # Phase 3: Extract temporal keys and add to vital_signs for metric calculations
+        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+        vital_signs['fiscal_year'] = fiscal_year
+        vital_signs['fiscal_quarter'] = fiscal_quarter
+
         # Phase 2: Calculate inventory and debt metrics
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
@@ -161,8 +166,25 @@ class TargetFinancialAnalyzer:
         # Phase 3: Calculate cash flow metrics
         cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
 
-        # Phase 3: Extract temporal keys
-        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+        # Pillar 3: Calculate efficiency metrics
+        efficiency_metrics = self._calculate_efficiency_metrics(vital_signs, period)
+
+        # Pillar 3: Calculate Cash Conversion Cycle (CCC = DSI + DSO - DPO)
+        dsi = inventory_metrics.get('days_sales_of_inventory')
+        dso = efficiency_metrics.get('days_sales_outstanding')
+        dpo = efficiency_metrics.get('days_payable_outstanding')
+
+        if dsi is not None and dso is not None and dpo is not None:
+            ccc = dsi + dso - dpo
+            efficiency_metrics['cash_conversion_cycle_days'] = round(ccc, 1)
+
+            # Health assessment (retail industry benchmark: <60 days is good)
+            if ccc < 60:
+                efficiency_metrics['ccc_health'] = 'Healthy'
+            elif ccc < 90:
+                efficiency_metrics['ccc_health'] = 'Moderate'
+            else:
+                efficiency_metrics['ccc_health'] = 'Weak'
 
         # Extract qualitative data
         strategic_promise = self._extract_strategic_promise(soup)
@@ -178,6 +200,7 @@ class TargetFinancialAnalyzer:
             "debt_metrics": debt_metrics,
             "liquidity_metrics": liquidity_metrics,
             "cashflow_metrics": cashflow_metrics,
+            "efficiency_metrics": efficiency_metrics,
             "strategic_promise": strategic_promise,
             "risk_flags": []
         }
@@ -200,6 +223,11 @@ class TargetFinancialAnalyzer:
         vital_signs = self._extract_vital_signs(soup, is_annual=False, raw_content=html_content)
         comp_sales = self._extract_comparable_sales(soup, is_annual=False)
 
+        # Phase 3: Extract temporal keys and add to vital_signs for metric calculations
+        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+        vital_signs['fiscal_year'] = fiscal_year
+        vital_signs['fiscal_quarter'] = fiscal_quarter
+
         # Phase 2: Calculate inventory and debt metrics
         inventory_metrics = self._calculate_inventory_metrics(vital_signs, period)
         debt_metrics = self._calculate_debt_metrics(vital_signs)
@@ -210,8 +238,25 @@ class TargetFinancialAnalyzer:
         # Phase 3: Calculate cash flow metrics
         cashflow_metrics = self._calculate_cashflow_metrics(vital_signs)
 
-        # Phase 3: Extract temporal keys
-        fiscal_year, fiscal_quarter = self._parse_period_to_fiscal(period)
+        # Pillar 3: Calculate efficiency metrics
+        efficiency_metrics = self._calculate_efficiency_metrics(vital_signs, period)
+
+        # Pillar 3: Calculate Cash Conversion Cycle (CCC = DSI + DSO - DPO)
+        dsi = inventory_metrics.get('days_sales_of_inventory')
+        dso = efficiency_metrics.get('days_sales_outstanding')
+        dpo = efficiency_metrics.get('days_payable_outstanding')
+
+        if dsi is not None and dso is not None and dpo is not None:
+            ccc = dsi + dso - dpo
+            efficiency_metrics['cash_conversion_cycle_days'] = round(ccc, 1)
+
+            # Health assessment (retail industry benchmark: <60 days is good)
+            if ccc < 60:
+                efficiency_metrics['ccc_health'] = 'Healthy'
+            elif ccc < 90:
+                efficiency_metrics['ccc_health'] = 'Moderate'
+            else:
+                efficiency_metrics['ccc_health'] = 'Weak'
 
         # Extract risk flags (with heatmap tracking)
         risk_flags = self._extract_risk_flags(soup, period)
@@ -246,6 +291,7 @@ class TargetFinancialAnalyzer:
             "debt_metrics": debt_metrics,
             "liquidity_metrics": liquidity_metrics,
             "cashflow_metrics": cashflow_metrics,
+            "efficiency_metrics": efficiency_metrics,
             "risk_flags": risk_flags
         }
 
@@ -314,6 +360,9 @@ class TargetFinancialAnalyzer:
             'us-gaap:CashAndCashEquivalentsAtCarryingValue': 'cash_and_equivalents',  # Fallback
             'us-gaap:AccountsAndOtherReceivablesNetCurrent': 'current_receivables',
             'us-gaap:AccountsReceivableNetCurrent': 'current_receivables',  # Fallback
+            # Pillar 3: Accounts Payable for Cash Conversion Cycle
+            'us-gaap:AccountsPayableCurrent': 'current_payables',
+            'us-gaap:AccountsPayableTradeCurrent': 'current_payables',  # Fallback
             'us-gaap:StockholdersEquity': 'stockholders_equity',
             'us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest': 'stockholders_equity',  # Fallback
             'us-gaap:Assets': 'total_assets'
@@ -529,6 +578,10 @@ class TargetFinancialAnalyzer:
         """
         Calculate inventory efficiency metrics (Phase 2 Enhancement).
 
+        CRITICAL: For quarterly periods, COGS must be annualized before calculating
+        turnover ratios, since inventory is a point-in-time snapshot but COGS is
+        cumulative over the period.
+
         Metrics:
         - Inventory Turnover Ratio = COGS / Average Inventory
         - Days Sales of Inventory (DSI) = 365 / Inventory Turnover
@@ -545,11 +598,20 @@ class TargetFinancialAnalyzer:
         # Need COGS and Inventory
         cogs = vital_signs.get('cost_of_sales_billion')
         inventory = vital_signs.get('inventory_billion')
+        fiscal_quarter = vital_signs.get('fiscal_quarter')
 
         if cogs and inventory:
+            # CRITICAL: Annualize quarterly COGS to match point-in-time inventory
+            if fiscal_quarter is not None:
+                # Quarterly period (10-Q) - annualize COGS
+                annualized_cogs = cogs * 4
+            else:
+                # Annual period (10-K) - use as is
+                annualized_cogs = cogs
+
             # For simplicity, use current inventory (not average)
             # To calculate true average, would need previous period's inventory
-            inventory_turnover = cogs / inventory
+            inventory_turnover = annualized_cogs / inventory
             dsi = 365 / inventory_turnover
 
             inventory_metrics['inventory_turnover_ratio'] = round(inventory_turnover, 2)
@@ -649,6 +711,26 @@ class TargetFinancialAnalyzer:
             roe = (net_income / stockholders_equity) * 100
             debt_metrics['return_on_equity_percent'] = round(roe, 2)
 
+            # Pillar 3: DuPont Analysis Components
+            # Component 1: Profit Margin (already exists as net_profit_margin_percent)
+            profit_margin = vital_signs.get('net_profit_margin_percent', 0) / 100  # Convert to decimal
+
+            # Component 2: Asset Turnover = Revenue / Total Assets
+            net_sales = vital_signs.get('net_sales_billion')
+            if net_sales and total_assets and total_assets > 0:
+                asset_turnover = net_sales / total_assets
+                debt_metrics['dupont_asset_turnover'] = round(asset_turnover, 2)
+
+            # Component 3: Financial Leverage = Total Assets / Stockholders Equity
+            if total_assets and stockholders_equity > 0:
+                financial_leverage = total_assets / stockholders_equity
+                debt_metrics['dupont_financial_leverage'] = round(financial_leverage, 2)
+
+            # Validation: ROE should equal Profit Margin × Asset Turnover × Financial Leverage
+            if all(k in debt_metrics for k in ['dupont_asset_turnover', 'dupont_financial_leverage']):
+                calculated_roe = profit_margin * debt_metrics['dupont_asset_turnover'] * debt_metrics['dupont_financial_leverage'] * 100
+                debt_metrics['dupont_roe_validation'] = round(calculated_roe, 2)  # Should match return_on_equity_percent
+
         if net_income and total_assets:
             # 6. ROA = (Net Income / Total Assets) × 100%
             roa = (net_income / total_assets) * 100
@@ -721,6 +803,89 @@ class TargetFinancialAnalyzer:
         liquidity_metrics['working_capital_trend'] = 'positive' if working_capital > 0 else 'negative'
 
         return liquidity_metrics
+
+    def _calculate_efficiency_metrics(self, vital_signs: Dict, period: str) -> Dict:
+        """
+        Calculate operational efficiency metrics (Pillar 3: Operational Efficiency).
+
+        CRITICAL: For quarterly periods, COGS and Revenue must be annualized before
+        calculating turnover ratios, since balance sheet items (AP, AR, Inventory) are
+        point-in-time snapshots but income statement items are cumulative over period.
+
+        Formula: Turnover Ratio = Annualized Income Statement Item / Balance Sheet Item
+        - Quarterly: COGS × 4 / AP (annualize the 3-month COGS to match 365-day formula)
+        - Annual: COGS / AP (already 12-month COGS)
+
+        Metrics calculated:
+        - Asset Turnover Ratio = Revenue / Total Assets
+        - Receivables Turnover = Revenue / Accounts Receivable
+        - Days Sales Outstanding (DSO) = 365 / Receivables Turnover
+        - Payables Turnover = COGS / Accounts Payable
+        - Days Payables Outstanding (DPO) = 365 / Payables Turnover
+        - Cash Conversion Cycle = DSI + DSO - DPO (calculated in main analysis flow)
+
+        Args:
+            vital_signs: Dictionary of extracted financial metrics (in billions)
+            period: Period label (e.g., "Q1 2025", "FY2024")
+
+        Returns:
+            Dict with efficiency_metrics or empty dict if data unavailable
+        """
+        efficiency_metrics = {}
+
+        # Extract values (in billions)
+        net_sales = vital_signs.get('net_sales_billion')
+        total_assets = vital_signs.get('total_assets_billion')
+        current_receivables = vital_signs.get('current_receivables_billion')
+        current_payables = vital_signs.get('current_payables_billion')
+        cost_of_sales = vital_signs.get('cost_of_sales_billion')
+
+        # CRITICAL: Detect if quarterly period and annualize income statement items
+        # Balance sheet items are point-in-time, but income statement items are cumulative
+        fiscal_quarter = vital_signs.get('fiscal_quarter')
+
+        if fiscal_quarter is not None:
+            # Quarterly period (10-Q) - annualize COGS and Revenue
+            # Multiply by 4 to convert 3-month values to 12-month equivalent
+            annualized_revenue = net_sales * 4 if net_sales else None
+            annualized_cogs = cost_of_sales * 4 if cost_of_sales else None
+        else:
+            # Annual period (10-K) - use as is (already 12 months)
+            annualized_revenue = net_sales
+            annualized_cogs = cost_of_sales
+
+        # 1. Asset Turnover Ratio = Revenue / Total Assets
+        if annualized_revenue and total_assets and total_assets > 0:
+            asset_turnover = annualized_revenue / total_assets
+            efficiency_metrics['asset_turnover_ratio'] = round(asset_turnover, 2)
+
+            # Health assessment (retail industry benchmark: >1.5 is good)
+            if asset_turnover >= 1.5:
+                efficiency_metrics['asset_turnover_health'] = 'Healthy'
+            elif asset_turnover >= 1.0:
+                efficiency_metrics['asset_turnover_health'] = 'Moderate'
+            else:
+                efficiency_metrics['asset_turnover_health'] = 'Weak'
+
+        # 2. Receivables Turnover = Revenue / Accounts Receivable (use annualized revenue)
+        if annualized_revenue and current_receivables and current_receivables > 0:
+            receivables_turnover = annualized_revenue / current_receivables
+            efficiency_metrics['receivables_turnover_ratio'] = round(receivables_turnover, 2)
+
+            # Days Sales Outstanding (DSO) = 365 / Receivables Turnover
+            dso = 365 / receivables_turnover
+            efficiency_metrics['days_sales_outstanding'] = round(dso, 1)
+
+        # 3. Payables Turnover = COGS / Accounts Payable (use annualized COGS)
+        if annualized_cogs and current_payables and current_payables > 0:
+            payables_turnover = annualized_cogs / current_payables
+            efficiency_metrics['payables_turnover_ratio'] = round(payables_turnover, 2)
+
+            # Days Payables Outstanding (DPO) = 365 / Payables Turnover
+            dpo = 365 / payables_turnover
+            efficiency_metrics['days_payable_outstanding'] = round(dpo, 1)
+
+        return efficiency_metrics
 
     def _extract_quarter_number(self, period: str) -> Optional[str]:
         """
@@ -1290,7 +1455,11 @@ class TargetFinancialAnalyzer:
                     'debt_to_ebitda_ratio': [],
                     'debt_to_ebitda_health': [],
                     'return_on_equity_percent': [],
-                    'return_on_assets_percent': []
+                    'return_on_assets_percent': [],
+                    # Pillar 3: DuPont Analysis components
+                    'dupont_asset_turnover': [],
+                    'dupont_financial_leverage': [],
+                    'dupont_roe_validation': []
                 },
                 'liquidity': {
                     'current_ratio': [],
@@ -1323,6 +1492,16 @@ class TargetFinancialAnalyzer:
                     'depreciation_amortization_billion': [],  # Phase 7
                     'ebitda_billion': [],  # Phase 7
                     'ebitda_margin_percent': []  # Phase 7
+                },
+                'efficiency': {
+                    'asset_turnover_ratio': [],
+                    'asset_turnover_health': [],
+                    'receivables_turnover_ratio': [],
+                    'days_sales_outstanding': [],
+                    'payables_turnover_ratio': [],
+                    'days_payable_outstanding': [],
+                    'cash_conversion_cycle_days': [],
+                    'ccc_health': []
                 }
             },
             'comparisons': {
@@ -1420,6 +1599,16 @@ class TargetFinancialAnalyzer:
             timeseries_data['metrics']['debt']['return_on_assets_percent'].append(
                 debt_metrics.get('return_on_assets_percent')
             )
+            # Pillar 3: DuPont Analysis components
+            timeseries_data['metrics']['debt']['dupont_asset_turnover'].append(
+                debt_metrics.get('dupont_asset_turnover')
+            )
+            timeseries_data['metrics']['debt']['dupont_financial_leverage'].append(
+                debt_metrics.get('dupont_financial_leverage')
+            )
+            timeseries_data['metrics']['debt']['dupont_roe_validation'].append(
+                debt_metrics.get('dupont_roe_validation')
+            )
 
             # Pillar 2: Liquidity metrics
             timeseries_data['metrics']['liquidity']['current_ratio'].append(
@@ -1508,6 +1697,33 @@ class TargetFinancialAnalyzer:
             )
             timeseries_data['metrics']['operating_expenses']['ebitda_margin_percent'].append(
                 vital.get('ebitda_margin_percent')
+            )
+
+            # Pillar 3: Efficiency metrics
+            efficiency = filing.get('efficiency_metrics', {})
+            timeseries_data['metrics']['efficiency']['asset_turnover_ratio'].append(
+                efficiency.get('asset_turnover_ratio')
+            )
+            timeseries_data['metrics']['efficiency']['asset_turnover_health'].append(
+                efficiency.get('asset_turnover_health')
+            )
+            timeseries_data['metrics']['efficiency']['receivables_turnover_ratio'].append(
+                efficiency.get('receivables_turnover_ratio')
+            )
+            timeseries_data['metrics']['efficiency']['days_sales_outstanding'].append(
+                efficiency.get('days_sales_outstanding')
+            )
+            timeseries_data['metrics']['efficiency']['payables_turnover_ratio'].append(
+                efficiency.get('payables_turnover_ratio')
+            )
+            timeseries_data['metrics']['efficiency']['days_payable_outstanding'].append(
+                efficiency.get('days_payable_outstanding')
+            )
+            timeseries_data['metrics']['efficiency']['cash_conversion_cycle_days'].append(
+                efficiency.get('cash_conversion_cycle_days')
+            )
+            timeseries_data['metrics']['efficiency']['ccc_health'].append(
+                efficiency.get('ccc_health')
             )
 
             # Comparisons
