@@ -2007,6 +2007,265 @@ def create_debt_to_ebitda_trend(data):
     return fig
 
 
+def create_dupont_analysis_breakdown(data):
+    """
+    Chart 19: DuPont Analysis Breakdown (Pillar 3)
+
+    Shows how ROE breaks down into three multiplicative components:
+    - Profit Margin (Net Income / Revenue)
+    - Asset Turnover (Revenue / Total Assets)
+    - Financial Leverage (Total Assets / Stockholders Equity)
+
+    Formula: ROE = Profit Margin × Asset Turnover × Financial Leverage
+
+    Uses dropdown menu to switch between fiscal quarters (Q1-Q4).
+    Q4 values are calculated from annual 10-K data minus Q1-Q3.
+    """
+    import plotly.graph_objects as go
+
+    # Step 1: Collect Q1-Q3 quarterly data from 10-Q filings
+    periods_data = []
+
+    for i, period in enumerate(data['periods']):
+        # Only include 10-Q quarterly filings (exclude annual 10-K)
+        if period['filing_type'] != '10-Q':
+            continue
+
+        period_label = period.get('period')  # e.g., "Q3 2025"
+        fiscal_year = period.get('fiscal_year')
+        fiscal_quarter = period.get('fiscal_quarter')
+
+        # Get DuPont components
+        roe = data['metrics']['debt'].get('return_on_equity_percent', [None])[i]
+        profit_margin = data['metrics']['margins'].get('net_profit_margin_percent', [None])[i]
+        asset_turnover = data['metrics']['debt'].get('dupont_asset_turnover', [None])[i]
+        financial_leverage = data['metrics']['debt'].get('dupont_financial_leverage', [None])[i]
+
+        # Get revenue and net income for Q4 calculation
+        revenue = data['metrics']['revenue'].get('net_sales_billion', [None])[i]
+        net_income = data['metrics']['cash_flows'].get('net_income_billion', [None])[i]
+
+        # Only include periods with complete data
+        if all(v is not None for v in [roe, profit_margin, asset_turnover, financial_leverage, revenue, net_income]):
+            periods_data.append({
+                'period': period_label,
+                'fiscal_year': fiscal_year,
+                'fiscal_quarter': fiscal_quarter,
+                'roe': roe,
+                'profit_margin': profit_margin,
+                'asset_turnover': asset_turnover,
+                'financial_leverage': financial_leverage,
+                'revenue': revenue,
+                'net_income': net_income
+            })
+
+    # Step 2: Calculate Q4 from annual 10-K reports
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+
+            # Get annual values
+            annual_revenue = data['metrics']['revenue'].get('net_sales_billion', [None])[i]
+            annual_net_income = data['metrics']['cash_flows'].get('net_income_billion', [None])[i]
+            annual_asset_turnover = data['metrics']['debt'].get('dupont_asset_turnover', [None])[i]
+            annual_financial_leverage = data['metrics']['debt'].get('dupont_financial_leverage', [None])[i]
+
+            # Skip if annual data incomplete
+            if not all([annual_revenue, annual_net_income, annual_asset_turnover, annual_financial_leverage]):
+                continue
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1 = q2 = q3 = None
+            for q in periods_data:
+                if q['fiscal_year'] == fy:
+                    if q['fiscal_quarter'] == 1:
+                        q1 = q
+                    elif q['fiscal_quarter'] == 2:
+                        q2 = q
+                    elif q['fiscal_quarter'] == 3:
+                        q3 = q
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if all([q1, q2, q3]):
+                # Q4 Income statement items (cumulative → subtract Q1-Q3)
+                q4_revenue = annual_revenue - (q1['revenue'] + q2['revenue'] + q3['revenue'])
+                q4_net_income = annual_net_income - (q1['net_income'] + q2['net_income'] + q3['net_income'])
+
+                # Q4 Balance sheet items (year-end values from 10-K)
+                # Back-calculate Total Assets and Stockholders Equity from annual ratios
+                # Total Assets = Revenue / Asset Turnover (year-end value)
+                total_assets = annual_revenue / annual_asset_turnover if annual_asset_turnover > 0 else None
+                # Stockholders Equity = Total Assets / Financial Leverage (year-end value)
+                stockholders_equity = total_assets / annual_financial_leverage if (total_assets and annual_financial_leverage > 0) else None
+
+                if all([q4_revenue, total_assets, stockholders_equity]) and q4_revenue > 0 and stockholders_equity > 0:
+                    # Calculate Q4 DuPont components
+                    q4_profit_margin = (q4_net_income / q4_revenue) * 100
+                    q4_asset_turnover = q4_revenue / total_assets
+                    q4_financial_leverage = total_assets / stockholders_equity
+                    q4_roe = (q4_net_income / stockholders_equity) * 100
+
+                    periods_data.append({
+                        'period': f'Q4 {fy}',
+                        'fiscal_year': fy,
+                        'fiscal_quarter': 4,
+                        'roe': round(q4_roe, 2),
+                        'profit_margin': round(q4_profit_margin, 2),
+                        'asset_turnover': round(q4_asset_turnover, 2),
+                        'financial_leverage': round(q4_financial_leverage, 2),
+                        'revenue': q4_revenue,
+                        'net_income': q4_net_income
+                    })
+
+    if not periods_data:
+        print("⚠️  Skipping DuPont Analysis: No complete quarterly data available")
+        return None
+
+    # Sort by fiscal year, then quarter (for proper chronological order)
+    def sort_key(item):
+        year = item['fiscal_year']
+        quarter = item.get('fiscal_quarter', 4)
+        return (year, quarter)
+
+    periods_data.sort(key=sort_key)
+
+    # Calculate global Y-axis range for consistent scaling across all periods
+    all_values = []
+    for p in periods_data:
+        all_values.extend([p['profit_margin'], p['asset_turnover'], p['financial_leverage'], p['roe']])
+
+    y_min = 0  # Always start at 0
+    y_max = max(all_values) * 1.1  # Add 10% padding
+
+    # Create figure with subplots
+    fig = go.Figure()
+
+    # Create one grouped bar chart trace set per fiscal year
+    for idx, period_data in enumerate(periods_data):
+        period_label = period_data['period']
+
+        # Visibility: Only most recent period visible by default
+        visible = (idx == len(periods_data) - 1)
+
+        # Bar 1: Profit Margin
+        fig.add_trace(go.Bar(
+            name='Profit Margin (%)',
+            x=['Profit Margin'],
+            y=[period_data['profit_margin']],
+            marker_color='#3498db',  # Blue
+            text=[f"{period_data['profit_margin']:.2f}%"],
+            textposition='outside',
+            visible=visible,
+            showlegend=(idx == 0)  # Only show legend for first trace set
+        ))
+
+        # Bar 2: Asset Turnover
+        fig.add_trace(go.Bar(
+            name='Asset Turnover (x)',
+            x=['Asset Turnover'],
+            y=[period_data['asset_turnover']],
+            marker_color='#e67e22',  # Orange
+            text=[f"{period_data['asset_turnover']:.2f}x"],
+            textposition='outside',
+            visible=visible,
+            showlegend=(idx == 0)
+        ))
+
+        # Bar 3: Financial Leverage
+        fig.add_trace(go.Bar(
+            name='Financial Leverage (x)',
+            x=['Financial Leverage'],
+            y=[period_data['financial_leverage']],
+            marker_color='#9b59b6',  # Purple
+            text=[f"{period_data['financial_leverage']:.2f}x"],
+            textposition='outside',
+            visible=visible,
+            showlegend=(idx == 0)
+        ))
+
+        # Bar 4: ROE (Result)
+        fig.add_trace(go.Bar(
+            name='ROE (%)',
+            x=['ROE (Result)'],
+            y=[period_data['roe']],
+            marker_color='#27ae60',  # Green
+            text=[f"{period_data['roe']:.2f}%"],
+            textposition='outside',
+            visible=visible,
+            showlegend=(idx == 0)
+        ))
+
+    # Create dropdown menu buttons (reverse order for most recent first)
+    buttons = []
+    for idx_rev in range(len(periods_data) - 1, -1, -1):
+        period_data = periods_data[idx_rev]
+        # Calculate visibility array (4 traces per period)
+        visible_array = [False] * (len(periods_data) * 4)
+        start_idx = idx_rev * 4
+        visible_array[start_idx:start_idx + 4] = [True, True, True, True]
+
+        buttons.append({
+            'label': period_data['period'],
+            'method': 'update',
+            'args': [
+                {'visible': visible_array},
+                {
+                    'title': {
+                        'text': f"Target: DuPont Analysis ({period_data['period']})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'y': 0.97,
+                        'yanchor': 'top'
+                    },
+                    'yaxis': {'range': [y_min, y_max]}  # Preserve fixed Y-axis range
+                }
+            ]
+        })
+
+    # Layout
+    most_recent = periods_data[-1]['period']
+    fig.update_layout(
+        title={
+            'text': f"Target: DuPont Analysis ({most_recent})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.97,
+            'yanchor': 'top'
+        },
+        xaxis_title="DuPont Components",
+        yaxis_title="Value",
+        yaxis=dict(range=[y_min, y_max]),  # Fixed Y-axis range for consistent scaling
+        height=600,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5
+        ),
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.02,
+            'xanchor': 'left',
+            'y': 1.15,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': '#BDBDBD',
+            'borderwidth': 1
+        }],
+        margin=dict(t=140, b=80, l=80, r=40)
+    )
+
+    # Save chart
+    output_path = 'output/chart_dupont_analysis.html'
+    fig.write_html(output_path)
+    print(f"✅ Chart 19 created: {output_path}")
+    return fig
+
+
 def main():
     """Generate all Plotly visualizations."""
     print("📊 Generating Plotly visualizations from time-series data...")
@@ -2050,7 +2309,10 @@ def main():
     create_capital_structure_donut(data)  # Chart 17
     create_debt_to_ebitda_trend(data)  # Chart 18
 
-    print("\n✅ All 18 visualizations created in output/ directory")
+    # Pillar 3: Operational Efficiency visualizations
+    create_dupont_analysis_breakdown(data)  # Chart 19
+
+    print("\n✅ All 19 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -2070,6 +2332,7 @@ def main():
     print("     - chart_current_ratio_gauge.html (Chart 16 - Pillar 2)")
     print("     - chart_capital_structure_donut.html (Chart 17 - Pillar 2)")
     print("     - chart_debt_to_ebitda_trend.html (Chart 18 - Pillar 2)")
+    print("     - chart_dupont_analysis.html (Chart 19 - Pillar 3)")
 
 
 if __name__ == "__main__":
