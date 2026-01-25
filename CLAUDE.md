@@ -982,7 +982,7 @@ self.risk_heatmap = {
 # Run analyzer (includes executive insights export - Phase 4)
 python3 financial_analyzer.py
 
-# Run visualizations (creates 15 charts including Phase 4, Phase 6 & Phase 7)
+# Run visualizations (creates 20 charts: Phases 3-7 + Pillar 2 + Pillar 3)
 python3 visualize_data.py
 
 # Generate investment thesis (Phase 4)
@@ -1177,7 +1177,7 @@ for i, period in enumerate(data['periods']):
 
 ## Complete Chart Catalog
 
-All 19 interactive Plotly charts created by `visualize_data.py`:
+All 20 interactive Plotly charts created by `visualize_data.py`:
 
 ### Chart 1: Revenue vs Inventory Growth (Phase 3)
 - **Type**: Dual-axis line chart
@@ -1372,6 +1372,65 @@ All 19 interactive Plotly charts created by `visualize_data.py`:
   3. **Fixed Y-axis**: User-requested fix to enable proper visual comparison across periods
   4. **Grouped bars**: Shows all 4 components side-by-side for easy ratio interpretation
   5. **Formula in subtitle**: Reinforces that ROE is multiplicative product of 3 components
+
+### Chart 20: Cash Conversion Cycle Trend (Pillar 3)
+- **Type**: Multi-line chart with flexible quarterly/annual data detection
+- **Purpose**: Track how efficiently Target converts resources (inventory, receivables) into cash over time
+- **File**: `chart_cash_conversion_cycle.html`
+- **Data**: Intelligently selects between quarterly (15 periods) or annual (5-10 periods) based on receivables availability
+- **Formula**: CCC = DSI + DSO - DPO (lower is better)
+- **Components**:
+  - DSI (Days Sales of Inventory) = 365 / (COGS / Inventory) - Red line
+  - DSO (Days Sales Outstanding) = 365 / (Revenue / Receivables) - Orange line
+  - DPO (Days Payables Outstanding) = 365 / (COGS / Payables) - Blue line
+  - CCC (Cash Conversion Cycle) = DSI + DSO - DPO - Green line (bold)
+- **Flexible Data Detection** (commit a2edf63):
+  - Automatically detects if quarterly receivables available in 10-Q filings
+  - **Threshold**: ≥8 quarters needed for quarterly approach (2 years of data)
+  - **Quarterly approach**: Displays Q1-Q3 from 10-Q + calculated Q4 from 10-K (15 periods)
+  - **Annual approach**: Falls back to 10-K annual data only (5-10 periods)
+  - Detection function: `_detect_ccc_data_availability(data)` scans all periods
+- **Q4 Calculation for Quarterly Approach**:
+  - Q4 DSI = (365 × year_end_inventory) / annual_cogs
+  - Q4 DSO = (365 × year_end_receivables) / annual_revenue
+  - Q4 DPO = (365 × year_end_payables) / annual_cogs
+  - Uses year-end balance sheet values (point-in-time) with annual income statement totals (365-day basis)
+- **For Target Corporation**:
+  - Uses annual data (5 periods: FY2020-FY2024)
+  - Receivables NOT reported in quarterly 10-Q filings (0/12 quarters)
+  - Console output: "Using 5 annual periods (receivables only in 10-K filings)"
+  - Chart subtitle: "Annual data: FY2020 - FY2024"
+- **For Other Companies**:
+  - If receivables available in 10-Q (≥8 quarters): automatically uses quarterly data
+  - Console output: "Using X quarterly periods (receivables available in 10-Q filings)"
+  - Chart subtitle: "Quarterly data: Q1 2022 - Q3 2025"
+- **Features**:
+  - Reference line at 60 days (retail industry benchmark for healthy CCC)
+  - Reference line at 0 days (for context)
+  - Hover tooltip shows all 4 values (DSI, DSO, DPO, CCC) at once
+  - 4 distinct color-coded lines for easy component identification
+  - Legend positioned at bottom (horizontal orientation)
+  - Responsive design with proper margins (left: 100px, right: 100px for centering)
+  - Width: 1000px for better label spacing
+- **Business Insights**:
+  - **CCC trend**: Lower values indicate faster cash conversion (more efficient)
+  - **DSI component**: High DSI means inventory sitting too long
+  - **DSO component**: High DSO means slow customer payment collection
+  - **DPO component**: High DPO means company taking longer to pay suppliers (can be positive)
+  - **Retail benchmark (60 days)**: Target's CCC range (31.4-71.2 days) shows efficient working capital management
+  - **Negative CCC possible**: If DPO > (DSI + DSO), company collects cash before paying suppliers (very efficient)
+- **Implementation Details**:
+  - Location: `visualize_data.py` lines 2269-2411
+  - Detection function: lines 2269-2303 (`_detect_ccc_data_availability`)
+  - Chart function: lines 2306-2411 (`create_cash_conversion_cycle_chart`)
+  - Data availability constraint: Target receivables only in 10-K (22.7% coverage overall)
+- **Key Design Decisions**:
+  1. **Intelligent detection**: Makes tool reusable across companies with different reporting practices
+  2. **8-quarter threshold**: Ensures minimum 2 years of data for meaningful quarterly analysis
+  3. **Graceful fallback**: Always works even if receivables sparse (uses annual data)
+  4. **Console transparency**: Clear messages show which data source selected and why
+  5. **Chart subtitle**: Dynamic subtitle shows data frequency (Quarterly/Annual) and period range
+  6. **Q4 calculation**: Uses year-end balance sheet + annual income statement for consistency with 365-day formulas
 
 ## Key Learnings
 
