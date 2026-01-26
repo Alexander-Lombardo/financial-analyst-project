@@ -1024,7 +1024,8 @@ self.risk_heatmap = {
 4. **Chart 22: Cash Flow Sankey Diagram** (`create_cash_flow_sankey()`):
    - 7 nodes: OCF, FCF, CapEx, Dividends, Buybacks, Debt Repayment, Retained Cash
    - Color-coded flows showing cash allocation
-   - Dropdown menu for fiscal year selection (last 5 years)
+   - Dropdown menu for quarter selection (15 quarters: Q1 2022 - Q3 2025)
+   - Q4 data calculated from annual 10-K (Q4 = Annual - Q1 - Q2 - Q3)
    - Interactive highlighting on hover
 
 5. **Test Suite** - `test_pillar4_cash_flow_dynamics.py` (18 test cases):
@@ -1605,11 +1606,11 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
 - **Implementation**: `visualize_data.py` function `create_ocf_vs_capex_chart()`
 
 ### Chart 22: Cash Flow Sankey Diagram (Pillar 4)
-- **Type**: Plotly Sankey diagram with dropdown menu for fiscal year selection
+- **Type**: Plotly Sankey diagram with dropdown menu for quarter selection
 - **Purpose**: Visualize where cash flows from Operating Cash Flow to various uses (the "three engines")
 - **File**: `chart_cash_flow_sankey.html`
-- **Data**: 10 fiscal years (FY2015-FY2024) from annual 10-K filings
-- **Dropdown Menu**: Switch between fiscal years (most recent first, last 5 years)
+- **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods
+- **Dropdown Menu**: Switch between quarters (most recent first)
 - **Nodes** (7 total):
   1. **Operating Cash Flow** (source) - Green, shows total OCF
   2. **Free Cash Flow** (intermediate) - Blue, OCF minus CapEx
@@ -1627,7 +1628,8 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   - Color-coded flows matching destination node colors
   - Dollar values displayed in node labels
   - Dropdown updates all node values and flows
-  - Title updates dynamically with selected fiscal year
+  - Title updates dynamically with selected quarter
+  - Q4 data calculated from annual 10-K (Q4 = Annual - Q1 - Q2 - Q3)
 - **GAAP Tags Used**:
   - `us-gaap:PaymentsToAcquirePropertyPlantAndEquipment`: CapEx
   - `us-gaap:PaymentsOfDividendsCommonStock`: Dividends
@@ -1636,8 +1638,9 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
 - **Business Insights**:
   - Answers "Where does Target's cash go?"
   - Shows cash allocation priorities (reinvestment vs shareholder returns)
-  - FY2024: OCF $7.37B → CapEx $2.89B → FCF $4.48B
-  - Visualizes capital allocation strategy year-over-year
+  - Q3 2025: OCF $3.48B → CapEx $0.64B → FCF $2.84B (example latest quarter)
+  - Visualizes capital allocation strategy quarter-over-quarter
+  - Reveals seasonal patterns in cash usage (Q4 typically higher CapEx)
 - **Implementation**: `visualize_data.py` function `create_cash_flow_sankey()`
 
 ## Key Learnings
