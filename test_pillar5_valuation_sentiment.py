@@ -147,7 +147,7 @@ class TestValuationCharts(unittest.TestCase):
         has_pe = "P/E" in content or "P\\u002fE" in content or "Ratio" in content
         self.assertTrue(has_pe, "Chart 23 missing P/E reference")
         self.assertIn("Revenue Growth", content, "Chart 23 missing Revenue Growth")
-        self.assertIn("Pillar 5", content, "Chart 23 missing Pillar 5 reference")
+        self.assertIn("Valuation", content, "Chart 23 missing Valuation reference")
 
         print("✅ Chart 23 contains all required elements")
 
@@ -176,7 +176,7 @@ class TestValuationCharts(unittest.TestCase):
         has_pe = "P/E" in content or "P\\u002fE" in content
         self.assertTrue(has_pe, "Chart 24 missing P/E reference")
         self.assertIn("Undervalued", content, "Chart 24 missing valuation zones")
-        self.assertIn("Pillar 5", content, "Chart 24 missing Pillar 5 reference")
+        self.assertIn("Valuation", content, "Chart 24 missing Valuation reference")
 
         print("✅ Chart 24 contains all required elements")
 
