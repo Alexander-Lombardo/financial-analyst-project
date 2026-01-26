@@ -3241,12 +3241,208 @@ def create_cash_flow_sankey(data):
 # Pillar 5: Valuation & Market Sentiment Charts
 # =============================================================================
 
+def _get_quarterly_valuation_data(data):
+    """
+    Extract quarterly data needed for historical P/E calculation.
+
+    Returns list of dicts with period, quarter_end_date, revenue_growth, ttm_net_income.
+    """
+    periods = data['periods']
+    net_income = data['metrics']['cash_flows'].get('net_income_billion', [])
+    yoy_growth = data['metrics']['revenue'].get('yoy_growth_percent', [])
+
+    # Map fiscal quarters to approximate end dates (Target fiscal year ends late Jan)
+    # Q1 ends late April, Q2 ends late July, Q3 ends late October, Q4 ends late January
+    quarter_end_map = {
+        'Q1': '-04-30',
+        'Q2': '-07-31',
+        'Q3': '-10-31',
+        'Q4': '-01-31'  # Note: Q4 end is in the NEXT calendar year
+    }
+
+    quarterly_data = []
+
+    # First, build a lookup of all net income values by period
+    ni_lookup = {}
+    for i, period in enumerate(periods):
+        if i < len(net_income) and net_income[i] is not None:
+            ni_lookup[period['period']] = {
+                'net_income': net_income[i],
+                'fiscal_year': period['fiscal_year'],
+                'filing_type': period['filing_type']
+            }
+
+    # Process only 10-Q quarterly filings
+    for i, period in enumerate(periods):
+        if period['filing_type'] != '10-Q':
+            continue
+
+        period_str = period['period']  # e.g., "Q3 2024"
+        fiscal_year = period['fiscal_year']
+
+        # Parse quarter
+        if ' ' not in period_str:
+            continue
+        quarter = period_str.split(' ')[0]  # "Q3"
+
+        # Determine quarter end date
+        if quarter == 'Q4':
+            # Q4 ends in January of the NEXT calendar year
+            calendar_year = fiscal_year + 1
+        else:
+            calendar_year = fiscal_year
+        quarter_end_date = f"{calendar_year}{quarter_end_map[quarter]}"
+
+        # Get revenue growth for this quarter
+        growth = yoy_growth[i] if i < len(yoy_growth) else None
+
+        # Calculate TTM (trailing 12-month) net income
+        # For Q3 2024, we need Q4 2023 + Q1 2024 + Q2 2024 + Q3 2024
+        ttm_quarters = _get_ttm_quarters(quarter, fiscal_year)
+        ttm_net_income = 0
+        ttm_complete = True
+
+        for q_period in ttm_quarters:
+            if q_period in ni_lookup:
+                ttm_net_income += ni_lookup[q_period]['net_income']
+            else:
+                # Try to get Q4 from annual report
+                if q_period.startswith('Q4'):
+                    fy = int(q_period.split()[1])
+                    annual_key = f"FY{fy}"
+                    # Calculate Q4 = Annual - Q1 - Q2 - Q3
+                    if annual_key in ni_lookup:
+                        annual_ni = ni_lookup[annual_key]['net_income']
+                        q1_key = f"Q1 {fy}"
+                        q2_key = f"Q2 {fy}"
+                        q3_key = f"Q3 {fy}"
+                        if all(k in ni_lookup for k in [q1_key, q2_key, q3_key]):
+                            q4_ni = annual_ni - ni_lookup[q1_key]['net_income'] - ni_lookup[q2_key]['net_income'] - ni_lookup[q3_key]['net_income']
+                            ttm_net_income += q4_ni
+                            continue
+                ttm_complete = False
+                break
+
+        if not ttm_complete or ttm_net_income <= 0:
+            continue
+
+        quarterly_data.append({
+            'period': period_str,
+            'quarter_end_date': quarter_end_date,
+            'revenue_growth': growth,
+            'ttm_net_income_billion': round(ttm_net_income, 3)
+        })
+
+    # =========================================================================
+    # Add Q4 periods from 10-K annual reports
+    # Q4 data is not in 10-Q filings, must be calculated from annual 10-K
+    # =========================================================================
+
+    # Build revenue lookup for Q4 calculation
+    revenue_lookup = {}
+    revenue_data = data['metrics']['revenue'].get('net_sales_billion', [])
+    for i, period in enumerate(periods):
+        if i < len(revenue_data) and revenue_data[i] is not None:
+            revenue_lookup[period['period']] = revenue_data[i]
+
+    # Generate Q4 periods from 10-K annual reports
+    for fy_period, fy_data in ni_lookup.items():
+        if not fy_period.startswith('FY'):
+            continue
+
+        fy = int(fy_period[2:])  # FY2024 -> 2024
+
+        # Check if we have Q1, Q2, Q3 for this fiscal year
+        q1_key, q2_key, q3_key = f"Q1 {fy}", f"Q2 {fy}", f"Q3 {fy}"
+
+        if not all(k in ni_lookup for k in [q1_key, q2_key, q3_key]):
+            continue
+
+        # TTM for Q4 is the full fiscal year net income
+        ttm_net_income = fy_data['net_income']
+
+        if ttm_net_income <= 0:
+            continue
+
+        # Calculate Q4 revenue growth (need revenue data)
+        q4_growth = None
+        fy_revenue_key = f"FY{fy}"
+        prior_fy_key = f"FY{fy - 1}"
+
+        if (fy_revenue_key in revenue_lookup and prior_fy_key in revenue_lookup
+            and all(k in revenue_lookup for k in [q1_key, q2_key, q3_key])):
+
+            # Calculate Q4 revenue for current year
+            q4_revenue = revenue_lookup[fy_revenue_key] - revenue_lookup[q1_key] - \
+                         revenue_lookup[q2_key] - revenue_lookup[q3_key]
+
+            # Calculate Q4 revenue for prior year
+            prior_q1 = f"Q1 {fy-1}"
+            prior_q2 = f"Q2 {fy-1}"
+            prior_q3 = f"Q3 {fy-1}"
+
+            if all(k in revenue_lookup for k in [prior_q1, prior_q2, prior_q3]):
+                prior_q4_revenue = revenue_lookup[prior_fy_key] - revenue_lookup[prior_q1] - \
+                                   revenue_lookup[prior_q2] - revenue_lookup[prior_q3]
+
+                if prior_q4_revenue > 0:
+                    q4_growth = ((q4_revenue / prior_q4_revenue) - 1) * 100
+
+        # Q4 quarter end date (January of next calendar year)
+        quarter_end_date = f"{fy + 1}-01-31"
+
+        quarterly_data.append({
+            'period': f'Q4 {fy}',
+            'quarter_end_date': quarter_end_date,
+            'revenue_growth': round(q4_growth, 2) if q4_growth is not None else None,
+            'ttm_net_income_billion': round(ttm_net_income, 3)
+        })
+
+    # Sort chronologically by year then quarter
+    quarterly_data.sort(key=lambda x: (
+        int(x['period'].split()[1]),  # Year
+        int(x['period'][1])           # Quarter number
+    ))
+
+    return quarterly_data
+
+
+def _get_ttm_quarters(current_quarter: str, fiscal_year: int) -> list:
+    """
+    Get the 4 quarters that make up TTM for a given quarter.
+
+    For Q3 2024: returns ['Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024']
+    """
+    quarter_num = int(current_quarter[1])  # Q3 -> 3
+
+    quarters = []
+    for i in range(4):
+        # Go back 3, 2, 1, 0 quarters from current
+        offset = 3 - i
+        q_num = quarter_num - offset
+        fy = fiscal_year
+
+        # Adjust for year boundary
+        while q_num <= 0:
+            q_num += 4
+            fy -= 1
+        while q_num > 4:
+            q_num -= 4
+            fy += 1
+
+        quarters.append(f"Q{q_num} {fy}")
+
+    return quarters
+
+
 def create_valuation_vs_growth_scatter(data, market_data=None):
     """
-    Chart 23: Valuation vs Growth Scatter Plot
+    Chart 23: Valuation vs Growth Scatter Plot with Quarterly Dropdown
 
     Plots P/E Ratio (Y-axis) vs Revenue Growth (X-axis) for Target and peers.
-    Helps identify "undervalued" outliers (low P/E, high growth).
+    Includes dropdown menu to view positions across different quarters.
+    Historical P/E is calculated for ALL companies (Target + peers) using
+    price ratio scaling from Yahoo Finance stock price history.
 
     Args:
         data: Time-series data from target_timeseries.json
@@ -3258,152 +3454,264 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     import plotly.graph_objects as go
     from market_data_fetcher import MarketDataFetcher
 
-    # Fetch market data if not provided
-    if market_data is None:
-        try:
-            fetcher = MarketDataFetcher()
-            comparison = fetcher.get_peer_comparison()
-        except Exception as e:
-            print(f"⚠️ Warning: Could not fetch market data: {e}")
-            print("   Skipping Chart 23 (requires Yahoo Finance API)")
-            return None
-    else:
-        comparison = market_data
+    # Fetch current market data for peers
+    try:
+        fetcher = MarketDataFetcher()
+        comparison = fetcher.get_peer_comparison()
+    except Exception as e:
+        print(f"⚠️ Warning: Could not fetch market data: {e}")
+        print("   Skipping Chart 23 (requires Yahoo Finance API)")
+        return None
 
     companies = comparison.get('companies', [])
     if not companies:
         print("⚠️ Warning: No company data available for Chart 23")
         return None
 
-    # Prepare data for scatter plot
-    tickers = []
-    names = []
-    pe_ratios = []
-    revenue_growths = []
-    market_caps = []
-
+    # Extract peer data (excluding Target - we'll use historical P/E for Target)
+    peers = []
     for company in companies:
+        if company.get('ticker') == 'TGT':
+            continue
         pe = company.get('pe_ratio')
         growth = company.get('revenue_growth_percent')
-
-        # Only include companies with both metrics
         if pe is not None and growth is not None:
-            tickers.append(company.get('ticker'))
-            names.append(company.get('name', company.get('ticker')))
-            pe_ratios.append(pe)
-            revenue_growths.append(growth)
-            market_caps.append(company.get('market_cap_billion', 50))
+            peers.append({
+                'ticker': company.get('ticker'),
+                'name': company.get('name', company.get('ticker')),
+                'pe_ratio': pe,
+                'revenue_growth': growth
+            })
 
-    if len(pe_ratios) < 2:
-        print("⚠️ Warning: Not enough data points for Chart 23 scatter plot")
+    if len(peers) < 1:
+        print("⚠️ Warning: Not enough peer data for Chart 23")
         return None
 
-    # Calculate averages for reference lines
-    avg_pe = sum(pe_ratios) / len(pe_ratios)
-    avg_growth = sum(revenue_growths) / len(revenue_growths)
+    # Get quarterly valuation data for Target
+    quarterly_data = _get_quarterly_valuation_data(data)
+    if not quarterly_data:
+        print("⚠️ Warning: No quarterly data available for Chart 23")
+        return None
+
+    # Calculate historical P/E for Target
+    print("   Calculating historical P/E ratios for Target...")
+    historical_pe = fetcher.get_historical_pe_for_quarters(quarterly_data)
+
+    # Filter to quarters with valid P/E
+    valid_quarters = []
+    for q in quarterly_data:
+        if q['period'] in historical_pe and q['revenue_growth'] is not None:
+            pe_data = historical_pe[q['period']]
+            if pe_data.get('pe_ratio'):
+                valid_quarters.append({
+                    'period': q['period'],
+                    'pe_ratio': pe_data['pe_ratio'],
+                    'revenue_growth': q['revenue_growth'],
+                    'stock_price': pe_data['stock_price'],
+                    'ttm_eps': pe_data['ttm_eps'],
+                    'quarter_end_date': pe_data['quarter_end_date']
+                })
+
+    if not valid_quarters:
+        print("⚠️ Warning: Could not calculate historical P/E for any quarter")
+        return None
+
+    print(f"   Found {len(valid_quarters)} quarters with valid P/E data")
+
+    # Get quarter-end dates for historical peer P/E calculation
+    quarter_dates = [q['quarter_end_date'] for q in valid_quarters]
+
+    # Calculate historical P/E for each peer
+    print("   Calculating historical P/E ratios for peers...")
+    peer_historical_pe = {}
+    for peer in peers:
+        ticker = peer['ticker']
+        peer_pe_history = fetcher.get_historical_pe_for_ticker(ticker, quarter_dates)
+        peer_historical_pe[ticker] = peer_pe_history
+        if peer_pe_history:
+            print(f"      {ticker}: {len(peer_pe_history)} periods")
+
+    # Calculate fixed averages based on peers + latest Target
+    all_pe = [p['pe_ratio'] for p in peers] + [valid_quarters[-1]['pe_ratio']]
+    all_growth = [p['revenue_growth'] for p in peers] + [valid_quarters[-1]['revenue_growth']]
+    avg_pe = sum(all_pe) / len(all_pe)
+    avg_growth = sum(all_growth) / len(all_growth)
+
+    # Determine axis ranges for consistency (include historical peer P/E values)
+    all_pe_values = [p['pe_ratio'] for p in peers] + [q['pe_ratio'] for q in valid_quarters]
+    # Add historical peer P/E values to range calculation
+    for ticker, pe_history in peer_historical_pe.items():
+        all_pe_values.extend(pe_history.values())
+    all_growth_values = [p['revenue_growth'] for p in peers] + [q['revenue_growth'] for q in valid_quarters]
+    pe_min, pe_max = min(all_pe_values) - 5, max(all_pe_values) + 10
+    growth_min, growth_max = min(all_growth_values) - 5, max(all_growth_values) + 5
 
     # Create figure
     fig = go.Figure()
 
-    # Add quadrant shading (background regions)
-    # Lower-right quadrant (Undervalued: low P/E, high growth) - Green
+    # Add quadrant shading (fixed position based on averages)
+    # Lower-right quadrant (Undervalued) - Green
     fig.add_shape(
         type="rect",
-        x0=avg_growth, x1=max(revenue_growths) + 5,
+        x0=avg_growth, x1=growth_max + 5,
         y0=0, y1=avg_pe,
         fillcolor="rgba(46, 204, 113, 0.1)",
         line=dict(width=0),
         layer="below"
     )
-
-    # Upper-left quadrant (Overvalued: high P/E, low growth) - Red
+    # Upper-left quadrant (Overvalued) - Red
     fig.add_shape(
         type="rect",
-        x0=min(revenue_growths) - 5, x1=avg_growth,
-        y0=avg_pe, y1=max(pe_ratios) + 10,
+        x0=growth_min - 5, x1=avg_growth,
+        y0=avg_pe, y1=pe_max + 10,
         fillcolor="rgba(231, 76, 60, 0.1)",
         line=dict(width=0),
         layer="below"
     )
 
-    # Add scatter points for each company
-    for i, ticker in enumerate(tickers):
-        is_target = (ticker == 'TGT')
+    # Track trace count for visibility control
+    # Structure: For each quarter, we add [Target, Peer1, Peer2, Peer3, Peer4]
+    traces_per_quarter = 1 + len(peers)  # Target + peers
+    total_traces = len(valid_quarters) * traces_per_quarter
 
-        # Color and size based on whether it's Target
-        color = '#e74c3c' if is_target else '#3498db'
-        size = 25 if is_target else 15
-        symbol = 'star' if is_target else 'circle'
+    # Peer colors for differentiation
+    peer_colors = ['#3498db', '#9b59b6', '#1abc9c', '#f39c12']
 
+    # Add traces for each quarter
+    for q_idx, quarter in enumerate(valid_quarters):
+        is_latest = (q_idx == len(valid_quarters) - 1)
+        visible = is_latest  # Only show latest quarter by default
+
+        # Add Target trace for this quarter
+        # Use legendgroup to keep legend persistent across quarters
         fig.add_trace(go.Scatter(
-            x=[revenue_growths[i]],
-            y=[pe_ratios[i]],
+            x=[quarter['revenue_growth']],
+            y=[quarter['pe_ratio']],
             mode='markers+text',
-            name=names[i],
+            name='Target Corporation',
+            legendgroup='Target',  # Group all Target traces
             marker=dict(
-                size=size,
-                color=color,
-                symbol=symbol,
+                size=25,
+                color='#e74c3c',
+                symbol='star',
                 line=dict(width=2, color='white')
             ),
-            text=[ticker],
+            text=['TGT'],
             textposition='top center',
-            textfont=dict(size=12, color=color, weight='bold' if is_target else 'normal'),
+            textfont=dict(size=12, color='#e74c3c', weight='bold'),
             hovertemplate=(
-                f"<b>{names[i]} ({ticker})</b><br>" +
-                f"P/E Ratio: {pe_ratios[i]:.1f}x<br>" +
-                f"Revenue Growth: {revenue_growths[i]:.1f}%<br>" +
+                f"<b>Target Corporation (TGT)</b><br>" +
+                f"Period: {quarter['period']}<br>" +
+                f"P/E Ratio: {quarter['pe_ratio']:.1f}x<br>" +
+                f"Revenue Growth: {quarter['revenue_growth']:.1f}%<br>" +
+                f"Stock Price: ${quarter['stock_price']:.2f}<br>" +
+                f"TTM EPS: ${quarter['ttm_eps']:.2f}<br>" +
                 "<extra></extra>"
-            )
+            ),
+            visible=visible,
+            showlegend=(q_idx == 0)  # Show legend for first trace in group
         ))
 
-    # Add average reference lines
-    fig.add_hline(
-        y=avg_pe,
-        line_dash="dash",
-        line_color="gray"
-    )
+        # Add peer traces for this quarter with historical P/E
+        for p_idx, peer in enumerate(peers):
+            ticker = peer['ticker']
+            quarter_date = quarter['quarter_end_date']
+
+            # Get historical P/E for this peer at this quarter
+            hist_pe = peer_historical_pe.get(ticker, {}).get(quarter_date)
+            # Fall back to current P/E if historical not available
+            pe_value = hist_pe if hist_pe else peer['pe_ratio']
+            is_historical = hist_pe is not None
+
+            color = peer_colors[p_idx % len(peer_colors)]
+
+            fig.add_trace(go.Scatter(
+                x=[peer['revenue_growth']],  # Revenue growth stays at current (no historical available)
+                y=[pe_value],
+                mode='markers+text',
+                name=peer['name'],
+                legendgroup=peer['ticker'],  # Group all traces for this peer
+                marker=dict(
+                    size=15,
+                    color=color,
+                    symbol='circle',
+                    line=dict(width=2, color='white')
+                ),
+                text=[peer['ticker']],
+                textposition='top center',
+                textfont=dict(size=12, color=color),
+                hovertemplate=(
+                    f"<b>{peer['name']} ({peer['ticker']})</b><br>" +
+                    f"Period: {quarter['period']}<br>" +
+                    f"P/E Ratio: {pe_value:.1f}x {'(historical)' if is_historical else '(current)'}<br>" +
+                    f"Revenue Growth: {peer['revenue_growth']:.1f}% (current)<br>" +
+                    "<extra></extra>"
+                ),
+                visible=visible,
+                showlegend=(q_idx == 0)  # Show legend for first trace in group
+            ))
+
+    # Add reference lines (fixed)
+    fig.add_hline(y=avg_pe, line_dash="dash", line_color="gray")
     fig.add_vline(
-        x=avg_growth,
-        line_dash="dash",
-        line_color="gray",
+        x=avg_growth, line_dash="dash", line_color="gray",
         annotation_text=f"Avg Growth: {avg_growth:.1f}%",
         annotation_position="top"
     )
 
-    # Add quadrant labels
+    # Add quadrant labels (fixed)
     fig.add_annotation(
-        x=max(revenue_growths) - 1,
-        y=5,
+        x=growth_max - 1, y=5,
         text="<b>Undervalued Zone</b><br>(High Growth, Low P/E)",
-        showarrow=False,
-        font=dict(size=10, color='#27ae60'),
+        showarrow=False, font=dict(size=10, color='#27ae60'),
         bgcolor="rgba(255,255,255,0.8)"
     )
     fig.add_annotation(
-        x=min(revenue_growths) + 1,
-        y=65,
+        x=growth_min + 1, y=pe_max + 5,
         text="<b>Overvalued Zone</b><br>(Low Growth, High P/E)",
-        showarrow=False,
-        font=dict(size=10, color='#c0392b'),
-        bgcolor="rgba(255,255,255,0.8)",
-        yanchor="top"
+        showarrow=False, font=dict(size=10, color='#c0392b'),
+        bgcolor="rgba(255,255,255,0.8)", yanchor="top"
     )
-
-    # Add Avg P/E label inside plot area (to avoid clipping)
     fig.add_annotation(
-        x=min(revenue_growths),
-        y=avg_pe + 2,
+        x=growth_min, y=avg_pe + 2,
         text=f"Avg P/E: {avg_pe:.1f}x",
-        showarrow=False,
-        font=dict(size=11, color='gray'),
+        showarrow=False, font=dict(size=11, color='gray'),
         xanchor="left"
     )
 
+    # Create dropdown buttons (most recent first)
+    buttons = []
+    for q_idx_rev in range(len(valid_quarters) - 1, -1, -1):
+        quarter = valid_quarters[q_idx_rev]
+
+        # Build visibility array
+        visible_array = [False] * total_traces
+        start_idx = q_idx_rev * traces_per_quarter
+        for i in range(traces_per_quarter):
+            visible_array[start_idx + i] = True
+
+        buttons.append({
+            'label': quarter['period'],
+            'method': 'update',
+            'args': [
+                {'visible': visible_array},
+                {
+                    'title': {
+                        'text': f"Target: Valuation vs Growth Analysis ({quarter['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'y': 0.95,
+                        'yanchor': 'top'
+                    }
+                }
+            ]
+        })
+
     # Update layout
+    latest_q = valid_quarters[-1]
     fig.update_layout(
         title={
-            'text': "Target: Valuation vs Growth Analysis<br><sub>P/E Ratio vs Revenue Growth YoY - Lower right = potentially undervalued</sub>",
+            'text': f"Target: Valuation vs Growth Analysis ({latest_q['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -3411,8 +3719,8 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
         },
         xaxis_title="Revenue Growth YoY (%)",
         yaxis_title="P/E Ratio (x)",
-        height=600,
-        width=1000,
+        height=650,
+        width=1100,
         showlegend=True,
         legend=dict(
             orientation="v",
@@ -3421,32 +3729,39 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
             xanchor="left",
             x=1.08
         ),
-        margin=dict(l=120, r=220, t=100, b=80),
+        margin=dict(l=120, r=220, t=140, b=80),
         plot_bgcolor='white',
         xaxis=dict(
             gridcolor='lightgray',
             zeroline=True,
-            zerolinecolor='gray'
+            zerolinecolor='gray',
+            range=[growth_min, growth_max]
         ),
         yaxis=dict(
             gridcolor='lightgray',
             zeroline=True,
-            zerolinecolor='gray'
-        )
+            zerolinecolor='gray',
+            range=[pe_min, pe_max]
+        ),
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.17,
+            'xanchor': 'left',
+            'y': 1.12,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': 'lightgray'
+        }]
     )
 
     # Save chart
     output_path = "output/chart_valuation_scatter.html"
     fig.write_html(output_path)
     print(f"✅ Chart 23 created: {output_path}")
-
-    # Find Target's position
-    target_idx = tickers.index('TGT') if 'TGT' in tickers else None
-    if target_idx is not None:
-        target_pe = pe_ratios[target_idx]
-        target_growth = revenue_growths[target_idx]
-        print(f"   Target: P/E={target_pe:.1f}x, Growth={target_growth:.1f}%")
-        print(f"   Peer Avg: P/E={avg_pe:.1f}x, Growth={avg_growth:.1f}%")
+    print(f"   {len(valid_quarters)} quarters available in dropdown")
+    print(f"   Latest: {latest_q['period']} - P/E={latest_q['pe_ratio']:.1f}x, Growth={latest_q['revenue_growth']:.1f}%")
 
     return fig
 

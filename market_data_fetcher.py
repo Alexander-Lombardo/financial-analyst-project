@@ -340,6 +340,176 @@ class MarketDataFetcher:
             'pe_discount_percent': round((1 - target_pe / avg_peer_pe) * 100, 1) if target_pe and avg_peer_pe else None
         }
 
+    def get_quarter_end_price(self, ticker: str, date_str: str) -> Optional[float]:
+        """
+        Get stock price for a specific date (or closest trading day).
+
+        Args:
+            ticker: Stock ticker symbol.
+            date_str: Date string in YYYY-MM-DD format.
+
+        Returns:
+            Closing price for that date, or None if not available.
+        """
+        try:
+            # Get historical data covering the date range
+            history = self.get_historical_prices(ticker, '5y')
+            if history.empty:
+                return None
+
+            # Convert target date to datetime
+            target_date = pd.to_datetime(date_str)
+
+            # Handle both index-based and column-based date formats
+            if 'Date' in history.columns:
+                # Column-based (from cache) - dates may be strings with timezone info
+                # Convert to datetime, handling mixed timezone strings
+                dates = []
+                for d in history['Date']:
+                    try:
+                        # Parse and convert to naive datetime (drop timezone)
+                        dt = pd.to_datetime(d)
+                        if hasattr(dt, 'tz') and dt.tz is not None:
+                            dt = dt.tz_localize(None)
+                        dates.append(dt)
+                    except Exception:
+                        dates.append(pd.NaT)
+                history_dates = pd.Series(dates, index=history.index)
+            else:
+                # Index-based (from fresh API call) - convert to Series for consistent handling
+                idx = history.index
+                dates = []
+                for d in idx:
+                    try:
+                        dt = pd.to_datetime(d)
+                        if hasattr(dt, 'tz') and dt.tz is not None:
+                            dt = dt.tz_localize(None)
+                        dates.append(dt)
+                    except Exception:
+                        dates.append(pd.NaT)
+                history_dates = pd.Series(dates, index=range(len(dates)))
+
+            # Make target date timezone-naive if needed
+            if hasattr(target_date, 'tz') and target_date.tz is not None:
+                target_date = target_date.tz_localize(None)
+
+            # Filter to dates on or before target
+            valid_mask = history_dates <= target_date
+            if not valid_mask.any():
+                return None
+
+            # Find index of closest date
+            valid_indices = history_dates[valid_mask].index.tolist()
+            closest_idx = valid_indices[-1]  # Last valid index (most recent before target)
+
+            # Get the closing price
+            price = history.iloc[closest_idx]['Close']
+
+            return round(float(price), 2)
+
+        except Exception as e:
+            print(f"Warning: Failed to get price for {ticker} on {date_str}: {e}")
+            return None
+
+    def get_historical_pe_for_quarters(self, quarters_data: List[Dict]) -> Dict[str, Dict]:
+        """
+        Calculate historical P/E ratios for specified quarters.
+
+        Args:
+            quarters_data: List of dicts with:
+                - 'period': e.g., 'Q3 2024'
+                - 'quarter_end_date': e.g., '2024-10-31'
+                - 'ttm_net_income_billion': trailing 12-month net income in billions
+
+        Returns:
+            Dict mapping period to P/E data:
+            {
+                'Q3 2024': {
+                    'stock_price': 142.67,
+                    'ttm_eps': 8.85,
+                    'pe_ratio': 16.1,
+                    'quarter_end_date': '2024-10-31'
+                }
+            }
+        """
+        # Get shares outstanding (use current - assume relatively stable)
+        try:
+            stock = yf.Ticker('TGT')
+            shares_outstanding = stock.info.get('sharesOutstanding', 460_000_000)
+        except Exception:
+            shares_outstanding = 460_000_000  # Fallback: ~460M shares
+
+        shares_billion = shares_outstanding / 1e9
+
+        results = {}
+        for q in quarters_data:
+            period = q['period']
+            date_str = q['quarter_end_date']
+            ttm_net_income = q.get('ttm_net_income_billion')
+
+            if ttm_net_income is None or ttm_net_income <= 0:
+                continue
+
+            # Get stock price for quarter end
+            price = self.get_quarter_end_price('TGT', date_str)
+            if price is None:
+                continue
+
+            # Calculate TTM EPS and P/E
+            ttm_eps = ttm_net_income / shares_billion
+            pe_ratio = price / ttm_eps if ttm_eps > 0 else None
+
+            results[period] = {
+                'stock_price': price,
+                'ttm_eps': round(ttm_eps, 2),
+                'pe_ratio': round(pe_ratio, 2) if pe_ratio else None,
+                'quarter_end_date': date_str
+            }
+
+        return results
+
+    def get_historical_pe_for_ticker(self, ticker: str, quarter_end_dates: List[str]) -> Dict[str, float]:
+        """
+        Get approximate historical P/E for any ticker at specified dates.
+
+        Uses price ratio scaling: Historical P/E ≈ Current P/E × (Historical Price / Current Price)
+        This approximation assumes EPS is relatively stable over the period.
+
+        Args:
+            ticker: Stock ticker symbol (e.g., 'WMT', 'COST').
+            quarter_end_dates: List of dates in YYYY-MM-DD format.
+
+        Returns:
+            Dict mapping date to estimated P/E ratio:
+            {'2024-10-31': 15.2, '2024-07-31': 14.8, ...}
+        """
+        try:
+            # Get current P/E and price from valuation metrics
+            metrics = self.get_valuation_metrics()
+            ticker_data = metrics.get(ticker, {})
+
+            current_pe = ticker_data.get('pe_ratio')
+            current_price = ticker_data.get('price')
+
+            if not current_pe or not current_price:
+                print(f"Warning: Missing current P/E or price for {ticker}")
+                return {}
+
+            results = {}
+            for date_str in quarter_end_dates:
+                hist_price = self.get_quarter_end_price(ticker, date_str)
+                if hist_price and hist_price > 0:
+                    # Scale P/E by price ratio (assumes stable EPS)
+                    # Historical P/E ≈ Current P/E × (Historical Price / Current Price)
+                    hist_pe = current_pe * (hist_price / current_price)
+                    results[date_str] = round(hist_pe, 2)
+
+            return results
+
+        except Exception as e:
+            print(f"Warning: Failed to get historical P/E for {ticker}: {e}")
+            return {}
+
 
 def main():
     """Test the market data fetcher."""
