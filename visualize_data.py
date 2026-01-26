@@ -3361,9 +3361,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     fig.add_hline(
         y=avg_pe,
         line_dash="dash",
-        line_color="gray",
-        annotation_text=f"Avg P/E: {avg_pe:.1f}x",
-        annotation_position="right"
+        line_color="gray"
     )
     fig.add_vline(
         x=avg_growth,
@@ -3384,11 +3382,22 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     )
     fig.add_annotation(
         x=min(revenue_growths) + 1,
-        y=max(pe_ratios) - 5,
+        y=65,
         text="<b>Overvalued Zone</b><br>(Low Growth, High P/E)",
         showarrow=False,
         font=dict(size=10, color='#c0392b'),
-        bgcolor="rgba(255,255,255,0.8)"
+        bgcolor="rgba(255,255,255,0.8)",
+        yanchor="top"
+    )
+
+    # Add Avg P/E label inside plot area (to avoid clipping)
+    fig.add_annotation(
+        x=min(revenue_growths),
+        y=avg_pe + 2,
+        text=f"Avg P/E: {avg_pe:.1f}x",
+        showarrow=False,
+        font=dict(size=11, color='gray'),
+        xanchor="left"
     )
 
     # Update layout
@@ -3403,16 +3412,16 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
         xaxis_title="Revenue Growth YoY (%)",
         yaxis_title="P/E Ratio (x)",
         height=600,
-        width=900,
+        width=1000,
         showlegend=True,
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="left",
+            x=1.08
         ),
-        margin=dict(l=80, r=80, t=100, b=100),
+        margin=dict(l=120, r=220, t=100, b=80),
         plot_bgcolor='white',
         xaxis=dict(
             gridcolor='lightgray',
