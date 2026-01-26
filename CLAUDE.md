@@ -28,6 +28,7 @@ financial-analyst-project/
 ├── financial_analyzer.py       # Main analyzer (core logic)
 ├── visualize_data.py           # Plotly visualizations (Phase 3)
 ├── sec_data_fetcher.py         # SEC EDGAR downloader
+├── market_data_fetcher.py      # Yahoo Finance market data (Pillar 5)
 ├── create_presentation.py      # PowerPoint generation (optional)
 ├── create_google_slides.py     # Google Slides generation (optional)
 ├── requirements.txt            # Python dependencies
@@ -41,11 +42,13 @@ financial-analyst-project/
 │   ├── target_analysis.json    # Detailed format
 │   ├── target_timeseries.json  # Time-series format (Phase 3+)
 │   ├── target_summary.txt      # Human-readable summary
-│   ├── chart_*.html            # 22 interactive Plotly charts (Phase 3-7 + Pillars 2-4)
+│   ├── chart_*.html            # 24 interactive Plotly charts (Phase 3-7 + Pillars 2-5)
 │   ├── chart_expense_breakdown.html  # Chart 14 (Phase 6)
 │   ├── chart_ebitda_bridge.html      # Chart 15 (Phase 7)
 │   ├── chart_ocf_vs_capex.html       # Chart 21 (Pillar 4)
 │   ├── chart_cash_flow_sankey.html   # Chart 22 (Pillar 4)
+│   ├── chart_valuation_scatter.html  # Chart 23 (Pillar 5)
+│   ├── chart_pe_band.html            # Chart 24 (Pillar 5)
 │   ├── ccc_data_table.html     # Chart 20 companion data table (Pillar 3)
 │   └── Target_Financial_Analysis.pptx  # PowerPoint presentation
 ├── docs/
@@ -54,7 +57,8 @@ financial-analyst-project/
 ├── test_expense_breakdown_chart.py  # Phase 6 test suite
 ├── test_ebitda_bridge_chart.py      # Phase 7 test suite
 ├── test_pillar3_operational_efficiency.py  # Pillar 3 test suite
-└── test_pillar4_cash_flow_dynamics.py      # Pillar 4 test suite
+├── test_pillar4_cash_flow_dynamics.py      # Pillar 4 test suite
+└── test_pillar5_valuation_sentiment.py     # Pillar 5 test suite
 ```
 
 ## Core Components
@@ -1063,6 +1067,106 @@ self.risk_heatmap = {
 6. ✅ All 18 test cases pass
 7. ✅ Documentation updated
 
+### Pillar 5: Valuation & Market Sentiment (Complete) ✅
+
+**User Request**: Implement Pillar 5 financial analysis answering: "Is the stock fairly priced compared to its peers and historical norms?"
+
+**Requested Analysis**:
+- Real-time valuation metrics (P/E, P/S, EV/EBITDA, Dividend Yield)
+- Peer comparison (Target vs WMT, COST, AMZN, KR)
+- Historical valuation context
+
+**Requested Visualizations**:
+1. Scatter Plot (P/E vs Revenue Growth): Find undervalued outliers
+2. Area Chart (Historical P/E Band): Show current valuation vs historical range
+
+**Solution Implemented**:
+
+1. **Created `market_data_fetcher.py` Module**:
+   - `MarketDataFetcher` class for Yahoo Finance API integration
+   - Methods:
+     - `get_current_prices()` - Fetch current stock prices
+     - `get_historical_prices(ticker, period)` - Get historical price data
+     - `get_valuation_metrics()` - Fetch P/E, P/S, EV/EBITDA, dividend yield
+     - `get_peer_comparison()` - Compare Target vs retail peers
+     - `get_target_valuation_summary()` - Valuation status (Undervalued/Fair/Overvalued)
+     - `get_quarter_end_price(ticker, date)` - Get stock price for specific date
+     - `get_historical_pe_for_quarters(quarters_data)` - Calculate Target historical P/E from SEC data
+     - `get_historical_pe_for_ticker(ticker, dates)` - Calculate peer historical P/E via price scaling
+   - Features:
+     - Caching with configurable TTL (1 hour for prices, 24 hours for history)
+     - Graceful fallback to cached data if API fails
+     - Configurable ticker list (default: TGT, WMT, COST, AMZN, KR)
+     - Timezone-aware date handling for historical price lookups
+
+2. **Chart 23: Valuation vs Growth Scatter with Dropdown** (`create_valuation_vs_growth_scatter()`):
+   - **Dropdown menu**: 11 quarters (Q1 2023 - Q3 2025) including calculated Q4 periods
+   - X-axis: Revenue Growth YoY (%)
+   - Y-axis: Historical P/E Ratio (calculated for selected quarter)
+   - Markers: Target (large red star) + 4 peers (smaller, color-coded)
+   - **Historical P/E for all companies**: Target from SEC TTM EPS, peers via price-ratio scaling
+   - **Q4 calculation**: Q4 = FY - Q1 - Q2 - Q3 (revenue, net income)
+   - Quadrant annotations:
+     - Upper-left: "Overvalued Zone" (high P/E, low growth)
+     - Lower-right: "Undervalued Zone" (low P/E, high growth)
+   - Reference lines: Average P/E (horizontal), Average Growth (vertical)
+   - Features:
+     - `legendgroup` pattern for legend persistence when switching quarters
+     - All 5 companies move positions when switching quarters
+     - Hover tooltips show period, P/E, growth, stock price, TTM EPS
+
+3. **Chart 24: Historical P/E Band Area Chart** (`create_pe_band_area_chart()`):
+   - X-axis: Time (5-year history)
+   - Primary Y-axis: Stock price
+   - Overlay: P/E valuation bands (shaded areas)
+     - Green zone: P/E < 12 (historically undervalued)
+     - Yellow zone: P/E 12-18 (fair value)
+     - Red zone: P/E > 18 (historically overvalued)
+   - Current price marker with P/E annotation
+   - 5-year EPS calculation from SEC data
+
+4. **Test Suite** - `test_pillar5_valuation_sentiment.py` (16 test cases):
+   - `TestMarketDataFetcher`: API functionality, caching, data validation
+   - `TestValuationCharts`: Chart file existence and content verification
+   - `TestValuationMetricsCalculation`: P/E, P/S, dividend yield validation
+
+**Results**:
+- ✅ **Market data fetching**: All 5 tickers fetch successfully
+- ✅ **P/E ratios validated**: Range 10-60x (reasonable for retail sector)
+- ✅ **P/S ratios validated**: All positive values
+- ✅ **Dividend yields validated**: Range 0-15% (reasonable)
+- ✅ **Historical prices**: 200+ data points for 1-year history
+- ✅ **Caching working**: Second fetch uses cached data
+- ✅ **Chart 23 created**: Scatter plot with quadrant labels
+- ✅ **Chart 24 created**: P/E band area chart with valuation zones
+- ✅ **All 16 test cases pass**: 100% success rate
+
+**Business Insights Enabled**:
+- **Relative Valuation**: Where does Target sit vs peers on P/E-Growth spectrum?
+- **Value Identification**: Lower-right quadrant = potential undervalued opportunities
+- **Historical Context**: Is current P/E above or below historical average?
+- **Valuation Zones**: Quick visual assessment of overvalued/undervalued status
+- **Dividend Comparison**: Yield comparison across retail peers
+
+**Key Design Decisions**:
+1. **yfinance Integration**: Free, reliable API for real-time market data
+2. **Caching Strategy**: Avoids rate limits, enables offline chart viewing
+3. **Quadrant Labels**: Immediately communicates valuation implications
+4. **Peer Selection**: WMT, COST, AMZN, KR represent direct retail competitors
+5. **P/E Bands**: Based on Target's historical P/E range (not industry-wide)
+
+**Pillar 5 Success Criteria** (all met ✅):
+1. ✅ market_data_fetcher.py created with MarketDataFetcher class
+2. ✅ yfinance dependency added to requirements.txt
+3. ✅ Current prices fetched for 5 tickers
+4. ✅ Valuation metrics (P/E, P/S, dividend yield) extracted
+5. ✅ Peer comparison data structured for visualization
+6. ✅ Historical price data fetched (5-year period)
+7. ✅ Chart 23 (Valuation Scatter) created with quadrant labels
+8. ✅ Chart 24 (P/E Band) created with valuation zones
+9. ✅ All 16 test cases pass
+10. ✅ Documentation updated
+
 ## Testing & Verification
 
 ### Quick Test
@@ -1070,7 +1174,7 @@ self.risk_heatmap = {
 # Run analyzer (includes executive insights export - Phase 4)
 python3 financial_analyzer.py
 
-# Run visualizations (creates 22 charts: Phases 3-7 + Pillars 2-4)
+# Run visualizations (creates 24 charts: Phases 3-7 + Pillars 2-5)
 python3 visualize_data.py
 
 # Generate investment thesis (Phase 4)
@@ -1086,6 +1190,8 @@ open output/chart_expense_breakdown.html  # Phase 6
 open output/chart_ebitda_bridge.html      # Phase 7
 open output/chart_ocf_vs_capex.html       # Pillar 4
 open output/chart_cash_flow_sankey.html   # Pillar 4
+open output/chart_valuation_scatter.html  # Pillar 5
+open output/chart_pe_band.html            # Pillar 5
 open output/Target_Financial_Analysis.pptx
 ```
 
@@ -1192,6 +1298,28 @@ python3 test_pillar4_cash_flow_dynamics.py
 - ✅ Chart 22 (Cash Flow Sankey) created with fiscal year dropdown
 - ✅ All 18/18 tests pass (100% success rate)
 
+### Pillar 5 Verification
+Test Valuation & Market Sentiment Analysis:
+```bash
+# Pillar 5: Comprehensive test suite (16 tests)
+python3 test_pillar5_valuation_sentiment.py
+```
+
+**Expected results**:
+- ✅ MarketDataFetcher initialized with 5 tickers (TGT, WMT, COST, AMZN, KR)
+- ✅ Current prices fetched for all tickers (TGT price $10-$500 range)
+- ✅ Valuation metrics extracted (P/E, P/S, dividend yield)
+- ✅ P/E ratios in range 0-100 (reasonable for retail)
+- ✅ P/S ratios positive for all companies
+- ✅ Dividend yields in range 0-20%
+- ✅ Peer comparison structured with averages
+- ✅ Historical prices: 100+ data points for 1-year period
+- ✅ Cache functionality working (second fetch uses cache)
+- ✅ Chart 23 (Valuation Scatter) created with required elements
+- ✅ Chart 24 (P/E Band) created with valuation zones
+- ✅ Target valuation summary generated with status
+- ✅ All 16/16 tests pass (100% success rate)
+
 **Overall Expected Results**:
 - 22 total filings (10 10-Ks + 12 10-Qs)
 - FY2024 net_sales_billion ~106.6B
@@ -1199,7 +1327,7 @@ python3 test_pillar4_cash_flow_dynamics.py
 - All filings have fiscal_year and fiscal_quarter fields
 - 6+ filings have vs_year_ago comparisons
 - Risk heatmap shows shrink trend increasing
-- 22 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3 + Charts 21-22 from Pillar 4)
+- 24 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3 + Charts 21-22 from Pillar 4 + Charts 23-24 from Pillar 5)
 - All test suites pass
 
 ## Environment Setup
@@ -1650,6 +1778,87 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   - Visualizes capital allocation strategy quarter-over-quarter
   - Reveals seasonal patterns in cash usage (Q4 typically higher CapEx)
 - **Implementation**: `visualize_data.py` function `create_cash_flow_sankey()`
+
+### Chart 23: Valuation vs Growth Scatter with Quarterly Dropdown (Pillar 5)
+- **Type**: Plotly Scatter chart with dropdown menu for quarter selection
+- **Purpose**: Track how Target and peers' valuation positions have evolved over time
+- **File**: `chart_valuation_scatter.html`
+- **Data**: 11 quarters (Q1 2023 - Q3 2025) including calculated Q4 periods
+- **Companies**: Target (TGT), Walmart (WMT), Costco (COST), Amazon (AMZN), Kroger (KR)
+- **Dropdown Menu**: Switch between 11 quarterly views (most recent first)
+- **Axes**:
+  - X-axis: Revenue Growth YoY (%)
+  - Y-axis: P/E Ratio (historical for selected quarter)
+- **Historical P/E Calculation**:
+  - **Target**: Calculated from SEC TTM net income + Yahoo Finance stock prices
+    - TTM EPS = (Q1 + Q2 + Q3 + Q4 Net Income) / Shares Outstanding
+    - P/E = Stock Price at Quarter End / TTM EPS
+  - **Peers**: Price-ratio scaled approximation
+    - Historical P/E ≈ Current P/E × (Historical Price / Current Price)
+    - Assumes EPS relatively stable over 2-3 year period
+- **Q4 Data Calculation**:
+  - Q4 not in 10-Q filings, calculated from annual 10-K
+  - Q4 Revenue = FY Revenue - Q1 - Q2 - Q3
+  - Q4 Revenue Growth = (Q4 Current / Q4 Prior - 1) × 100
+  - Q4 TTM Net Income = Full fiscal year net income from 10-K
+  - Q4 Quarter End Date = January of next calendar year (e.g., Q4 2024 → 2025-01-31)
+- **Quadrant Labels**:
+  - Upper-left: "Overvalued Zone" (high P/E, low growth)
+  - Lower-right: "Undervalued Zone" (low P/E, high growth)
+- **Reference Lines**:
+  - Horizontal dashed gray: Average P/E across peers
+  - Vertical dashed gray: Average Revenue Growth
+- **Features**:
+  - **Legend persistence**: Uses `legendgroup` pattern so legend stays visible when switching quarters
+  - Target marker larger (size=25) with star symbol, highlighted in red
+  - Peer markers smaller (size=15) with distinct colors
+  - Hover tooltips show period, P/E, growth, stock price, TTM EPS
+  - All 5 companies move positions when switching quarters
+  - Title updates dynamically with selected quarter
+- **Color Scheme**:
+  - Target: Red (#e74c3c)
+  - Walmart: Blue (#3498db)
+  - Costco: Purple (#9b59b6)
+  - Amazon: Teal (#1abc9c)
+  - Kroger: Orange (#f39c12)
+- **Helper Functions**:
+  - `_get_quarterly_valuation_data(data)`: Extracts quarterly data and calculates Q4 periods
+  - `_get_ttm_quarters(quarter, fiscal_year)`: Returns 4 quarters for TTM calculation
+- **MarketDataFetcher Methods**:
+  - `get_historical_pe_for_quarters(quarters_data)`: Calculates Target historical P/E from SEC data
+  - `get_historical_pe_for_ticker(ticker, dates)`: Calculates peer historical P/E via price scaling
+  - `get_quarter_end_price(ticker, date)`: Gets stock price for specific date
+- **Business Insights**:
+  - Answers "How has Target's valuation position evolved over time?"
+  - Track if Target is becoming more/less attractive vs peers
+  - See how market valued companies at different points in time
+  - Compare current positioning to historical positioning
+- **Implementation**: `visualize_data.py` function `create_valuation_vs_growth_scatter()`
+
+### Chart 24: Historical P/E Band Area Chart (Pillar 5)
+- **Type**: Plotly area chart with price line overlay
+- **Purpose**: Show if current valuation is above or below historical norms
+- **File**: `chart_pe_band.html`
+- **Data**: 5-year historical prices from Yahoo Finance + SEC EPS data
+- **Elements**:
+  - Stock price line (primary y-axis)
+  - P/E valuation bands (shaded areas):
+    - Green zone: P/E < 12 (historically undervalued)
+    - Yellow zone: P/E 12-18 (fair value range)
+    - Red zone: P/E > 18 (historically overvalued)
+  - Current price marker with P/E annotation
+- **Features**:
+  - 5-year time range for historical context
+  - EPS calculated from SEC Net Income / Shares Outstanding
+  - P/E bands based on Target's historical valuation range
+  - Interactive hover showing price and implied P/E
+  - Zone labels indicating valuation status
+- **Business Insights**:
+  - Answers "Is Target's current valuation high or low vs history?"
+  - Green band periods = historical buying opportunities
+  - Red band periods = historically expensive
+  - Current position shows relative valuation assessment
+- **Implementation**: `visualize_data.py` function `create_pe_band_area_chart()`
 
 ## Key Learnings
 
