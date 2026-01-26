@@ -1583,26 +1583,34 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   6. **Q4 calculation**: Uses year-end balance sheet + annual income statement for consistency with 365-day formulas
 
 ### Chart 21: Operating Cash Flow vs Capital Expenditures (Pillar 4)
-- **Type**: Combo chart (grouped bars + line)
+- **Type**: Combo chart (bars + lines) with single y-axis
 - **Purpose**: Show the relationship between OCF and CapEx, with the gap representing Free Cash Flow
 - **File**: `chart_ocf_vs_capex.html`
 - **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods
 - **Elements**:
-  - Green bars: Operating Cash Flow (primary y-axis)
-  - Red bars: Capital Expenditures (primary y-axis)
-  - Blue line with diamond markers: Free Cash Flow (secondary y-axis)
+  - Green bars: Operating Cash Flow
+  - Red line with markers: Capital Expenditures
+  - Blue line with diamond markers: Free Cash Flow
+- **CRITICAL: YTD to Standalone Conversion**:
+  - 10-Q cash flow values are cumulative YTD, NOT standalone quarters
+  - Chart converts to standalone quarterly values:
+    - Q1 = Q1 YTD (as-is)
+    - Q2 = Q2 YTD - Q1 YTD
+    - Q3 = Q3 YTD - Q2 YTD
+    - Q4 = Annual - Q3 YTD
+  - Verified: Q1+Q2+Q3+Q4 = Annual for all fiscal years
 - **Features**:
-  - Dual y-axis: Bars share left axis, FCF line uses right axis
+  - Single y-axis for all metrics ($ Billions)
   - Text labels on all data points showing $ values
-  - Zero reference line for FCF axis
+  - Zero reference line
   - Q4 data calculated from annual 10-K reports
   - Hover tooltips with unified x-axis mode
-- **Key Insight**: The gap between OCF and CapEx bars represents Free Cash Flow - the "gold standard" of cash generation
+- **Key Insight**: The gap between OCF bars and CapEx line represents Free Cash Flow
 - **Business Insights**:
   - Answers "Is Target generating enough operating cash to fund its capital investments?"
-  - Negative FCF (4 quarters) indicates heavy reinvestment periods
-  - Positive FCF available for dividends, buybacks, debt repayment
-  - Typical Target quarterly FCF: -$0.5B to +$2.5B
+  - Q3 2022 shows -$2.87B OCF (inventory crisis quarter)
+  - Q4 periods typically strong cash generation ($3.29B - $3.47B)
+  - Typical Target quarterly FCF: -$4.67B to +$2.44B
 - **Implementation**: `visualize_data.py` function `create_ocf_vs_capex_chart()`
 
 ### Chart 22: Cash Flow Sankey Diagram (Pillar 4)
