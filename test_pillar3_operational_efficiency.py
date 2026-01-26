@@ -235,17 +235,29 @@ def test_chart19_file_exists():
 
 
 def test_chart20_file_exists():
-    """Test that Chart 20 (Cash Conversion Cycle) was created"""
+    """Test that Chart 20 (Cash Conversion Cycle) was created with dropdown menu"""
     chart_path = Path('output/chart_cash_conversion_cycle.html')
 
-    print(f"\n📊 Chart 20 (CCC) File Test:")
+    print(f"\n📊 Chart 20 (CCC Peer Comparison) File Test:")
 
     assert chart_path.exists(), "Chart 20 HTML file not found"
 
     file_size = chart_path.stat().st_size
     assert file_size > 10000, f"Chart file too small: {file_size} bytes"
 
+    # Verify dropdown menu exists in HTML
+    with open(chart_path, 'r') as f:
+        html_content = f.read()
+
+    # Check for updatemenus (dropdown) in Plotly config
+    assert 'updatemenus' in html_content, "Dropdown menu not found in chart"
+
+    # Check for multiple period labels
+    assert 'FY2024' in html_content, "FY2024 period not found in chart"
+    assert 'FY2023' in html_content, "FY2023 period not found in chart"
+
     print(f"   ✅ PASS: Chart 20 created ({file_size:,} bytes)")
+    print(f"   ✅ Dropdown menu detected in HTML")
 
 
 def test_efficiency_health_assessments():
@@ -270,6 +282,100 @@ def test_efficiency_health_assessments():
     print("   ✅ PASS: Health assessments valid")
 
 
+def test_peer_data_loading():
+    """Test that peer comparison data loads correctly (multi-year structure)"""
+    peer_data_path = Path('data/peer_comparison_data.json')
+
+    print(f"\n📊 Peer Data Loading Test:")
+
+    assert peer_data_path.exists(), "Peer data file not found"
+
+    with open(peer_data_path, 'r') as f:
+        peer_data = json.load(f)
+
+    # Verify structure
+    assert 'cash_conversion_cycle' in peer_data, "Missing 'cash_conversion_cycle' key"
+    assert 'companies' in peer_data['cash_conversion_cycle'], "Missing 'companies' key"
+
+    companies = peer_data['cash_conversion_cycle']['companies']
+    peer_count = len(companies)
+
+    print(f"   Loaded: {peer_count} peer companies")
+
+    # Verify multi-year structure
+    total_years = 0
+    for company, info in companies.items():
+        # Check for multi-year structure
+        assert 'ticker' in info, f"{company} missing 'ticker' key"
+        assert 'years' in info, f"{company} missing 'years' key (multi-year structure required)"
+
+        years = info['years']
+        year_count = len(years)
+        total_years += year_count
+
+        print(f"   {company} ({info['ticker']}): {year_count} years")
+
+        # Verify at least 2 years of data per company
+        assert year_count >= 2, f"{company} has only {year_count} year(s) - need at least 2 for trend analysis"
+
+        # Verify each year has required CCC fields
+        for year, data in years.items():
+            assert 'dsi' in data, f"{company} {year} missing DSI"
+            assert 'dso' in data, f"{company} {year} missing DSO"
+            assert 'dpo' in data, f"{company} {year} missing DPO"
+            assert 'ccc' in data, f"{company} {year} missing CCC"
+
+            # Verify CCC formula (CCC = DSI + DSO - DPO)
+            expected_ccc = data['dsi'] + data['dso'] - data['dpo']
+            actual_ccc = data['ccc']
+            assert abs(expected_ccc - actual_ccc) < 1.0, f"{company} {year} CCC formula mismatch: expected {expected_ccc:.1f}, got {actual_ccc:.1f}"
+
+    avg_years = total_years / peer_count if peer_count > 0 else 0
+    print(f"   Total company-years: {total_years} ({avg_years:.1f} years per company)")
+    print("   ✅ PASS: Peer data loaded and validated (multi-year)")
+
+
+def test_target_ccc_extraction():
+    """Test that Target's latest CCC is extracted correctly"""
+    with open('output/target_timeseries.json', 'r') as f:
+        data = json.load(f)
+
+    print(f"\n📊 Target CCC Extraction Test:")
+
+    # Find most recent period with complete CCC
+    target_ccc = None
+    for i in range(len(data['periods']) - 1, -1, -1):
+        dsi = data['metrics']['inventory']['days_sales_of_inventory'][i]
+        dso = data['metrics']['efficiency']['days_sales_outstanding'][i]
+        dpo = data['metrics']['efficiency']['days_payable_outstanding'][i]
+        ccc = data['metrics']['efficiency']['cash_conversion_cycle_days'][i]
+
+        if all(v is not None for v in [dsi, dso, dpo, ccc]):
+            target_ccc = {
+                'period': data['periods'][i]['period'],
+                'dsi': dsi,
+                'dso': dso,
+                'dpo': dpo,
+                'ccc': ccc
+            }
+            break
+
+    assert target_ccc is not None, "No complete CCC data found for Target"
+
+    print(f"   Latest period: {target_ccc['period']}")
+    print(f"   DSI: {target_ccc['dsi']:.1f} days")
+    print(f"   DSO: {target_ccc['dso']:.1f} days")
+    print(f"   DPO: {target_ccc['dpo']:.1f} days")
+    print(f"   CCC: {target_ccc['ccc']:.1f} days")
+
+    # Verify CCC formula
+    expected_ccc = target_ccc['dsi'] + target_ccc['dso'] - target_ccc['dpo']
+    actual_ccc = target_ccc['ccc']
+    assert abs(expected_ccc - actual_ccc) < 1.0, f"CCC formula mismatch: expected {expected_ccc:.1f}, got {actual_ccc:.1f}"
+
+    print("   ✅ PASS: Target CCC extracted successfully")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("TEST SUITE: Pillar 3 - Operational Efficiency")
@@ -283,9 +389,11 @@ if __name__ == "__main__":
     test_dupont_components()
     test_dupont_formula_validation()
     test_efficiency_health_assessments()
+    test_peer_data_loading()          # NEW: Test peer comparison data file
+    test_target_ccc_extraction()      # NEW: Test Target CCC extraction
     test_chart19_file_exists()
     test_chart20_file_exists()
 
     print("\n" + "=" * 60)
-    print("✅ ALL TESTS PASSED")
+    print("✅ ALL 12 TESTS PASSED")  # Updated count from 10 to 12
     print("=" * 60)
