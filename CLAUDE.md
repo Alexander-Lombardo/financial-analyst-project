@@ -34,15 +34,17 @@ financial-analyst-project/
 ├── .env                        # SEC credentials (git-ignored)
 ├── .env.example                # Template for .env
 ├── data/
-│   └── Target 10Q/
-│       └── sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
+│   ├── Target 10Q/
+│   │   └── sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
+│   └── peer_comparison_data.json  # Peer CCC data (Walmart, Amazon, Costco, Kroger)
 ├── output/
 │   ├── target_analysis.json    # Detailed format
 │   ├── target_timeseries.json  # Time-series format (Phase 3+)
 │   ├── target_summary.txt      # Human-readable summary
-│   ├── chart_*.html            # 15 interactive Plotly charts (Phase 3-7)
+│   ├── chart_*.html            # 20 interactive Plotly charts (Phase 3-7 + Pillar 2-3)
 │   ├── chart_expense_breakdown.html  # Chart 14 (Phase 6)
 │   ├── chart_ebitda_bridge.html      # Chart 15 (Phase 7)
+│   ├── ccc_data_table.html     # Chart 20 companion data table (Pillar 3)
 │   └── Target_Financial_Analysis.pptx  # PowerPoint presentation
 ├── docs/
 │   └── extended-financial-data-spec.md  # Original specification
@@ -1373,56 +1375,96 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   4. **Grouped bars**: Shows all 4 components side-by-side for easy ratio interpretation
   5. **Formula in subtitle**: Reinforces that ROE is multiplicative product of 3 components
 
-### Chart 20: Cash Conversion Cycle Trend (Pillar 3)
-- **Type**: Multi-line chart with flexible quarterly/annual data detection
-- **Purpose**: Track how efficiently Target converts resources (inventory, receivables) into cash over time
+### Chart 20: Cash Conversion Cycle - Peer Comparison with Dropdown (Pillar 3)
+- **Type**: Plotly grouped bar chart with dropdown menu for period selection
+- **Purpose**: Compare Target's CCC evolution against retail industry peers to assess competitive position over time
 - **File**: `chart_cash_conversion_cycle.html`
-- **Data**: Intelligently selects between quarterly (15 periods) or annual (5-10 periods) based on receivables availability
-- **Formula**: CCC = DSI + DSO - DPO (lower is better)
-- **Components**:
-  - DSI (Days Sales of Inventory) = 365 / (COGS / Inventory) - Red line
-  - DSO (Days Sales Outstanding) = 365 / (Revenue / Receivables) - Orange line
-  - DPO (Days Payables Outstanding) = 365 / (COGS / Payables) - Blue line
-  - CCC (Cash Conversion Cycle) = DSI + DSO - DPO - Green line (bold)
-- **Flexible Data Detection** (commit a2edf63):
-  - Automatically detects if quarterly receivables available in 10-Q filings
-  - **Threshold**: ≥8 quarters needed for quarterly approach (2 years of data)
-  - **Quarterly approach**: Displays Q1-Q3 from 10-Q + calculated Q4 from 10-K (15 periods)
-  - **Annual approach**: Falls back to 10-K annual data only (5-10 periods)
-  - Detection function: `_detect_ccc_data_availability(data)` scans all periods
-- **Q4 Calculation for Quarterly Approach**:
-  - Q4 DSI = (365 × year_end_inventory) / annual_cogs
-  - Q4 DSO = (365 × year_end_receivables) / annual_revenue
-  - Q4 DPO = (365 × year_end_payables) / annual_cogs
-  - Uses year-end balance sheet values (point-in-time) with annual income statement totals (365-day basis)
-- **For Target Corporation**:
-  - Uses annual data (5 periods: FY2020-FY2024)
-  - Receivables NOT reported in quarterly 10-Q filings (0/12 quarters)
-  - Console output: "Using 5 annual periods (receivables only in 10-K filings)"
-  - Chart subtitle: "Annual data: FY2020 - FY2024"
-- **For Other Companies**:
-  - If receivables available in 10-Q (≥8 quarters): automatically uses quarterly data
-  - Console output: "Using X quarterly periods (receivables available in 10-Q filings)"
-  - Chart subtitle: "Quarterly data: Q1 2022 - Q3 2025"
+- **Data**:
+  - **Target**: 5 historical periods (FY2020-FY2024) from timeseries JSON
+  - **Peers**: Static FY2024 benchmark (Walmart, Costco, Amazon, Kroger) from peer_comparison_data.json
+- **Companies**: Target, Walmart, Costco, Amazon, Kroger
+- **Dropdown Menu**: Switch between 5 fiscal years to see Target's CCC evolution
+  - Most recent period (FY2024) selected by default
+  - **Target bars change** per selected period (shows historical CCC components)
+  - **Peer bars remain constant** (FY2024 benchmark for all periods)
+  - Subtitle updates dynamically: "Target: [Selected Period] vs Peers: FY2024 Benchmark"
+- **Formula**: CCC = DSI + DSO - DPO (lower is better, negative indicates collecting cash before paying suppliers)
+- **Components**: 4 bars per company (DSI, DSO, DPO, CCC)
+- **Color Scheme**:
+  - DSI (Days in Inventory): Red (#e74c3c)
+  - DSO (Days to Collect): Orange (#f39c12)
+  - DPO (Days to Pay Suppliers): Blue (#3498db)
+  - CCC (Total Cycle): Green (#27ae60), thicker border (width=2)
+  - Target: Full saturation (opacity=1.0), Peers: 70% opacity (0.7)
+- **Data Sources**:
+  - **Target data**: Extracted from `output/target_timeseries.json` (all periods with complete CCC)
+  - **Peer data**: Manually curated in `data/peer_comparison_data.json` (requires external sourcing from peer 10-K filings)
+  - Helper functions:
+    - `_get_all_ccc_data(data)` - Extracts ALL Target CCC periods (sorted chronologically)
+    - `_get_latest_ccc_data(data)` - Extracts Target's most recent CCC (used by other functions)
+    - `_load_peer_comparison_data()` - Reads peer comparison JSON file
+- **Peer Data Structure** (data/peer_comparison_data.json):
+  ```json
+  {
+    "cash_conversion_cycle": {
+      "last_updated": "2024-01-31",
+      "fiscal_year": 2024,
+      "companies": {
+        "Walmart": {"dsi": 43.0, "dso": 4.2, "dpo": 48.5, "ccc": -1.3},
+        "Costco": {"dsi": 30.5, "dso": 4.8, "dpo": 35.0, "ccc": 0.3},
+        "Amazon": {"dsi": 38.2, "dso": 20.1, "dpo": 75.8, "ccc": -17.5},
+        "Kroger": {"dsi": 28.7, "dso": 3.9, "dpo": 31.2, "ccc": 1.4}
+      }
+    }
+  }
+  ```
 - **Features**:
   - Reference line at 60 days (retail industry benchmark for healthy CCC)
-  - Reference line at 0 days (for context)
-  - Hover tooltip shows all 4 values (DSI, DSO, DPO, CCC) at once
-  - 4 distinct color-coded lines for easy component identification
-  - Legend positioned at bottom (horizontal orientation)
-  - Responsive design with proper margins (left: 100px, right: 100px for centering)
-  - Width: 1000px for better label spacing
+  - Reference line at 0 days (for context, shows negative CCC values possible)
+  - Grouped bars (barmode='group') with 4 bars per company
+  - Text labels on bars showing exact values (e.g., "74.9", "3.5")
+  - Hover tooltips show company name and metric value
+  - **Legend persistence**: Uses `'legendonly'` visibility state for legend-defining traces to keep legend visible when toggling periods
+  - Legend at bottom (horizontal orientation)
+  - Responsive design with proper margins (l=80px, r=100px, t=100px, b=120px)
+  - Width: 1000px, Height: 600px
+  - Y-axis range: [-70, 175] to accommodate Amazon DPO (159.9) and CCC (-51.6) with text label padding
+- **Companion Data Table**: `output/ccc_data_table.html`
+  - Standalone HTML table showing 5-year CCC data for Target and all peers
+  - Info icon with modal popup explaining CCC formula (DSI + DSO - DPO)
+  - Color-coded CCC values: green (negative/efficient), red (positive)
+  - Data sourced from `peer_comparison_data.json`
 - **Business Insights**:
-  - **CCC trend**: Lower values indicate faster cash conversion (more efficient)
-  - **DSI component**: High DSI means inventory sitting too long
-  - **DSO component**: High DSO means slow customer payment collection
-  - **DPO component**: High DPO means company taking longer to pay suppliers (can be positive)
-  - **Retail benchmark (60 days)**: Target's CCC range (31.4-71.2 days) shows efficient working capital management
-  - **Negative CCC possible**: If DPO > (DSI + DSO), company collects cash before paying suppliers (very efficient)
-- **Implementation Details**:
-  - Location: `visualize_data.py` lines 2269-2411
-  - Detection function: lines 2269-2303 (`_detect_ccc_data_availability`)
-  - Chart function: lines 2306-2411 (`create_cash_conversion_cycle_chart`)
+  - **Answers**: "How has Target's Cash Conversion Cycle position improved or worsened vs retail industry peers over the past 5 years?"
+  - **Trend Analysis**: See if Target's CCC improving (decreasing) or worsening (increasing) over time
+  - **Component Evolution**: Identify if DSI, DSO, or DPO driving changes in competitive position
+  - **Competitive Positioning**: Track Target's position vs static industry benchmark
+  - **Target's Current Position**: CCC ~1.9 days (FY2024) positions Target competitive among retail peers
+  - **Best-in-Class**: Amazon (-17.5 days) and Walmart (-1.3 days) have negative CCCs = collect cash before paying suppliers
+  - **Component Comparison** (using FY2024 data):
+    - **DSI**: Target's 60.8 days vs peers (28-43 days) → improvement opportunity in inventory turns
+    - **DSO**: Target's 3.4 days competitive (3.9-4.8 days) → mostly credit card sales, efficient collection
+    - **DPO**: Target's 62.3 days strong (31-76 days) → good supplier payment terms
+  - **Negative CCC Insight**: Negative values indicate working capital as financing source, not use of cash
+  - **Static Peer Comparison Rationale**: Peer data represents current industry standard (FY2024), shows Target's evolution relative to today's competitive benchmark
+- **Implementation Details** (visualize_data.py):
+  - Location: lines 2298-2626
+  - Helper functions:
+    - `_get_all_ccc_data(data)` (lines 2298-2342): Extracts ALL Target CCC periods with complete data
+    - `_get_latest_ccc_data(data)` (lines 2345-2357): Extracts Target's most recent CCC (wrapper around _get_all_ccc_data)
+    - `_load_peer_comparison_data()` (lines 2269-2295): Loads peer CCC data from JSON file
+  - Main chart function: `create_cash_conversion_cycle_chart(data)` (lines 2360-2626)
+  - **Dropdown Implementation**:
+    - Total traces: 5 periods × 5 companies × 4 bars = 100 traces
+    - Visibility control: Only traces for selected period visible
+    - Button configuration: Most recent period first (reverse iteration)
+    - Title updates dynamically when switching periods
+  - Returns Plotly Figure object with grouped bars and dropdown menu
+- **Replaced Implementation** (2026-01-25):
+  - Previous: Multi-line trend chart showing Target's CCC evolution over time
+  - Current: Grouped bar chart comparing Target vs 4 retail peers
+  - Change reason: User requested peer comparison to assess competitive position
+  - Deprecated function: `_create_cash_conversion_cycle_trend_DEPRECATED()` kept for reference
   - Data availability constraint: Target receivables only in 10-K (22.7% coverage overall)
 - **Key Design Decisions**:
   1. **Intelligent detection**: Makes tool reusable across companies with different reporting practices
