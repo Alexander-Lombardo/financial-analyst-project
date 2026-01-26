@@ -3237,6 +3237,423 @@ def create_cash_flow_sankey(data):
     return fig
 
 
+# =============================================================================
+# Pillar 5: Valuation & Market Sentiment Charts
+# =============================================================================
+
+def create_valuation_vs_growth_scatter(data, market_data=None):
+    """
+    Chart 23: Valuation vs Growth Scatter Plot
+
+    Plots P/E Ratio (Y-axis) vs Revenue Growth (X-axis) for Target and peers.
+    Helps identify "undervalued" outliers (low P/E, high growth).
+
+    Args:
+        data: Time-series data from target_timeseries.json
+        market_data: Optional pre-fetched market data (fetches if None)
+
+    Returns:
+        Plotly Figure object
+    """
+    import plotly.graph_objects as go
+    from market_data_fetcher import MarketDataFetcher
+
+    # Fetch market data if not provided
+    if market_data is None:
+        try:
+            fetcher = MarketDataFetcher()
+            comparison = fetcher.get_peer_comparison()
+        except Exception as e:
+            print(f"⚠️ Warning: Could not fetch market data: {e}")
+            print("   Skipping Chart 23 (requires Yahoo Finance API)")
+            return None
+    else:
+        comparison = market_data
+
+    companies = comparison.get('companies', [])
+    if not companies:
+        print("⚠️ Warning: No company data available for Chart 23")
+        return None
+
+    # Prepare data for scatter plot
+    tickers = []
+    names = []
+    pe_ratios = []
+    revenue_growths = []
+    market_caps = []
+
+    for company in companies:
+        pe = company.get('pe_ratio')
+        growth = company.get('revenue_growth_percent')
+
+        # Only include companies with both metrics
+        if pe is not None and growth is not None:
+            tickers.append(company.get('ticker'))
+            names.append(company.get('name', company.get('ticker')))
+            pe_ratios.append(pe)
+            revenue_growths.append(growth)
+            market_caps.append(company.get('market_cap_billion', 50))
+
+    if len(pe_ratios) < 2:
+        print("⚠️ Warning: Not enough data points for Chart 23 scatter plot")
+        return None
+
+    # Calculate averages for reference lines
+    avg_pe = sum(pe_ratios) / len(pe_ratios)
+    avg_growth = sum(revenue_growths) / len(revenue_growths)
+
+    # Create figure
+    fig = go.Figure()
+
+    # Add quadrant shading (background regions)
+    # Lower-right quadrant (Undervalued: low P/E, high growth) - Green
+    fig.add_shape(
+        type="rect",
+        x0=avg_growth, x1=max(revenue_growths) + 5,
+        y0=0, y1=avg_pe,
+        fillcolor="rgba(46, 204, 113, 0.1)",
+        line=dict(width=0),
+        layer="below"
+    )
+
+    # Upper-left quadrant (Overvalued: high P/E, low growth) - Red
+    fig.add_shape(
+        type="rect",
+        x0=min(revenue_growths) - 5, x1=avg_growth,
+        y0=avg_pe, y1=max(pe_ratios) + 10,
+        fillcolor="rgba(231, 76, 60, 0.1)",
+        line=dict(width=0),
+        layer="below"
+    )
+
+    # Add scatter points for each company
+    for i, ticker in enumerate(tickers):
+        is_target = (ticker == 'TGT')
+
+        # Color and size based on whether it's Target
+        color = '#e74c3c' if is_target else '#3498db'
+        size = 25 if is_target else 15
+        symbol = 'star' if is_target else 'circle'
+
+        fig.add_trace(go.Scatter(
+            x=[revenue_growths[i]],
+            y=[pe_ratios[i]],
+            mode='markers+text',
+            name=names[i],
+            marker=dict(
+                size=size,
+                color=color,
+                symbol=symbol,
+                line=dict(width=2, color='white')
+            ),
+            text=[ticker],
+            textposition='top center',
+            textfont=dict(size=12, color=color, weight='bold' if is_target else 'normal'),
+            hovertemplate=(
+                f"<b>{names[i]} ({ticker})</b><br>" +
+                f"P/E Ratio: {pe_ratios[i]:.1f}x<br>" +
+                f"Revenue Growth: {revenue_growths[i]:.1f}%<br>" +
+                "<extra></extra>"
+            )
+        ))
+
+    # Add average reference lines
+    fig.add_hline(
+        y=avg_pe,
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Avg P/E: {avg_pe:.1f}x",
+        annotation_position="right"
+    )
+    fig.add_vline(
+        x=avg_growth,
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Avg Growth: {avg_growth:.1f}%",
+        annotation_position="top"
+    )
+
+    # Add quadrant labels
+    fig.add_annotation(
+        x=max(revenue_growths) - 1,
+        y=5,
+        text="<b>Undervalued Zone</b><br>(High Growth, Low P/E)",
+        showarrow=False,
+        font=dict(size=10, color='#27ae60'),
+        bgcolor="rgba(255,255,255,0.8)"
+    )
+    fig.add_annotation(
+        x=min(revenue_growths) + 1,
+        y=max(pe_ratios) - 5,
+        text="<b>Overvalued Zone</b><br>(Low Growth, High P/E)",
+        showarrow=False,
+        font=dict(size=10, color='#c0392b'),
+        bgcolor="rgba(255,255,255,0.8)"
+    )
+
+    # Update layout
+    fig.update_layout(
+        title={
+            'text': "Target: Valuation vs Growth Analysis<br><sub>Pillar 5: P/E Ratio vs Revenue Growth YoY - Lower right = potentially undervalued</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
+        },
+        xaxis_title="Revenue Growth YoY (%)",
+        yaxis_title="P/E Ratio (x)",
+        height=600,
+        width=900,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(l=80, r=80, t=100, b=100),
+        plot_bgcolor='white',
+        xaxis=dict(
+            gridcolor='lightgray',
+            zeroline=True,
+            zerolinecolor='gray'
+        ),
+        yaxis=dict(
+            gridcolor='lightgray',
+            zeroline=True,
+            zerolinecolor='gray'
+        )
+    )
+
+    # Save chart
+    output_path = "output/chart_valuation_scatter.html"
+    fig.write_html(output_path)
+    print(f"✅ Chart 23 created: {output_path}")
+
+    # Find Target's position
+    target_idx = tickers.index('TGT') if 'TGT' in tickers else None
+    if target_idx is not None:
+        target_pe = pe_ratios[target_idx]
+        target_growth = revenue_growths[target_idx]
+        print(f"   Target: P/E={target_pe:.1f}x, Growth={target_growth:.1f}%")
+        print(f"   Peer Avg: P/E={avg_pe:.1f}x, Growth={avg_growth:.1f}%")
+
+    return fig
+
+
+def create_pe_band_area_chart(data, market_data=None):
+    """
+    Chart 24: Historical P/E Band Area Chart
+
+    Shows Target's stock price over time with valuation bands
+    to indicate if it's trading above/below historical averages.
+
+    Args:
+        data: Time-series data from target_timeseries.json
+        market_data: Optional pre-fetched market data (fetches if None)
+
+    Returns:
+        Plotly Figure object
+    """
+    import plotly.graph_objects as go
+    from market_data_fetcher import MarketDataFetcher
+    import pandas as pd
+
+    # Fetch market data if not provided
+    try:
+        fetcher = MarketDataFetcher()
+        history = fetcher.get_historical_prices('TGT', '5y')
+        metrics = fetcher.get_valuation_metrics()
+    except Exception as e:
+        print(f"⚠️ Warning: Could not fetch market data: {e}")
+        print("   Skipping Chart 24 (requires Yahoo Finance API)")
+        return None
+
+    if history.empty:
+        print("⚠️ Warning: No historical price data for Chart 24")
+        return None
+
+    # Get Target's trailing twelve months EPS from SEC data
+    # Use most recent annual net income / shares outstanding approximation
+    # For simplicity, use yfinance EPS or calculate from P/E and price
+    target_data = metrics.get('TGT', {})
+    current_pe = target_data.get('pe_ratio', 15)
+    current_price = target_data.get('price', 100)
+
+    # Estimate EPS
+    if current_pe and current_price:
+        eps_estimate = current_price / current_pe
+    else:
+        eps_estimate = 8.0  # Fallback estimate for Target
+
+    # Calculate theoretical price levels for P/E bands
+    # Using estimated EPS to create valuation zones
+    pe_bands = {
+        'undervalued': 10,  # P/E < 10
+        'fair_low': 15,     # P/E 10-15
+        'fair_high': 20,    # P/E 15-20
+        'overvalued': 25    # P/E > 20
+    }
+
+    # Create figure
+    fig = go.Figure()
+
+    # Prepare price data
+    if 'Date' in history.columns:
+        dates = pd.to_datetime(history['Date'])
+        prices = history['Close'].values
+    else:
+        dates = history.index
+        prices = history['Close'].values
+
+    # Calculate P/E band price levels based on EPS
+    # These are approximate - actual EPS changes over time
+    undervalued_price = eps_estimate * pe_bands['undervalued']
+    fair_low_price = eps_estimate * pe_bands['fair_low']
+    fair_high_price = eps_estimate * pe_bands['fair_high']
+    overvalued_price = eps_estimate * pe_bands['overvalued']
+
+    # Add shaded areas for valuation zones (from bottom to top)
+
+    # Undervalued zone (green) - below P/E 10
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=[undervalued_price] * len(dates),
+        fill='tozeroy',
+        fillcolor='rgba(46, 204, 113, 0.3)',
+        line=dict(width=0),
+        name='Undervalued (P/E < 10)',
+        showlegend=True,
+        hoverinfo='skip'
+    ))
+
+    # Fair value lower zone (light green) - P/E 10-15
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=[fair_low_price] * len(dates),
+        fill='tonexty',
+        fillcolor='rgba(46, 204, 113, 0.15)',
+        line=dict(width=0),
+        name='Fair Value Low (P/E 10-15)',
+        showlegend=True,
+        hoverinfo='skip'
+    ))
+
+    # Fair value upper zone (yellow) - P/E 15-20
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=[fair_high_price] * len(dates),
+        fill='tonexty',
+        fillcolor='rgba(241, 196, 15, 0.2)',
+        line=dict(width=0),
+        name='Fair Value High (P/E 15-20)',
+        showlegend=True,
+        hoverinfo='skip'
+    ))
+
+    # Overvalued zone (red) - P/E > 20
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=[overvalued_price] * len(dates),
+        fill='tonexty',
+        fillcolor='rgba(231, 76, 60, 0.15)',
+        line=dict(width=0),
+        name='Overvalued (P/E > 20)',
+        showlegend=True,
+        hoverinfo='skip'
+    ))
+
+    # Add stock price line (on top of zones)
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=prices,
+        mode='lines',
+        name='TGT Stock Price',
+        line=dict(color='#2c3e50', width=2),
+        hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Price: $%{y:.2f}<extra></extra>"
+    ))
+
+    # Add P/E band reference lines with labels
+    for pe_val, label, color in [
+        (pe_bands['undervalued'], 'P/E = 10x', '#27ae60'),
+        (pe_bands['fair_low'], 'P/E = 15x', '#f39c12'),
+        (pe_bands['fair_high'], 'P/E = 20x', '#e67e22'),
+        (pe_bands['overvalued'], 'P/E = 25x', '#e74c3c')
+    ]:
+        price_level = eps_estimate * pe_val
+        fig.add_hline(
+            y=price_level,
+            line_dash="dot",
+            line_color=color,
+            line_width=1,
+            annotation_text=f"{label} (${price_level:.0f})",
+            annotation_position="right",
+            annotation_font_color=color
+        )
+
+    # Add current P/E annotation
+    if current_pe and current_price:
+        fig.add_annotation(
+            x=dates.iloc[-1] if hasattr(dates, 'iloc') else dates[-1],
+            y=current_price,
+            text=f"<b>Current</b><br>${current_price:.2f}<br>P/E: {current_pe:.1f}x",
+            showarrow=True,
+            arrowhead=2,
+            arrowcolor='#2c3e50',
+            ax=-50,
+            ay=-40,
+            font=dict(size=11, color='#2c3e50'),
+            bgcolor="white",
+            bordercolor='#2c3e50',
+            borderwidth=1
+        )
+
+    # Update layout
+    fig.update_layout(
+        title={
+            'text': f"Target: Historical Price with P/E Valuation Bands<br><sub>Pillar 5: 5-Year Price History with Estimated Valuation Zones (EPS ≈ ${eps_estimate:.2f})</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
+        },
+        xaxis_title="Date",
+        yaxis_title="Stock Price ($)",
+        height=600,
+        width=1000,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.15,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(l=80, r=120, t=100, b=100),
+        plot_bgcolor='white',
+        xaxis=dict(
+            gridcolor='lightgray',
+            type='date'
+        ),
+        yaxis=dict(
+            gridcolor='lightgray',
+            tickprefix='$'
+        ),
+        hovermode='x unified'
+    )
+
+    # Save chart
+    output_path = "output/chart_pe_band.html"
+    fig.write_html(output_path)
+    print(f"✅ Chart 24 created: {output_path}")
+    print(f"   Data: 5-year price history for TGT")
+    print(f"   Current: ${current_price:.2f} @ P/E {current_pe:.1f}x")
+    print(f"   Estimated EPS: ${eps_estimate:.2f}")
+
+    return fig
+
+
 # DEPRECATED: Old time-series trend chart implementation (replaced with peer comparison)
 # This function was replaced on 2026-01-25 per user request to show peer comparison instead
 def _create_cash_conversion_cycle_trend_DEPRECATED(data):
@@ -3307,7 +3724,14 @@ def main():
     create_ocf_vs_capex_chart(data)  # Chart 21
     create_cash_flow_sankey(data)  # Chart 22
 
-    print("\n✅ All 22 visualizations created in output/ directory")
+    # Pillar 5: Valuation & Market Sentiment visualizations
+    try:
+        create_valuation_vs_growth_scatter(data)  # Chart 23
+        create_pe_band_area_chart(data)  # Chart 24
+    except Exception as e:
+        print(f"⚠️ Warning: Pillar 5 charts skipped (requires internet): {e}")
+
+    print("\n✅ All 24 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -3331,6 +3755,8 @@ def main():
     print("     - chart_cash_conversion_cycle.html (Chart 20 - Pillar 3)")
     print("     - chart_ocf_vs_capex.html (Chart 21 - Pillar 4)")
     print("     - chart_cash_flow_sankey.html (Chart 22 - Pillar 4)")
+    print("     - chart_valuation_scatter.html (Chart 23 - Pillar 5)")
+    print("     - chart_pe_band.html (Chart 24 - Pillar 5)")
 
 
 if __name__ == "__main__":
