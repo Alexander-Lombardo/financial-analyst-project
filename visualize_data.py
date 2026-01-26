@@ -3403,7 +3403,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     # Update layout
     fig.update_layout(
         title={
-            'text': "Target: Valuation vs Growth Analysis<br><sub>Pillar 5: P/E Ratio vs Revenue Growth YoY - Lower right = potentially undervalued</sub>",
+            'text': "Target: Valuation vs Growth Analysis<br><sub>P/E Ratio vs Revenue Growth YoY - Lower right = potentially undervalued</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
