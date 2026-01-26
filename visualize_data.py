@@ -2676,61 +2676,100 @@ def create_ocf_vs_capex_chart(data):
     Chart 21: Operating Cash Flow vs Capital Expenditures (Pillar 4)
 
     Shows the relationship between OCF and CapEx with the gap representing
-    Free Cash Flow. Uses bars for OCF and CapEx with a line for FCF.
+    Free Cash Flow. Uses bars for OCF and a line for CapEx.
+
+    IMPORTANT: 10-Q cash flow values are cumulative YTD, not standalone quarters.
+    This function converts YTD to standalone quarterly values:
+    - Q1 = Q1 YTD (as-is)
+    - Q2 = Q2 YTD - Q1 YTD
+    - Q3 = Q3 YTD - Q2 YTD
+    - Q4 = Annual - Q3 YTD
 
     Features:
-    - Dual-axis: Bars for OCF/CapEx (primary), Line for FCF (secondary)
+    - Single y-axis for all metrics ($ Billions)
     - Quarterly data with calculated Q4 from annual reports
-    - Color-coded: Green (OCF), Red (CapEx), Blue (FCF)
-    - FCF area fill to highlight cash generation
+    - Color-coded: Green (OCF bars), Red (CapEx line), Blue (FCF line)
     """
-    # Step 1: Collect quarterly data from 10-Q filings
-    quarterly_data = []
+    cf = data['metrics']['cash_flows']
+
+    # Step 1: Collect YTD data from 10-Q filings, grouped by fiscal year
+    ytd_by_fy = {}  # {fiscal_year: {'Q1': {...}, 'Q2': {...}, 'Q3': {...}}}
+    annual_data = {}  # {fiscal_year: {'ocf': ..., 'capex': ...}}
+
     for i, period in enumerate(data['periods']):
+        fy = period['fiscal_year']
+        ocf = cf['operating_cash_flow_billion'][i]
+        capex = cf['capital_expenditures_billion'][i]
+
         if period['filing_type'] == '10-Q':
-            ocf = data['metrics']['cash_flows']['operating_cash_flow_billion'][i]
-            capex = data['metrics']['cash_flows']['capital_expenditures_billion'][i]
-            fcf = data['metrics']['cash_flows']['free_cash_flow_billion'][i]
+            if fy not in ytd_by_fy:
+                ytd_by_fy[fy] = {}
+
+            # Determine quarter from period string (e.g., "Q1 2023" -> "Q1")
+            q_num = period['period'].split()[0]  # "Q1", "Q2", or "Q3"
+            ytd_by_fy[fy][q_num] = {'ocf': ocf, 'capex': capex}
+
+        elif period['filing_type'] == '10-K':
+            annual_data[fy] = {'ocf': ocf, 'capex': capex}
+
+    # Step 2: Convert YTD to standalone quarterly values and calculate Q4
+    quarterly_data = []
+
+    for fy in sorted(ytd_by_fy.keys()):
+        ytd = ytd_by_fy[fy]
+        annual = annual_data.get(fy)
+
+        # Q1 standalone = Q1 YTD (as-is)
+        if 'Q1' in ytd and ytd['Q1']['ocf'] is not None:
+            q1_ocf = ytd['Q1']['ocf']
+            q1_capex = ytd['Q1']['capex']
+            q1_fcf = q1_ocf - q1_capex if q1_capex else None
             quarterly_data.append({
-                'period': period['period'],
-                'fiscal_year': period['fiscal_year'],
-                'ocf': ocf,
-                'capex': capex,
-                'fcf': fcf
+                'period': f'Q1 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q1_ocf, 2),
+                'capex': round(q1_capex, 2) if q1_capex else None,
+                'fcf': round(q1_fcf, 2) if q1_fcf else None
             })
 
-    # Step 2: Calculate Q4 data from 10-K annual reports
-    for i, period in enumerate(data['periods']):
-        if period['filing_type'] == '10-K':
-            fy = period['fiscal_year']
-            annual_ocf = data['metrics']['cash_flows']['operating_cash_flow_billion'][i]
-            annual_capex = data['metrics']['cash_flows']['capital_expenditures_billion'][i]
+        # Q2 standalone = Q2 YTD - Q1 YTD
+        if 'Q1' in ytd and 'Q2' in ytd and ytd['Q2']['ocf'] is not None:
+            q2_ocf = ytd['Q2']['ocf'] - ytd['Q1']['ocf']
+            q2_capex = ytd['Q2']['capex'] - ytd['Q1']['capex'] if ytd['Q2']['capex'] and ytd['Q1']['capex'] else None
+            q2_fcf = q2_ocf - q2_capex if q2_capex else None
+            quarterly_data.append({
+                'period': f'Q2 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q2_ocf, 2),
+                'capex': round(q2_capex, 2) if q2_capex else None,
+                'fcf': round(q2_fcf, 2) if q2_fcf else None
+            })
 
-            # Find Q1, Q2, Q3 for this fiscal year
-            q1_ocf = q2_ocf = q3_ocf = None
-            q1_capex = q2_capex = q3_capex = None
-            for q in quarterly_data:
-                if q['fiscal_year'] == fy:
-                    if 'Q1' in q['period']:
-                        q1_ocf, q1_capex = q['ocf'], q['capex']
-                    elif 'Q2' in q['period']:
-                        q2_ocf, q2_capex = q['ocf'], q['capex']
-                    elif 'Q3' in q['period']:
-                        q3_ocf, q3_capex = q['ocf'], q['capex']
+        # Q3 standalone = Q3 YTD - Q2 YTD
+        if 'Q2' in ytd and 'Q3' in ytd and ytd['Q3']['ocf'] is not None:
+            q3_ocf = ytd['Q3']['ocf'] - ytd['Q2']['ocf']
+            q3_capex = ytd['Q3']['capex'] - ytd['Q2']['capex'] if ytd['Q3']['capex'] and ytd['Q2']['capex'] else None
+            q3_fcf = q3_ocf - q3_capex if q3_capex else None
+            quarterly_data.append({
+                'period': f'Q3 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q3_ocf, 2),
+                'capex': round(q3_capex, 2) if q3_capex else None,
+                'fcf': round(q3_fcf, 2) if q3_fcf else None
+            })
 
-            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
-            if all([q1_ocf, q2_ocf, q3_ocf, q1_capex, q2_capex, q3_capex,
-                    annual_ocf, annual_capex]):
-                q4_ocf = annual_ocf - (q1_ocf + q2_ocf + q3_ocf)
-                q4_capex = annual_capex - (q1_capex + q2_capex + q3_capex)
-                q4_fcf = q4_ocf - q4_capex
-                quarterly_data.append({
-                    'period': f'Q4 {fy}',
-                    'fiscal_year': fy,
-                    'ocf': round(q4_ocf, 3),
-                    'capex': round(q4_capex, 3),
-                    'fcf': round(q4_fcf, 3)
-                })
+        # Q4 standalone = Annual - Q3 YTD
+        if annual and 'Q3' in ytd and ytd['Q3']['ocf'] is not None:
+            q4_ocf = annual['ocf'] - ytd['Q3']['ocf']
+            q4_capex = annual['capex'] - ytd['Q3']['capex'] if annual['capex'] and ytd['Q3']['capex'] else None
+            q4_fcf = q4_ocf - q4_capex if q4_capex else None
+            quarterly_data.append({
+                'period': f'Q4 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q4_ocf, 2),
+                'capex': round(q4_capex, 2) if q4_capex else None,
+                'fcf': round(q4_fcf, 2) if q4_fcf else None
+            })
 
     # Step 3: Sort by fiscal year and quarter
     def sort_key(item):
@@ -2759,8 +2798,8 @@ def create_ocf_vs_capex_chart(data):
     capex_values = [q['capex'] for q in quarterly_data]
     fcf_values = [q['fcf'] for q in quarterly_data]
 
-    # Create figure with secondary y-axis
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    # Create figure with single y-axis (all metrics in same units)
+    fig = go.Figure()
 
     # Operating Cash Flow bars (green)
     fig.add_trace(
@@ -2772,22 +2811,22 @@ def create_ocf_vs_capex_chart(data):
             text=[f'${v:.2f}B' for v in ocf_values],
             textposition='outside',
             textfont=dict(size=9)
-        ),
-        secondary_y=False
+        )
     )
 
-    # Capital Expenditures bars (red)
+    # Capital Expenditures line (red)
     fig.add_trace(
-        go.Bar(
+        go.Scatter(
             x=periods,
             y=capex_values,
             name="Capital Expenditures",
-            marker_color='#e74c3c',
+            line=dict(color='#e74c3c', width=3),
+            mode='lines+markers+text',
+            marker=dict(size=8, symbol='circle'),
             text=[f'${v:.2f}B' for v in capex_values],
-            textposition='outside',
-            textfont=dict(size=9)
-        ),
-        secondary_y=False
+            textposition='top center',
+            textfont=dict(size=9, color='#e74c3c')
+        )
     )
 
     # Free Cash Flow line (blue) with markers
@@ -2802,50 +2841,43 @@ def create_ocf_vs_capex_chart(data):
             text=[f'${v:.2f}B' for v in fcf_values],
             textposition='top center',
             textfont=dict(size=10, color='#3498db')
-        ),
-        secondary_y=True
+        )
     )
 
-    # Add zero line for FCF axis
+    # Add zero line reference
     fig.add_hline(y=0, line_dash="dash", line_color="gray",
-                  line_width=1, opacity=0.5, secondary_y=True)
+                  line_width=1, opacity=0.5)
 
-    # Calculate data range for y-axis
-    max_bar = max(max(ocf_values), max(capex_values)) * 1.3
-    min_fcf = min(fcf_values) * 1.2 if min(fcf_values) < 0 else -0.5
-    max_fcf = max(fcf_values) * 1.3
+    # Calculate data range for y-axis with extra padding for labels
+    all_values = ocf_values + capex_values + fcf_values
+    min_val = min(all_values)
+    max_val = max(all_values)
+    y_min = min_val * 1.3 if min_val < 0 else -1  # Allow room below zero
+    y_max = max_val * 1.4  # Extra padding for labels
 
     fig.update_layout(
         title={
-            'text': "Target: Operating Cash Flow vs Capital Expenditures<br><sub>Pillar 4: The gap between OCF and CapEx is Free Cash Flow (FCF)</sub>",
+            'text': "Target: Operating Cash Flow vs Capital Expenditures<br><sub>OCF (bars) minus CapEx (line) = Free Cash Flow</sub>",
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'
         },
         barmode='group',
-        height=600,
+        height=700,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.02,
+            y=1.05,
             xanchor="right",
             x=1
         ),
         hovermode='x unified',
-        margin=dict(t=100, b=80)
-    )
-
-    # Update y-axes
-    fig.update_yaxes(
-        title_text="Cash Flow ($ Billions)",
-        range=[0, max_bar],
-        secondary_y=False
-    )
-    fig.update_yaxes(
-        title_text="Free Cash Flow ($ Billions)",
-        range=[min_fcf, max_fcf],
-        secondary_y=True
+        margin=dict(t=130, b=80),
+        yaxis=dict(
+            title_text="Cash Flow ($ Billions)",
+            range=[y_min, y_max]
+        )
     )
 
     # Update x-axis
