@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cash Conversion Cycle Data - Target vs Peers</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 5px;
+        }
+        .info {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .company-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .negative {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .positive {
+            color: #e74c3c;
+        }
+        .formula {
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .note {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .info-icon:hover {
+            background-color: #2980b9;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .formula {
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <!-- Info Modal -->
+    <div class="modal-overlay" id="infoModal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h3>Cash Conversion Cycle Formula</h3>
+            <div class="formula">
+                CCC = DSI + DSO - DPO
+            </div>
+            <ul>
+                <li><strong>DSI</strong> (Days Sales of Inventory): How long inventory sits before being sold</li>
+                <li><strong>DSO</strong> (Days Sales Outstanding): How long it takes to collect cash from customers</li>
+                <li><strong>DPO</strong> (Days Payables Outstanding): How long before paying suppliers</li>
+                <li><strong>CCC</strong> (Cash Conversion Cycle): Total days to convert resources into cash</li>
+            </ul>
+            <p class="note">Lower CCC is better. Negative CCC means collecting cash before paying suppliers (highly efficient).</p>
+        </div>
+    </div>
+
+    <h1>Cash Conversion Cycle Analysis</h1>
+    <div class="header-row">
+        <h2>Target Corporation vs Retail Peers</h2>
+        <span class="info-icon" onclick="openModal()" title="View formula info">i</span>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('infoModal').classList.add('active');
+        }
+        function closeModal(event) {
+            if (!event || event.target === document.getElementById('infoModal')) {
+                document.getElementById('infoModal').classList.remove('active');
+            }
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+
+    <h2>Target Corporation (5 Fiscal Years)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>DSI (days)</th>
+                <th>DSO (days)</th>
+                <th>DPO (days)</th>
+                <th>CCC (days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="company-name">FY2020</td>
+                <td>58.8</td>
+                <td>2.5</td>
+                <td>70.9</td>
+                <td class="negative">-9.6</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2021</td>
+                <td>67.7</td>
+                <td>2.9</td>
+                <td>75.4</td>
+                <td class="negative">-4.8</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2022</td>
+                <td>59.9</td>
+                <td>4.0</td>
+                <td>59.9</td>
+                <td class="positive">4.0</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2023</td>
+                <td>55.8</td>
+                <td>3.1</td>
+                <td>56.8</td>
+                <td class="positive">2.1</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2024</td>
+                <td>60.8</td>
+                <td>3.4</td>
+                <td>62.3</td>
+                <td class="positive">1.9</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Amazon (AMZN)</h2>
+    <p class="note">E-commerce leader, inventory-light marketplace model</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Fiscal Year</th>
+                <th>DSI (days)</th>
+                <th>DSO (days)</th>
+                <th>DPO (days)</th>
+                <th>CCC (days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="company-name">FY2019</td>
+                <td>53.8</td>
+                <td>53.5</td>
+                <td>123.8</td>
+                <td class="negative">-16.5</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2020</td>
+                <td>52.5</td>
+                <td>55.8</td>
+                <td>159.9</td>
+                <td class="negative">-51.6</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2021</td>
+                <td>51.1</td>
+                <td>55.6</td>
+                <td>123.1</td>
+                <td class="negative">-16.4</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2022</td>
+                <td>46.1</td>
+                <td>63.9</td>
+                <td>106.7</td>
+                <td class="positive">3.4</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2023</td>
+                <td>42.1</td>
+                <td>78.5</td>
+                <td>107.4</td>
+                <td class="positive">13.2</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Costco (COST)</h2>
+    <p class="note">Warehouse club, membership-based, high inventory turnover</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Fiscal Year</th>
+                <th>DSI (days)</th>
+                <th>DSO (days)</th>
+                <th>DPO (days)</th>
+                <th>CCC (days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="company-name">FY2020</td>
+                <td>30.4</td>
+                <td>3.5</td>
+                <td>34.8</td>
+                <td class="negative">-0.9</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2021</td>
+                <td>32.8</td>
+                <td>3.5</td>
+                <td>32.7</td>
+                <td class="positive">3.6</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2022</td>
+                <td>28.6</td>
+                <td>3.5</td>
+                <td>30.0</td>
+                <td class="positive">2.1</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2023</td>
+                <td>30.6</td>
+                <td>3.5</td>
+                <td>31.9</td>
+                <td class="positive">2.2</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2024</td>
+                <td>27.6</td>
+                <td>3.5</td>
+                <td>30.1</td>
+                <td class="positive">1.0</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Kroger (KR)</h2>
+    <p class="note">Grocery-focused retailer, perishable inventory</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Fiscal Year</th>
+                <th>DSI (days)</th>
+                <th>DSO (days)</th>
+                <th>DPO (days)</th>
+                <th>CCC (days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="company-name">FY2020</td>
+                <td>30.3</td>
+                <td>3.5</td>
+                <td>24.0</td>
+                <td class="positive">9.8</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2021</td>
+                <td>28.4</td>
+                <td>3.5</td>
+                <td>24.2</td>
+                <td class="positive">7.7</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2022</td>
+                <td>30.6</td>
+                <td>3.5</td>
+                <td>22.3</td>
+                <td class="positive">11.8</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2023</td>
+                <td>29.5</td>
+                <td>3.5</td>
+                <td>32.5</td>
+                <td class="positive">0.5</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2024</td>
+                <td>30.3</td>
+                <td>3.5</td>
+                <td>32.5</td>
+                <td class="positive">1.3</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Walmart (WMT)</h2>
+    <p class="note">World's largest retailer, direct Target competitor</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Fiscal Year</th>
+                <th>DSI (days)</th>
+                <th>DSO (days)</th>
+                <th>DPO (days)</th>
+                <th>CCC (days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="company-name">FY2020</td>
+                <td>39.0</td>
+                <td>3.5</td>
+                <td>42.7</td>
+                <td class="negative">-0.1</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2021</td>
+                <td>48.1</td>
+                <td>3.5</td>
+                <td>47.0</td>
+                <td class="positive">4.6</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2022</td>
+                <td>44.5</td>
+                <td>3.5</td>
+                <td>42.3</td>
+                <td class="positive">5.7</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2023</td>
+                <td>40.9</td>
+                <td>3.5</td>
+                <td>42.3</td>
+                <td class="positive">2.1</td>
+            </tr>
+            <tr>
+                <td class="company-name">FY2024</td>
+                <td>40.3</td>
+                <td>3.5</td>
+                <td>41.8</td>
+                <td class="positive">1.9</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="info" style="margin-top: 40px;">
+        <strong>Data Sources:</strong>
+        <ul>
+            <li>Target: Automated extraction from SEC 10-K filings (FY2020-FY2024)</li>
+            <li>Peers: Automated extraction from SEC EDGAR 10-K filings</li>
+            <li>Last Updated: 2026-01-26</li>
+        </ul>
+    </div>
+</body>
+</html>

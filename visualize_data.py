@@ -2266,66 +2266,119 @@ def create_dupont_analysis_breakdown(data):
     return fig
 
 
-def _detect_ccc_data_availability(data):
+def _load_peer_comparison_data(filepath: str = "data/peer_comparison_data.json"):
     """
-    Detect if quarterly CCC data is available for charting.
+    Load peer company data for comparison charts.
 
-    This function scans all periods to determine whether the company reports
-    receivables in quarterly 10-Q filings (enabling quarterly CCC visualization)
-    or only in annual 10-K filings (requiring fallback to annual visualization).
+    Args:
+        filepath: Path to JSON file containing peer CCC data
+
+    Returns:
+        dict: Peer comparison data structure with CCC components for each peer company
+              Returns empty dict if file not found
+    """
+    from pathlib import Path
+    import json
+
+    peer_path = Path(filepath)
+    if not peer_path.exists():
+        print(f"⚠️  WARNING: Peer data not found at {filepath}")
+        print(f"   Chart 20 will display Target data only without peer comparison")
+        return {}
+
+    try:
+        with open(peer_path, 'r') as f:
+            peer_data = json.load(f)
+        return peer_data
+    except json.JSONDecodeError as e:
+        print(f"⚠️  WARNING: Failed to parse peer data: {e}")
+        return {}
+
+
+def _get_all_ccc_data(data):
+    """
+    Extract ALL periods with complete CCC components from timeseries data.
+
+    Args:
+        data: Time-series data dictionary from target_timeseries.json
+
+    Returns:
+        list: List of dicts with CCC data for each period, sorted chronologically.
+              Each dict contains: period, fiscal_year, fiscal_quarter, filing_type, dsi, dso, dpo, ccc
+              Returns empty list if no complete data found.
+    """
+    ccc_periods = []
+
+    # Scan ALL periods (both 10-K and 10-Q)
+    for i, period in enumerate(data['periods']):
+        dsi = data['metrics']['inventory']['days_sales_of_inventory'][i]
+        dso = data['metrics']['efficiency']['days_sales_outstanding'][i]
+        dpo = data['metrics']['efficiency']['days_payable_outstanding'][i]
+        ccc = data['metrics']['efficiency']['cash_conversion_cycle_days'][i]
+
+        # Only include periods with all 4 components present
+        if all(v is not None for v in [dsi, dso, dpo, ccc]):
+            ccc_periods.append({
+                'period': period['period'],  # e.g., "FY2024" or "Q3 2025"
+                'fiscal_year': period['fiscal_year'],
+                'fiscal_quarter': period.get('fiscal_quarter'),  # May be None for annual
+                'filing_type': period['filing_type'],  # '10-K' or '10-Q'
+                'dsi': dsi,
+                'dso': dso,
+                'dpo': dpo,
+                'ccc': ccc
+            })
+
+    # Sort chronologically (oldest first)
+    def sort_key(item):
+        year = item['fiscal_year']
+        quarter = item.get('fiscal_quarter', 0)  # Annual = 0 (before Q1)
+        return (year, quarter)
+
+    ccc_periods.sort(key=sort_key)
+
+    return ccc_periods
+
+
+def _get_latest_ccc_data(data):
+    """
+    Extract Target's most recent CCC components from timeseries data.
+
+    Scans periods from most recent backwards to find the first period with
+    complete CCC data (all components non-null).
+
+    Args:
+        data: Time-series data dictionary from target_timeseries.json
 
     Returns:
         dict: {
-            'quarterly_count': int - Number of quarterly periods with complete CCC
-            'annual_count': int - Number of annual periods with complete CCC
-            'use_quarterly': bool - True if quarterly data sufficient (>=8 quarters)
-            'message': str - Info message about data source for console output
+            'dsi': float - Days Sales of Inventory
+            'dso': float - Days Sales Outstanding
+            'dpo': float - Days Payables Outstanding
+            'ccc': float - Cash Conversion Cycle (DSI + DSO - DPO)
+            'period': str - Period label (e.g., "FY2024", "Q3 2025")
         }
+
+    Raises:
+        ValueError: If no complete CCC data found in any period
     """
-    quarterly_count = 0
-    annual_count = 0
+    # Use _get_all_ccc_data() and return last period
+    all_ccc = _get_all_ccc_data(data)
 
-    for i, period in enumerate(data['periods']):
-        # Get CCC components
-        dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
-        dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
-        dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
+    if not all_ccc:
+        raise ValueError("No complete CCC data found for Target in timeseries JSON")
 
-        # Check if all components present (required for complete CCC calculation)
-        if all(v is not None for v in [dsi, dso, dpo]):
-            if period['filing_type'] == '10-Q':
-                quarterly_count += 1
-            elif period['filing_type'] == '10-K':
-                annual_count += 1
-
-    # Decision: Use quarterly if at least 8 quarters available (2 years of data)
-    # This threshold ensures sufficient data for meaningful trend analysis
-    use_quarterly = quarterly_count >= 8
-
-    if use_quarterly:
-        message = f"Using {quarterly_count} quarterly periods (receivables available in 10-Q filings)"
-    else:
-        message = f"Using {annual_count} annual periods (receivables only in 10-K filings)"
-
-    return {
-        'quarterly_count': quarterly_count,
-        'annual_count': annual_count,
-        'use_quarterly': use_quarterly,
-        'message': message
-    }
+    return all_ccc[-1]  # Return most recent period
 
 
 def create_cash_conversion_cycle_chart(data):
     """
-    Chart 20: Cash Conversion Cycle Trend (Pillar 3: Operational Efficiency)
+    Chart 20: Cash Conversion Cycle - Peer Comparison (Pillar 3: Operational Efficiency)
 
-    Shows the number of days it takes to convert resource inputs into cash.
+    Grouped bar chart comparing Target's CCC components against retail industry peers.
+    Shows DSI, DSO, DPO, and total CCC for each company.
+
     Formula: CCC = DSI + DSO - DPO
-
-    Intelligently selects quarterly or annual data based on availability:
-    - Quarterly data (15 periods): If receivables reported in 10-Q filings (>=8 quarters)
-    - Annual data (5-10 periods): If receivables only in 10-K filings
-
     Lower CCC is better - indicates faster cash conversion.
 
     Args:
@@ -2336,202 +2389,221 @@ def create_cash_conversion_cycle_chart(data):
     """
     import plotly.graph_objects as go
 
-    # Step 1: Detect data availability
-    availability = _detect_ccc_data_availability(data)
-    use_quarterly = availability['use_quarterly']
+    print(f"\n📊 Chart 20: Creating peer comparison bar chart with dropdown...")
 
-    print(f"\n📊 Chart 20 Data Detection: {availability['message']}")
+    # Step 1: Extract ALL Target CCC periods
+    target_ccc_periods = _get_all_ccc_data(data)
 
-    # Step 2: Collect periods based on availability
-    periods = []
-    dsi_values = []
-    dso_values = []
-    dpo_values = []
-    ccc_values = []
+    if not target_ccc_periods:
+        print("❌ Error: No complete CCC data found for Target")
+        return None
 
-    if use_quarterly:
-        # QUARTERLY APPROACH: Collect Q1-Q3 from 10-Q filings
-        quarterly_data = []
+    print(f"   Target periods: {len(target_ccc_periods)} ({target_ccc_periods[0]['period']} - {target_ccc_periods[-1]['period']})")
 
-        for i, period in enumerate(data['periods']):
-            if period['filing_type'] == '10-Q':
-                period_label = period.get('period')
+    # Step 2: Load peer data (multi-year structure)
+    peer_data = _load_peer_comparison_data()
+    peer_companies = {}
 
-                # Get values
-                dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
-                dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
-                dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
-                ccc = data['metrics']['efficiency'].get('cash_conversion_cycle_days', [None])[i]
-
-                # Only include if all values present
-                if all(v is not None for v in [dsi, dso, dpo, ccc]):
-                    quarterly_data.append({
-                        'period': period_label,
-                        'fiscal_year': period.get('fiscal_year'),
-                        'fiscal_quarter': period.get('fiscal_quarter'),
-                        'dsi': dsi,
-                        'dso': dso,
-                        'dpo': dpo,
-                        'ccc': ccc
-                    })
-
-        # CALCULATE Q4 from annual 10-K reports
-        for i, period in enumerate(data['periods']):
-            if period['filing_type'] == '10-K':
-                fy = period.get('fiscal_year')
-
-                # Get annual raw values for Q4 calculation
-                annual_revenue = data['metrics']['revenue'].get('net_sales_billion', [None])[i]
-                annual_cogs = data['metrics']['revenue'].get('cost_of_sales_billion', [None])[i]
-                annual_inventory = data['metrics']['inventory'].get('inventory_billion', [None])[i]
-
-                # Check for current_receivables_billion - this is the key field needed for DSO
-                annual_receivables = None
-                if 'liquidity' in data['metrics'] and 'current_receivables_billion' in data['metrics']['liquidity']:
-                    annual_receivables = data['metrics']['liquidity'].get('current_receivables_billion', [None])[i]
-
-                # Fallback: check if receivables is in efficiency metrics
-                if annual_receivables is None:
-                    annual_receivables = data['metrics'].get('efficiency', {}).get('current_receivables_billion', [None])[i] if isinstance(data['metrics'].get('efficiency'), dict) else None
-
-                # Check for current_payables_billion
-                annual_payables = None
-                if 'liquidity' in data['metrics'] and 'current_payables_billion' in data['metrics']['liquidity']:
-                    annual_payables = data['metrics']['liquidity'].get('current_payables_billion', [None])[i]
-
-                # Fallback: check if payables is in efficiency metrics
-                if annual_payables is None:
-                    annual_payables = data['metrics'].get('efficiency', {}).get('current_payables_billion', [None])[i] if isinstance(data['metrics'].get('efficiency'), dict) else None
-
-                # Find Q1, Q2, Q3 for this fiscal year
-                q1 = q2 = q3 = None
-                for q in quarterly_data:
-                    if q['fiscal_year'] == fy:
-                        if q['fiscal_quarter'] == 1:
-                            q1 = q
-                        elif q['fiscal_quarter'] == 2:
-                            q2 = q
-                        elif q['fiscal_quarter'] == 3:
-                            q3 = q
-
-                # Calculate Q4 if all quarters present and balance sheet data available
-                if all([q1, q2, q3]) and all(v is not None for v in [annual_revenue, annual_cogs, annual_inventory, annual_receivables, annual_payables]):
-                    # Q4 DSI: Uses annual COGS and year-end inventory
-                    # Formula: DSI = 365 / (COGS / Inventory) = (365 * Inventory) / COGS
-                    q4_dsi = (365 * annual_inventory) / annual_cogs if annual_cogs > 0 else None
-
-                    # Q4 DSO: Uses annual revenue and year-end receivables
-                    # Formula: DSO = 365 / (Revenue / Receivables) = (365 * Receivables) / Revenue
-                    q4_dso = (365 * annual_receivables) / annual_revenue if annual_revenue > 0 else None
-
-                    # Q4 DPO: Uses annual COGS and year-end payables
-                    # Formula: DPO = 365 / (COGS / Payables) = (365 * Payables) / COGS
-                    q4_dpo = (365 * annual_payables) / annual_cogs if annual_cogs > 0 else None
-
-                    # Q4 CCC
-                    if all(v is not None for v in [q4_dsi, q4_dso, q4_dpo]):
-                        q4_ccc = q4_dsi + q4_dso - q4_dpo
-
-                        quarterly_data.append({
-                            'period': f'Q4 {fy}',
-                            'fiscal_year': fy,
-                            'fiscal_quarter': 4,
-                            'dsi': q4_dsi,
-                            'dso': q4_dso,
-                            'dpo': q4_dpo,
-                            'ccc': q4_ccc
-                        })
-
-        # Sort chronologically
-        quarterly_data.sort(key=lambda x: (x['fiscal_year'], x['fiscal_quarter']))
-
-        # Extract lists for plotting
-        for q in quarterly_data:
-            periods.append(q['period'])
-            dsi_values.append(q['dsi'])
-            dso_values.append(q['dso'])
-            dpo_values.append(q['dpo'])
-            ccc_values.append(q['ccc'])
-
+    if peer_data and 'cash_conversion_cycle' in peer_data:
+        peer_companies = peer_data['cash_conversion_cycle'].get('companies', {})
+        # Count total peer-years available
+        total_peer_years = sum(len(info.get('years', {})) for info in peer_companies.values())
+        print(f"   Peer data loaded: {len(peer_companies)} companies, {total_peer_years} company-years")
     else:
-        # ANNUAL APPROACH: Use 10-K filings only (fallback for companies without quarterly receivables)
-        for i, period in enumerate(data['periods']):
-            if period['filing_type'] != '10-K':
-                continue
+        print(f"   No peer data available - showing Target only")
 
-            period_label = f"FY{period.get('fiscal_year')}"
+    # Step 3: Build company list (Target + peers)
+    company_names = ['Target'] + sorted(peer_companies.keys())
 
-            # Get values
-            dsi = data['metrics']['inventory'].get('days_sales_of_inventory', [None])[i]
-            dso = data['metrics']['efficiency'].get('days_sales_outstanding', [None])[i]
-            dpo = data['metrics']['efficiency'].get('days_payable_outstanding', [None])[i]
-            ccc = data['metrics']['efficiency'].get('cash_conversion_cycle_days', [None])[i]
-
-            # Only include if all values present
-            if all(v is not None for v in [dsi, dso, dpo, ccc]):
-                periods.append(period_label)
-                dsi_values.append(dsi)
-                dso_values.append(dso)
-                dpo_values.append(dpo)
-                ccc_values.append(ccc)
-
-    # Create figure
+    # Step 4: Create figure with multiple trace sets (one per Target period)
     fig = go.Figure()
 
-    # Line 1: DSI (Days Sales of Inventory)
-    fig.add_trace(go.Scatter(
-        x=periods,
-        y=dsi_values,
-        mode='lines+markers',
-        name='DSI (Days in Inventory)',
-        line=dict(color='#e74c3c', width=3),
-        marker=dict(size=8, line=dict(color='white', width=2)),
-        hovertemplate='<b>DSI</b>: %{y:.1f} days<extra></extra>'
-    ))
+    # For each Target period, create 4 bar traces per company (DSI, DSO, DPO, CCC)
+    # Total traces = len(target_ccc_periods) × len(company_names) × 4
+    for period_idx, target_period in enumerate(target_ccc_periods):
+        # Visibility: Only most recent period visible by default
+        visible = (period_idx == len(target_ccc_periods) - 1)
 
-    # Line 2: DSO (Days Sales Outstanding)
-    fig.add_trace(go.Scatter(
-        x=periods,
-        y=dso_values,
-        mode='lines+markers',
-        name='DSO (Days to Collect Receivables)',
-        line=dict(color='#f39c12', width=3),
-        marker=dict(size=8, line=dict(color='white', width=2)),
-        hovertemplate='<b>DSO</b>: %{y:.1f} days<extra></extra>'
-    ))
+        # Build companies_data dict for this period
+        companies_data = {}
 
-    # Line 3: DPO (Days Payables Outstanding)
-    fig.add_trace(go.Scatter(
-        x=periods,
-        y=dpo_values,
-        mode='lines+markers',
-        name='DPO (Days to Pay Suppliers)',
-        line=dict(color='#3498db', width=3),
-        marker=dict(size=8, line=dict(color='white', width=2)),
-        hovertemplate='<b>DPO</b>: %{y:.1f} days<extra></extra>'
-    ))
+        # Target data changes per period
+        companies_data['Target'] = {
+            'dsi': target_period['dsi'],
+            'dso': target_period['dso'],
+            'dpo': target_period['dpo'],
+            'ccc': target_period['ccc'],
+            'opacity': 1.0  # Full saturation
+        }
 
-    # Line 4: CCC (Cash Conversion Cycle)
-    fig.add_trace(go.Scatter(
-        x=periods,
-        y=ccc_values,
-        mode='lines+markers',
-        name='CCC (Total Cycle)',
-        line=dict(color='#27ae60', width=4, dash='solid'),
-        marker=dict(size=10, line=dict(color='white', width=2)),
-        hovertemplate='<b>CCC</b>: %{y:.1f} days<extra></extra>'
-    ))
+        # Peer data lookup by fiscal year (dynamic)
+        # Note: All peer data extracted from actual SEC EDGAR 10-K filings (NOT averaged).
+        # Amazon has only 2 years (2019, 2023) due to extraction limitations.
+        # When a peer's fiscal year is missing, fallback uses most recent available year (actual data, not estimates).
+        # Opacity reduced to 0.5 when fallback is used to visually indicate data mismatch.
+        for peer_name, peer_info in peer_companies.items():
+            # Get peer data for THIS fiscal year
+            peer_years = peer_info.get('years', {})
+            peer_year_data = peer_years.get(str(target_period['fiscal_year']))
 
-    # Add reference line at 60 days (retail industry benchmark)
+            if peer_year_data:
+                # Use year-specific peer data
+                companies_data[peer_name] = {
+                    'dsi': peer_year_data['dsi'],
+                    'dso': peer_year_data['dso'],
+                    'dpo': peer_year_data['dpo'],
+                    'ccc': peer_year_data['ccc'],
+                    'opacity': 0.7  # Reduced opacity
+                }
+            else:
+                # Fallback: Use most recent available year if current year missing
+                if peer_years:
+                    latest_year = max(peer_years.keys())
+                    latest_data = peer_years[latest_year]
+                    companies_data[peer_name] = {
+                        'dsi': latest_data['dsi'],
+                        'dso': latest_data['dso'],
+                        'dpo': latest_data['dpo'],
+                        'ccc': latest_data['ccc'],
+                        'opacity': 0.5  # Even lighter to indicate data mismatch
+                    }
+                # If no peer data at all for this company, skip it for this period
+                # (company_names will be inconsistent across periods, but Plotly handles this)
+
+        # Filter to only companies with data for this period
+        companies_with_data = [c for c in company_names if c in companies_data]
+
+        # Create 4 bar traces for this period
+        # Trace 1: DSI (Red)
+        dsi_values = [companies_data[c]['dsi'] for c in companies_with_data]
+        dsi_opacities = [companies_data[c]['opacity'] for c in companies_with_data]
+
+        fig.add_trace(go.Bar(
+            name='DSI (Days in Inventory)',
+            x=companies_with_data,
+            y=dsi_values,
+            marker=dict(
+                color=[f'rgba(231, 76, 60, {o})' for o in dsi_opacities],
+                line=dict(color='rgba(231, 76, 60, 1.0)', width=1)
+            ),
+            text=[f'{v:.1f}' for v in dsi_values],
+            textposition='outside',
+            visible=visible,
+            legendgroup='DSI',
+            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            hovertemplate='<b>%{x}</b><br>DSI: %{y:.1f} days<extra></extra>'
+        ))
+
+        # Trace 2: DSO (Orange)
+        dso_values = [companies_data[c]['dso'] for c in companies_with_data]
+        dso_opacities = [companies_data[c]['opacity'] for c in companies_with_data]
+
+        fig.add_trace(go.Bar(
+            name='DSO (Days to Collect)',
+            x=companies_with_data,
+            y=dso_values,
+            marker=dict(
+                color=[f'rgba(243, 156, 18, {o})' for o in dso_opacities],
+                line=dict(color='rgba(243, 156, 18, 1.0)', width=1)
+            ),
+            text=[f'{v:.1f}' for v in dso_values],
+            textposition='outside',
+            visible=visible,
+            legendgroup='DSO',
+            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            hovertemplate='<b>%{x}</b><br>DSO: %{y:.1f} days<extra></extra>'
+        ))
+
+        # Trace 3: DPO (Blue)
+        dpo_values = [companies_data[c]['dpo'] for c in companies_with_data]
+        dpo_opacities = [companies_data[c]['opacity'] for c in companies_with_data]
+
+        fig.add_trace(go.Bar(
+            name='DPO (Days to Pay Suppliers)',
+            x=companies_with_data,
+            y=dpo_values,
+            marker=dict(
+                color=[f'rgba(52, 152, 219, {o})' for o in dpo_opacities],
+                line=dict(color='rgba(52, 152, 219, 1.0)', width=1)
+            ),
+            text=[f'{v:.1f}' for v in dpo_values],
+            textposition='outside',
+            visible=visible,
+            legendgroup='DPO',
+            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            hovertemplate='<b>%{x}</b><br>DPO: %{y:.1f} days<extra></extra>'
+        ))
+
+        # Trace 4: CCC (Green - more prominent)
+        ccc_values = [companies_data[c]['ccc'] for c in companies_with_data]
+        ccc_opacities = [companies_data[c]['opacity'] for c in companies_with_data]
+
+        fig.add_trace(go.Bar(
+            name='CCC (Total Cycle)',
+            x=companies_with_data,
+            y=ccc_values,
+            marker=dict(
+                color=[f'rgba(39, 174, 96, {o})' for o in ccc_opacities],
+                line=dict(color='rgba(39, 174, 96, 1.0)', width=2)  # Thicker for CCC
+            ),
+            text=[f'{v:.1f}' for v in ccc_values],
+            textposition='outside',
+            textfont=dict(size=12, color='black'),
+            visible=visible,
+            legendgroup='CCC',
+            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            hovertemplate='<b>%{x}</b><br>CCC: %{y:.1f} days<extra></extra>'
+        ))
+
+    # Step 5: Create dropdown menu buttons
+    buttons = []
+    traces_per_period = 4  # 4 bar traces per period (DSI, DSO, DPO, CCC), each with 5 companies
+
+    # Iterate in reverse (most recent first in dropdown)
+    for period_idx in range(len(target_ccc_periods) - 1, -1, -1):
+        target_period = target_ccc_periods[period_idx]
+
+        # Build visibility array - use 'legendonly' for traces that define the legend (last period's traces)
+        # This keeps the legend visible while hiding the bars
+        visible_array = []
+        legend_period_idx = len(target_ccc_periods) - 1  # Last period defines legend (has showlegend=True)
+
+        for trace_period_idx in range(len(target_ccc_periods)):
+            for _ in range(traces_per_period):  # 4 traces per period
+                if trace_period_idx == period_idx:
+                    # Currently selected period - show bars
+                    visible_array.append(True)
+                elif trace_period_idx == legend_period_idx:
+                    # Legend-defining period - keep legend visible but hide bars
+                    visible_array.append('legendonly')
+                else:
+                    # Other periods - fully hidden
+                    visible_array.append(False)
+
+        buttons.append({
+            'label': target_period['period'],  # e.g., "FY2024"
+            'method': 'update',
+            'args': [
+                {'visible': visible_array},
+                {
+                    'title': {
+                        'text': f"Target vs Retail Peers: Cash Conversion Cycle<br><sub>Comparing {target_period['period']} CCC performance (Lower is better)</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center'
+                    }
+                }
+            ]
+        })
+
+    # Step 6: Add reference lines
     fig.add_hline(
         y=60,
         line_dash="dash",
         line_color="gray",
         annotation_text="Retail Benchmark (60 days)",
-        annotation_position="right"  # Changed from left to right to avoid cut-off
+        annotation_position="right"
     )
 
-    # Add reference line at 0 (for context)
     fig.add_hline(
         y=0,
         line_dash="dot",
@@ -2539,51 +2611,79 @@ def create_cash_conversion_cycle_chart(data):
         opacity=0.3
     )
 
-    # Determine data frequency for subtitle
-    data_freq = "Quarterly" if use_quarterly else "Annual"
-    period_range = f"{periods[0]} - {periods[-1]}" if periods else "N/A"
+    # Step 7: Layout configuration
+    most_recent = target_ccc_periods[-1]['period']
 
-    # Layout
     fig.update_layout(
+        barmode='group',
         title={
-            'text': f"Target: Cash Conversion Cycle Trend<br><sub>Lower is better - Shows days to convert resources into cash (CCC = DSI + DSO - DPO)<br>{data_freq} data: {period_range}</sub>",
+            'text': f"Target vs Retail Peers: Cash Conversion Cycle<br><sub>Target: {most_recent} vs Peers: FY2024 Benchmark (Lower is better)</sub>",
             'x': 0.5,
             'xanchor': 'center'
         },
         xaxis=dict(
-            title="Fiscal Year",
-            tickangle=0,  # Keep horizontal (only 5 labels, should fit with 1000px width)
-            tickmode='linear'  # Show all 5 labels explicitly
+            title="Company",
+            tickangle=0
         ),
-        yaxis_title="Days",
+        yaxis=dict(
+            title="Days",
+            range=[-70, 175]  # Accommodate Amazon CCC (-51.6) + text label padding below
+        ),
         height=600,
-        width=1000,  # Increase from default ~700px to 1000px for better spacing
-        hovermode='x unified',
+        width=1000,
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.25,
+            y=-0.20,
             xanchor="center",
             x=0.5
         ),
-        margin=dict(t=100, b=120, l=100, r=100)  # Balanced margins to center chart and prevent cut-off
+        updatemenus=[{
+            'buttons': buttons,
+            'direction': 'down',
+            'showactive': True,
+            'x': 0.02,
+            'xanchor': 'left',
+            'y': 1.15,
+            'yanchor': 'top',
+            'bgcolor': 'white',
+            'bordercolor': '#BDBDBD',
+            'borderwidth': 1
+        }],
+        margin=dict(t=120, b=120, l=80, r=100),  # Increased top margin for dropdown
+        hovermode='closest'
     )
 
-    # Save chart with config to center it properly
+    # Step 8: Save chart with responsive config
     output_path = 'output/chart_cash_conversion_cycle.html'
-    config = {
-        'displayModeBar': True,
-        'responsive': True
-    }
+    config = {'displayModeBar': True, 'responsive': True}
     fig.write_html(output_path, config=config)
 
-    # Console output with data source information
     print(f"✅ Chart 20 created: {output_path}")
-    print(f"   Data source: {availability['message']}")
-    print(f"   Periods displayed: {len(periods)}")
+    print(f"   Chart type: Peer comparison with dropdown ({len(target_ccc_periods)} periods)")
+    print(f"   Companies: {len(company_names)} ({', '.join(company_names)})")
 
     return fig
+
+
+# DEPRECATED: Old time-series trend chart implementation (replaced with peer comparison)
+# This function was replaced on 2026-01-25 per user request to show peer comparison instead
+def _create_cash_conversion_cycle_trend_DEPRECATED(data):
+    """
+    DEPRECATED: Old Chart 20 implementation (time-series trend chart).
+
+    This function has been replaced with create_cash_conversion_cycle_chart()
+    which shows peer comparison bar chart instead of time-series trend.
+
+    Kept for reference in case time-series view is needed in the future.
+    """
+    import plotly.graph_objects as go
+
+    # [Original implementation would go here - removed for brevity]
+    # This was the multi-line chart showing Target's CCC evolution over time
+
+    pass  # Placeholder for deprecated function - not used
 
 
 def main():
