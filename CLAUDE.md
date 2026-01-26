@@ -41,16 +41,20 @@ financial-analyst-project/
 │   ├── target_analysis.json    # Detailed format
 │   ├── target_timeseries.json  # Time-series format (Phase 3+)
 │   ├── target_summary.txt      # Human-readable summary
-│   ├── chart_*.html            # 20 interactive Plotly charts (Phase 3-7 + Pillar 2-3)
+│   ├── chart_*.html            # 22 interactive Plotly charts (Phase 3-7 + Pillars 2-4)
 │   ├── chart_expense_breakdown.html  # Chart 14 (Phase 6)
 │   ├── chart_ebitda_bridge.html      # Chart 15 (Phase 7)
+│   ├── chart_ocf_vs_capex.html       # Chart 21 (Pillar 4)
+│   ├── chart_cash_flow_sankey.html   # Chart 22 (Pillar 4)
 │   ├── ccc_data_table.html     # Chart 20 companion data table (Pillar 3)
 │   └── Target_Financial_Analysis.pptx  # PowerPoint presentation
 ├── docs/
 │   └── extended-financial-data-spec.md  # Original specification
 ├── test_phase3_*.py            # Phase 3 test suites
 ├── test_expense_breakdown_chart.py  # Phase 6 test suite
-└── test_ebitda_bridge_chart.py      # Phase 7 test suite
+├── test_ebitda_bridge_chart.py      # Phase 7 test suite
+├── test_pillar3_operational_efficiency.py  # Pillar 3 test suite
+└── test_pillar4_cash_flow_dynamics.py      # Pillar 4 test suite
 ```
 
 ## Core Components
@@ -977,6 +981,87 @@ self.risk_heatmap = {
 12. ✅ All 25 test cases pass
 13. ✅ Visual verification confirms accurate data display
 
+### Pillar 4: Cash Flow Dynamics (Complete) ✅
+
+**User Request**: Implement Pillar 4 financial analysis answering: "Where is the cash coming from, and where is it going?"
+
+**Requested Analysis**:
+- Operating vs Investing vs Financing: Understanding the "three engines" of cash flow
+- Free Cash Flow (FCF): The "gold standard" of cash - what's left after operations and CapEx
+
+**Requested Visualizations**:
+1. Combo Chart (OCF vs CapEx): Bars for OCF/CapEx with line for FCF
+2. Sankey Diagram (Cash Flow): Shows flow of cash from operations into various buckets
+
+**Solution Implemented**:
+
+1. **Added 10 GAAP Cash Flow Component Tag Mappings** in `financial_analyzer.py`:
+   ```python
+   # Pillar 4: Cash Flow Dynamics - CapEx and Financing Components
+   'us-gaap:PaymentsToAcquirePropertyPlantAndEquipment': 'capital_expenditures',
+   'us-gaap:PaymentsForCapitalExpenditures': 'capital_expenditures',  # Fallback
+   'us-gaap:PaymentsOfDividendsCommonStock': 'dividends_paid',
+   'us-gaap:PaymentsOfDividends': 'dividends_paid',  # Fallback
+   'us-gaap:PaymentsForRepurchaseOfCommonStock': 'stock_repurchases',
+   'us-gaap:PaymentsForRepurchaseOfEquity': 'stock_repurchases',  # Fallback
+   'us-gaap:RepaymentsOfLongTermDebt': 'debt_repayments',
+   'us-gaap:RepaymentsOfDebt': 'debt_repayments',  # Fallback
+   'us-gaap:ProceedsFromIssuanceOfLongTermDebt': 'debt_issuance',
+   'us-gaap:ProceedsFromDebt': 'debt_issuance'  # Fallback
+   ```
+
+2. **Enhanced `_calculate_cashflow_metrics()` Method**:
+   - **Free Cash Flow** = Operating Cash Flow - Capital Expenditures
+   - **FCF Margin** = FCF / Revenue × 100
+   - Extracts dividends, stock repurchases, debt repayments for Sankey
+
+3. **Chart 21: OCF vs CapEx Combo Chart** (`create_ocf_vs_capex_chart()`):
+   - Grouped bars for OCF (green) and CapEx (red)
+   - Line with markers for FCF (blue) on secondary y-axis
+   - 15 quarters with calculated Q4 from annual reports
+   - Text labels showing dollar values on all data points
+
+4. **Chart 22: Cash Flow Sankey Diagram** (`create_cash_flow_sankey()`):
+   - 7 nodes: OCF, FCF, CapEx, Dividends, Buybacks, Debt Repayment, Retained Cash
+   - Color-coded flows showing cash allocation
+   - Dropdown menu for fiscal year selection (last 5 years)
+   - Interactive highlighting on hover
+
+5. **Test Suite** - `test_pillar4_cash_flow_dynamics.py` (18 test cases):
+   - CapEx extraction coverage and value validation
+   - FCF formula verification (FCF = OCF - CapEx)
+   - Cash flow component extraction tests
+   - Chart file creation verification
+
+**Results**:
+- ✅ **CapEx extraction**: 22/22 periods (100% coverage)
+- ✅ **CapEx range**: $0.67B - $5.53B (reasonable for Target's scale)
+- ✅ **FCF calculation**: 22/22 periods (100% coverage)
+- ✅ **FCF formula verified**: All periods pass FCF = OCF - CapEx
+- ✅ **FCF margin**: -14.4% to 8.5% (varies by quarter, some negative during heavy CapEx)
+- ✅ **Dividends**: 22/22 periods (100% coverage)
+- ✅ **Stock repurchases**: 20/22 periods (90.9% coverage)
+- ✅ **Debt repayments**: 19/22 periods (86.4% coverage)
+- ✅ **Chart 21 created**: 4.8MB interactive HTML
+- ✅ **Chart 22 created**: 4.9MB interactive HTML with dropdown
+- ✅ **All 18 test cases pass**: 100% success rate
+
+**Business Insights Enabled**:
+- **Cash Generation Quality**: FCF shows true cash available after reinvestment
+- **Capital Allocation Strategy**: Sankey visualizes prioritization (reinvestment vs returns)
+- **Investment Intensity**: CapEx/Revenue ratio reveals reinvestment rate
+- **Shareholder Return Profile**: Dividends + buybacks as % of FCF
+- **Deleveraging Pace**: Debt repayment relative to FCF generation
+
+**Pillar 4 Success Criteria** (all met ✅):
+1. ✅ CapEx extracted for 100% of periods
+2. ✅ FCF calculated correctly for all periods
+3. ✅ Cash flow components extracted for Sankey
+4. ✅ Chart 21 (OCF vs CapEx) shows 15 quarters with FCF line
+5. ✅ Chart 22 (Sankey) shows cash flow allocation with dropdown
+6. ✅ All 18 test cases pass
+7. ✅ Documentation updated
+
 ## Testing & Verification
 
 ### Quick Test
@@ -984,7 +1069,7 @@ self.risk_heatmap = {
 # Run analyzer (includes executive insights export - Phase 4)
 python3 financial_analyzer.py
 
-# Run visualizations (creates 20 charts: Phases 3-7 + Pillar 2 + Pillar 3)
+# Run visualizations (creates 22 charts: Phases 3-7 + Pillars 2-4)
 python3 visualize_data.py
 
 # Generate investment thesis (Phase 4)
@@ -998,6 +1083,8 @@ open output/chart_margin_bridge.html
 open output/chart_risk_trends.html
 open output/chart_expense_breakdown.html  # Phase 6
 open output/chart_ebitda_bridge.html      # Phase 7
+open output/chart_ocf_vs_capex.html       # Pillar 4
+open output/chart_cash_flow_sankey.html   # Pillar 4
 open output/Target_Financial_Analysis.pptx
 ```
 
@@ -1084,6 +1171,26 @@ python3 test_pillar3_operational_efficiency.py
 - Chart subtitle displays data frequency: "Annual data: FY2020 - FY2024" or "Quarterly data: Q1 2022 - Q3 2025"
 - Makes the tool reusable across companies with different reporting practices
 
+### Pillar 4 Verification
+Test Cash Flow Dynamics Analysis:
+```bash
+# Pillar 4: Comprehensive test suite (18 tests)
+python3 test_pillar4_cash_flow_dynamics.py
+```
+
+**Expected results**:
+- ✅ CapEx extracted for 22/22 periods (100% coverage)
+- ✅ CapEx range: $0.67B - $5.53B (reasonable for Target's scale)
+- ✅ Free Cash Flow calculated for 22/22 periods
+- ✅ FCF = OCF - CapEx formula verified for all periods
+- ✅ FCF margin range: -14.4% to 8.5% (varies by quarter)
+- ✅ Dividends extracted for 22/22 periods (100% coverage)
+- ✅ Stock repurchases extracted for 20/22 periods (90.9% coverage)
+- ✅ Debt repayments extracted for 19/22 periods (86.4% coverage)
+- ✅ Chart 21 (OCF vs CapEx) created with 15 quarters
+- ✅ Chart 22 (Cash Flow Sankey) created with fiscal year dropdown
+- ✅ All 18/18 tests pass (100% success rate)
+
 **Overall Expected Results**:
 - 22 total filings (10 10-Ks + 12 10-Qs)
 - FY2024 net_sales_billion ~106.6B
@@ -1091,7 +1198,7 @@ python3 test_pillar3_operational_efficiency.py
 - All filings have fiscal_year and fiscal_quarter fields
 - 6+ filings have vs_year_ago comparisons
 - Risk heatmap shows shrink trend increasing
-- 20 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3)
+- 22 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3 + Charts 21-22 from Pillar 4)
 - All test suites pass
 
 ## Environment Setup
@@ -1473,6 +1580,65 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   4. **Console transparency**: Clear messages show which data source selected and why
   5. **Chart subtitle**: Dynamic subtitle shows data frequency (Quarterly/Annual) and period range
   6. **Q4 calculation**: Uses year-end balance sheet + annual income statement for consistency with 365-day formulas
+
+### Chart 21: Operating Cash Flow vs Capital Expenditures (Pillar 4)
+- **Type**: Combo chart (grouped bars + line)
+- **Purpose**: Show the relationship between OCF and CapEx, with the gap representing Free Cash Flow
+- **File**: `chart_ocf_vs_capex.html`
+- **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods
+- **Elements**:
+  - Green bars: Operating Cash Flow (primary y-axis)
+  - Red bars: Capital Expenditures (primary y-axis)
+  - Blue line with diamond markers: Free Cash Flow (secondary y-axis)
+- **Features**:
+  - Dual y-axis: Bars share left axis, FCF line uses right axis
+  - Text labels on all data points showing $ values
+  - Zero reference line for FCF axis
+  - Q4 data calculated from annual 10-K reports
+  - Hover tooltips with unified x-axis mode
+- **Key Insight**: The gap between OCF and CapEx bars represents Free Cash Flow - the "gold standard" of cash generation
+- **Business Insights**:
+  - Answers "Is Target generating enough operating cash to fund its capital investments?"
+  - Negative FCF (4 quarters) indicates heavy reinvestment periods
+  - Positive FCF available for dividends, buybacks, debt repayment
+  - Typical Target quarterly FCF: -$0.5B to +$2.5B
+- **Implementation**: `visualize_data.py` function `create_ocf_vs_capex_chart()`
+
+### Chart 22: Cash Flow Sankey Diagram (Pillar 4)
+- **Type**: Plotly Sankey diagram with dropdown menu for fiscal year selection
+- **Purpose**: Visualize where cash flows from Operating Cash Flow to various uses (the "three engines")
+- **File**: `chart_cash_flow_sankey.html`
+- **Data**: 10 fiscal years (FY2015-FY2024) from annual 10-K filings
+- **Dropdown Menu**: Switch between fiscal years (most recent first, last 5 years)
+- **Nodes** (7 total):
+  1. **Operating Cash Flow** (source) - Green, shows total OCF
+  2. **Free Cash Flow** (intermediate) - Blue, OCF minus CapEx
+  3. **Capital Expenditures** - Red, reinvestment in business
+  4. **Dividends** - Purple, shareholder returns
+  5. **Stock Buybacks** - Orange, shareholder returns
+  6. **Debt Repayment** - Yellow, deleveraging
+  7. **Retained Cash** - Light Green, remaining cash
+- **Flows**:
+  - OCF → CapEx (reinvestment)
+  - OCF → FCF (remaining after CapEx)
+  - FCF → Dividends, Buybacks, Debt Repayment, Retained
+- **Features**:
+  - Interactive flow highlighting on hover
+  - Color-coded flows matching destination node colors
+  - Dollar values displayed in node labels
+  - Dropdown updates all node values and flows
+  - Title updates dynamically with selected fiscal year
+- **GAAP Tags Used**:
+  - `us-gaap:PaymentsToAcquirePropertyPlantAndEquipment`: CapEx
+  - `us-gaap:PaymentsOfDividendsCommonStock`: Dividends
+  - `us-gaap:PaymentsForRepurchaseOfCommonStock`: Stock buybacks
+  - `us-gaap:RepaymentsOfLongTermDebt`: Debt repayment
+- **Business Insights**:
+  - Answers "Where does Target's cash go?"
+  - Shows cash allocation priorities (reinvestment vs shareholder returns)
+  - FY2024: OCF $7.37B → CapEx $2.89B → FCF $4.48B
+  - Visualizes capital allocation strategy year-over-year
+- **Implementation**: `visualize_data.py` function `create_cash_flow_sankey()`
 
 ## Key Learnings
 

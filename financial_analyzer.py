@@ -365,7 +365,18 @@ class TargetFinancialAnalyzer:
             'us-gaap:AccountsPayableTradeCurrent': 'current_payables',  # Fallback
             'us-gaap:StockholdersEquity': 'stockholders_equity',
             'us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest': 'stockholders_equity',  # Fallback
-            'us-gaap:Assets': 'total_assets'
+            'us-gaap:Assets': 'total_assets',
+            # Pillar 4: Cash Flow Dynamics - CapEx and Financing Components
+            'us-gaap:PaymentsToAcquirePropertyPlantAndEquipment': 'capital_expenditures',
+            'us-gaap:PaymentsForCapitalExpenditures': 'capital_expenditures',  # Fallback
+            'us-gaap:PaymentsOfDividendsCommonStock': 'dividends_paid',
+            'us-gaap:PaymentsOfDividends': 'dividends_paid',  # Fallback
+            'us-gaap:PaymentsForRepurchaseOfCommonStock': 'stock_repurchases',
+            'us-gaap:PaymentsForRepurchaseOfEquity': 'stock_repurchases',  # Fallback
+            'us-gaap:RepaymentsOfLongTermDebt': 'debt_repayments',
+            'us-gaap:RepaymentsOfDebt': 'debt_repayments',  # Fallback
+            'us-gaap:ProceedsFromIssuanceOfLongTermDebt': 'debt_issuance',
+            'us-gaap:ProceedsFromDebt': 'debt_issuance'  # Fallback
         }
 
         # Extract all XBRL tagged values
@@ -540,11 +551,15 @@ class TargetFinancialAnalyzer:
 
     def _calculate_cashflow_metrics(self, vital_signs: Dict) -> Dict:
         """
-        Calculate cash flow metrics (Phase 3 Enhancement).
+        Calculate cash flow metrics (Phase 3 + Pillar 4 Enhancement).
 
-        Metrics:
-        - Free Cash Flow = Operating Cash Flow - CapEx (if available)
+        Phase 3 Metrics:
         - Operating Cash Flow Margin = Operating Cash Flow / Revenue
+
+        Pillar 4 Metrics:
+        - Free Cash Flow (FCF) = Operating Cash Flow - Capital Expenditures
+        - FCF Margin = FCF / Revenue
+        - Cash flow component breakdown for Sankey diagram
 
         Args:
             vital_signs: Dictionary containing cash flow and revenue data
@@ -559,6 +574,13 @@ class TargetFinancialAnalyzer:
         financing_cf = vital_signs.get('financing_cash_flow_billion')
         net_sales = vital_signs.get('net_sales_billion')
 
+        # Pillar 4: Capital expenditures and cash flow components
+        capex = vital_signs.get('capital_expenditures_billion')
+        dividends = vital_signs.get('dividends_paid_billion')
+        stock_repurchases = vital_signs.get('stock_repurchases_billion')
+        debt_repayments = vital_signs.get('debt_repayments_billion')
+        debt_issuance = vital_signs.get('debt_issuance_billion')
+
         if operating_cf is not None:
             cashflow_metrics['operating_cash_flow_billion'] = operating_cf
 
@@ -571,6 +593,34 @@ class TargetFinancialAnalyzer:
 
         if financing_cf is not None:
             cashflow_metrics['financing_cash_flow_billion'] = financing_cf
+
+        # Pillar 4: Capital Expenditures
+        if capex is not None:
+            # CapEx is reported as positive value in XBRL but represents cash outflow
+            cashflow_metrics['capital_expenditures_billion'] = abs(capex)
+
+            # Calculate Free Cash Flow: OCF - CapEx
+            if operating_cf is not None:
+                fcf = operating_cf - abs(capex)
+                cashflow_metrics['free_cash_flow_billion'] = round(fcf, 3)
+
+                # FCF Margin = FCF / Revenue
+                if net_sales and net_sales > 0:
+                    fcf_margin = (fcf / net_sales) * 100
+                    cashflow_metrics['free_cash_flow_margin_percent'] = round(fcf_margin, 2)
+
+        # Pillar 4: Financing activity components (for Sankey diagram)
+        if dividends is not None:
+            cashflow_metrics['dividends_paid_billion'] = abs(dividends)
+
+        if stock_repurchases is not None:
+            cashflow_metrics['stock_repurchases_billion'] = abs(stock_repurchases)
+
+        if debt_repayments is not None:
+            cashflow_metrics['debt_repayments_billion'] = abs(debt_repayments)
+
+        if debt_issuance is not None:
+            cashflow_metrics['debt_issuance_billion'] = abs(debt_issuance)
 
         return cashflow_metrics
 
@@ -1480,7 +1530,15 @@ class TargetFinancialAnalyzer:
                     'investing_cash_flow_billion': [],
                     'financing_cash_flow_billion': [],
                     'operating_cash_flow_margin_percent': [],
-                    'net_income_billion': []  # For earnings quality analysis
+                    'net_income_billion': [],  # For earnings quality analysis
+                    # Pillar 4: Cash Flow Dynamics
+                    'capital_expenditures_billion': [],
+                    'free_cash_flow_billion': [],
+                    'free_cash_flow_margin_percent': [],
+                    'dividends_paid_billion': [],
+                    'stock_repurchases_billion': [],
+                    'debt_repayments_billion': [],
+                    'debt_issuance_billion': []
                 },
                 'operating_expenses': {
                     'cost_of_sales_billion': [],
@@ -1659,6 +1717,29 @@ class TargetFinancialAnalyzer:
             )
             timeseries_data['metrics']['cash_flows']['net_income_billion'].append(
                 vital.get('net_income_billion')
+            )
+
+            # Pillar 4: Cash Flow Dynamics - CapEx and FCF
+            timeseries_data['metrics']['cash_flows']['capital_expenditures_billion'].append(
+                cashflow_metrics.get('capital_expenditures_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['free_cash_flow_billion'].append(
+                cashflow_metrics.get('free_cash_flow_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['free_cash_flow_margin_percent'].append(
+                cashflow_metrics.get('free_cash_flow_margin_percent')
+            )
+            timeseries_data['metrics']['cash_flows']['dividends_paid_billion'].append(
+                cashflow_metrics.get('dividends_paid_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['stock_repurchases_billion'].append(
+                cashflow_metrics.get('stock_repurchases_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['debt_repayments_billion'].append(
+                cashflow_metrics.get('debt_repayments_billion')
+            )
+            timeseries_data['metrics']['cash_flows']['debt_issuance_billion'].append(
+                cashflow_metrics.get('debt_issuance_billion')
             )
 
             # Operating expenses (Phase 6)

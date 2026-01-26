@@ -2667,6 +2667,544 @@ def create_cash_conversion_cycle_chart(data):
     return fig
 
 
+# =============================================================================
+# Pillar 4: Cash Flow Dynamics Visualizations
+# =============================================================================
+
+def create_ocf_vs_capex_chart(data):
+    """
+    Chart 21: Operating Cash Flow vs Capital Expenditures (Pillar 4)
+
+    Shows the relationship between OCF and CapEx with the gap representing
+    Free Cash Flow. Uses bars for OCF and CapEx with a line for FCF.
+
+    Features:
+    - Dual-axis: Bars for OCF/CapEx (primary), Line for FCF (secondary)
+    - Quarterly data with calculated Q4 from annual reports
+    - Color-coded: Green (OCF), Red (CapEx), Blue (FCF)
+    - FCF area fill to highlight cash generation
+    """
+    # Step 1: Collect quarterly data from 10-Q filings
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q':
+            ocf = data['metrics']['cash_flows']['operating_cash_flow_billion'][i]
+            capex = data['metrics']['cash_flows']['capital_expenditures_billion'][i]
+            fcf = data['metrics']['cash_flows']['free_cash_flow_billion'][i]
+            quarterly_data.append({
+                'period': period['period'],
+                'fiscal_year': period['fiscal_year'],
+                'ocf': ocf,
+                'capex': capex,
+                'fcf': fcf
+            })
+
+    # Step 2: Calculate Q4 data from 10-K annual reports
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K':
+            fy = period['fiscal_year']
+            annual_ocf = data['metrics']['cash_flows']['operating_cash_flow_billion'][i]
+            annual_capex = data['metrics']['cash_flows']['capital_expenditures_billion'][i]
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1_ocf = q2_ocf = q3_ocf = None
+            q1_capex = q2_capex = q3_capex = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if 'Q1' in q['period']:
+                        q1_ocf, q1_capex = q['ocf'], q['capex']
+                    elif 'Q2' in q['period']:
+                        q2_ocf, q2_capex = q['ocf'], q['capex']
+                    elif 'Q3' in q['period']:
+                        q3_ocf, q3_capex = q['ocf'], q['capex']
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if all([q1_ocf, q2_ocf, q3_ocf, q1_capex, q2_capex, q3_capex,
+                    annual_ocf, annual_capex]):
+                q4_ocf = annual_ocf - (q1_ocf + q2_ocf + q3_ocf)
+                q4_capex = annual_capex - (q1_capex + q2_capex + q3_capex)
+                q4_fcf = q4_ocf - q4_capex
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'ocf': round(q4_ocf, 3),
+                    'capex': round(q4_capex, 3),
+                    'fcf': round(q4_fcf, 3)
+                })
+
+    # Step 3: Sort by fiscal year and quarter
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Filter to only include complete data points
+    quarterly_data = [q for q in quarterly_data
+                      if q['ocf'] is not None and q['capex'] is not None]
+
+    periods = [q['period'] for q in quarterly_data]
+    ocf_values = [q['ocf'] for q in quarterly_data]
+    capex_values = [q['capex'] for q in quarterly_data]
+    fcf_values = [q['fcf'] for q in quarterly_data]
+
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Operating Cash Flow bars (green)
+    fig.add_trace(
+        go.Bar(
+            x=periods,
+            y=ocf_values,
+            name="Operating Cash Flow",
+            marker_color='#27ae60',
+            text=[f'${v:.2f}B' for v in ocf_values],
+            textposition='outside',
+            textfont=dict(size=9)
+        ),
+        secondary_y=False
+    )
+
+    # Capital Expenditures bars (red)
+    fig.add_trace(
+        go.Bar(
+            x=periods,
+            y=capex_values,
+            name="Capital Expenditures",
+            marker_color='#e74c3c',
+            text=[f'${v:.2f}B' for v in capex_values],
+            textposition='outside',
+            textfont=dict(size=9)
+        ),
+        secondary_y=False
+    )
+
+    # Free Cash Flow line (blue) with markers
+    fig.add_trace(
+        go.Scatter(
+            x=periods,
+            y=fcf_values,
+            name="Free Cash Flow (FCF)",
+            line=dict(color='#3498db', width=3),
+            mode='lines+markers+text',
+            marker=dict(size=10, symbol='diamond'),
+            text=[f'${v:.2f}B' for v in fcf_values],
+            textposition='top center',
+            textfont=dict(size=10, color='#3498db')
+        ),
+        secondary_y=True
+    )
+
+    # Add zero line for FCF axis
+    fig.add_hline(y=0, line_dash="dash", line_color="gray",
+                  line_width=1, opacity=0.5, secondary_y=True)
+
+    # Calculate data range for y-axis
+    max_bar = max(max(ocf_values), max(capex_values)) * 1.3
+    min_fcf = min(fcf_values) * 1.2 if min(fcf_values) < 0 else -0.5
+    max_fcf = max(fcf_values) * 1.3
+
+    fig.update_layout(
+        title={
+            'text': "Target: Operating Cash Flow vs Capital Expenditures<br><sub>Pillar 4: The gap between OCF and CapEx is Free Cash Flow (FCF)</sub>",
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        barmode='group',
+        height=600,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode='x unified',
+        margin=dict(t=100, b=80)
+    )
+
+    # Update y-axes
+    fig.update_yaxes(
+        title_text="Cash Flow ($ Billions)",
+        range=[0, max_bar],
+        secondary_y=False
+    )
+    fig.update_yaxes(
+        title_text="Free Cash Flow ($ Billions)",
+        range=[min_fcf, max_fcf],
+        secondary_y=True
+    )
+
+    # Update x-axis
+    fig.update_xaxes(title_text="Quarter", tickangle=-45)
+
+    output_path = "output/chart_ocf_vs_capex.html"
+    fig.write_html(output_path)
+    print(f"✅ Chart 21 created: {output_path}")
+    print(f"   Data: {len(periods)} quarters with OCF, CapEx, and FCF")
+
+    return fig
+
+
+def create_cash_flow_sankey(data):
+    """
+    Chart 22: Cash Flow Sankey Diagram (Pillar 4)
+
+    Shows the flow of cash from Operating Cash Flow through various uses:
+    - Capital Expenditures (reinvestment)
+    - Dividends (shareholder returns)
+    - Stock Repurchases (shareholder returns)
+    - Debt Repayment (deleveraging)
+    - Retained Cash (remaining)
+
+    Uses quarterly data with calculated Q4 for granular cash allocation view.
+    """
+    cf = data['metrics']['cash_flows']
+
+    # Step 1: Collect quarterly data from 10-Q filings
+    quarterly_data = []
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-Q':
+            ocf = cf['operating_cash_flow_billion'][i]
+            capex = cf['capital_expenditures_billion'][i]
+            dividends = cf['dividends_paid_billion'][i]
+            buybacks = cf['stock_repurchases_billion'][i]
+            debt_repay = cf['debt_repayments_billion'][i]
+
+            if ocf is not None and capex is not None:
+                quarterly_data.append({
+                    'period': period['period'],
+                    'fiscal_year': period['fiscal_year'],
+                    'fiscal_quarter': period['fiscal_quarter'],
+                    'ocf': ocf,
+                    'capex': capex or 0,
+                    'dividends': dividends or 0,
+                    'buybacks': buybacks or 0,
+                    'debt_repay': debt_repay or 0
+                })
+
+    # Step 2: Calculate Q4 data from 10-K annual reports
+    for i, period in enumerate(data['periods']):
+        if period['filing_type'] == '10-K':
+            fy = period['fiscal_year']
+            annual_ocf = cf['operating_cash_flow_billion'][i]
+            annual_capex = cf['capital_expenditures_billion'][i]
+            annual_div = cf['dividends_paid_billion'][i]
+            annual_buyback = cf['stock_repurchases_billion'][i]
+            annual_debt = cf['debt_repayments_billion'][i]
+
+            if annual_ocf is None or annual_capex is None:
+                continue
+
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1 = q2 = q3 = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if q['fiscal_quarter'] == 1:
+                        q1 = q
+                    elif q['fiscal_quarter'] == 2:
+                        q2 = q
+                    elif q['fiscal_quarter'] == 3:
+                        q3 = q
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if q1 and q2 and q3:
+                q4_ocf = annual_ocf - (q1['ocf'] + q2['ocf'] + q3['ocf'])
+                q4_capex = annual_capex - (q1['capex'] + q2['capex'] + q3['capex'])
+                q4_div = (annual_div or 0) - (q1['dividends'] + q2['dividends'] + q3['dividends'])
+                q4_buyback = (annual_buyback or 0) - (q1['buybacks'] + q2['buybacks'] + q3['buybacks'])
+                q4_debt = (annual_debt or 0) - (q1['debt_repay'] + q2['debt_repay'] + q3['debt_repay'])
+
+                quarterly_data.append({
+                    'period': f'Q4 {fy}',
+                    'fiscal_year': fy,
+                    'fiscal_quarter': 4,
+                    'ocf': round(q4_ocf, 3),
+                    'capex': round(max(0, q4_capex), 3),  # CapEx should be positive
+                    'dividends': round(max(0, q4_div), 3),
+                    'buybacks': round(max(0, q4_buyback), 3),
+                    'debt_repay': round(max(0, q4_debt), 3)
+                })
+
+    # Step 3: Sort by fiscal year and quarter
+    def sort_key(item):
+        return (item['fiscal_year'], item['fiscal_quarter'])
+
+    quarterly_data.sort(key=sort_key)
+
+    # Use most recent quarter for Sankey
+    if not quarterly_data:
+        print("⚠️ No quarterly data available for Sankey diagram")
+        return None
+
+    latest = quarterly_data[-1]
+
+    # Calculate values for Sankey
+    ocf = latest['ocf']
+    capex = latest['capex']
+    dividends = latest['dividends']
+    buybacks = latest['buybacks']
+    debt_repay = latest['debt_repay']
+
+    # FCF and retained cash
+    fcf = ocf - capex
+    total_returns = dividends + buybacks + debt_repay
+    retained = max(0, fcf - total_returns)  # Remaining cash
+
+    # If uses exceed FCF, adjust (company drew on reserves/debt)
+    if fcf < total_returns:
+        retained = 0  # No retention, actually drew down
+
+    # Define Sankey nodes
+    # 0: Operating Cash Flow
+    # 1: Free Cash Flow
+    # 2: Capital Expenditures
+    # 3: Dividends
+    # 4: Stock Repurchases
+    # 5: Debt Repayment
+    # 6: Retained Cash
+
+    labels = [
+        f"Operating Cash Flow<br>${ocf:.2f}B",
+        f"Free Cash Flow<br>${fcf:.2f}B",
+        f"Capital Expenditures<br>${capex:.2f}B",
+        f"Dividends<br>${dividends:.2f}B",
+        f"Stock Buybacks<br>${buybacks:.2f}B",
+        f"Debt Repayment<br>${debt_repay:.2f}B",
+        f"Retained Cash<br>${retained:.2f}B"
+    ]
+
+    # Define flows (source, target, value)
+    source = []
+    target = []
+    value = []
+    colors = []
+
+    # Flow 1: OCF -> CapEx (reinvestment)
+    if capex > 0:
+        source.append(0)
+        target.append(2)
+        value.append(capex)
+        colors.append('rgba(231, 76, 60, 0.6)')  # Red
+
+    # Flow 2: OCF -> FCF (remaining after CapEx)
+    if fcf > 0:
+        source.append(0)
+        target.append(1)
+        value.append(fcf)
+        colors.append('rgba(52, 152, 219, 0.6)')  # Blue
+
+    # Flow 3: FCF -> Dividends
+    if dividends > 0:
+        source.append(1)
+        target.append(3)
+        value.append(dividends)
+        colors.append('rgba(155, 89, 182, 0.6)')  # Purple
+
+    # Flow 4: FCF -> Stock Buybacks
+    if buybacks > 0:
+        source.append(1)
+        target.append(4)
+        value.append(buybacks)
+        colors.append('rgba(230, 126, 34, 0.6)')  # Orange
+
+    # Flow 5: FCF -> Debt Repayment
+    if debt_repay > 0:
+        source.append(1)
+        target.append(5)
+        value.append(debt_repay)
+        colors.append('rgba(241, 196, 15, 0.6)')  # Yellow
+
+    # Flow 6: FCF -> Retained Cash
+    if retained > 0:
+        source.append(1)
+        target.append(6)
+        value.append(retained)
+        colors.append('rgba(39, 174, 96, 0.6)')  # Green
+
+    # Create Sankey diagram
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=20,
+            thickness=30,
+            line=dict(color="black", width=1),
+            label=labels,
+            color=[
+                '#27ae60',  # OCF - Green
+                '#3498db',  # FCF - Blue
+                '#e74c3c',  # CapEx - Red
+                '#9b59b6',  # Dividends - Purple
+                '#e67e22',  # Buybacks - Orange
+                '#f1c40f',  # Debt Repay - Yellow
+                '#2ecc71'   # Retained - Light Green
+            ]
+        ),
+        link=dict(
+            source=source,
+            target=target,
+            value=value,
+            color=colors
+        )
+    )])
+
+    # Create dropdown for different quarters (most recent 15)
+    buttons = []
+    for q_data in reversed(quarterly_data[-15:]):  # Last 15 quarters, most recent first
+        qtr = q_data['period']
+        ocf_q = q_data['ocf']
+        capex_q = q_data['capex']
+        div_q = q_data['dividends']
+        buy_q = q_data['buybacks']
+        debt_q = q_data['debt_repay']
+        fcf_q = ocf_q - capex_q
+        total_q = div_q + buy_q + debt_q
+        retained_q = max(0, fcf_q - total_q)
+
+        # Build flows for this quarter
+        q_source, q_target, q_value, q_colors = [], [], [], []
+
+        if capex_q > 0:
+            q_source.append(0)
+            q_target.append(2)
+            q_value.append(capex_q)
+            q_colors.append('rgba(231, 76, 60, 0.6)')
+
+        if fcf_q > 0:
+            q_source.append(0)
+            q_target.append(1)
+            q_value.append(fcf_q)
+            q_colors.append('rgba(52, 152, 219, 0.6)')
+
+        if div_q > 0:
+            q_source.append(1)
+            q_target.append(3)
+            q_value.append(div_q)
+            q_colors.append('rgba(155, 89, 182, 0.6)')
+
+        if buy_q > 0:
+            q_source.append(1)
+            q_target.append(4)
+            q_value.append(buy_q)
+            q_colors.append('rgba(230, 126, 34, 0.6)')
+
+        if debt_q > 0:
+            q_source.append(1)
+            q_target.append(5)
+            q_value.append(debt_q)
+            q_colors.append('rgba(241, 196, 15, 0.6)')
+
+        if retained_q > 0:
+            q_source.append(1)
+            q_target.append(6)
+            q_value.append(retained_q)
+            q_colors.append('rgba(39, 174, 96, 0.6)')
+
+        q_labels = [
+            f"Operating Cash Flow<br>${ocf_q:.2f}B",
+            f"Free Cash Flow<br>${fcf_q:.2f}B",
+            f"Capital Expenditures<br>${capex_q:.2f}B",
+            f"Dividends<br>${div_q:.2f}B",
+            f"Stock Buybacks<br>${buy_q:.2f}B",
+            f"Debt Repayment<br>${debt_q:.2f}B",
+            f"Retained Cash<br>${retained_q:.2f}B"
+        ]
+
+        buttons.append(dict(
+            label=qtr,
+            method='update',
+            args=[
+                {
+                    'node': [dict(
+                        pad=20,
+                        thickness=30,
+                        line=dict(color="black", width=1),
+                        label=q_labels,
+                        color=[
+                            '#27ae60', '#3498db', '#e74c3c',
+                            '#9b59b6', '#e67e22', '#f1c40f', '#2ecc71'
+                        ]
+                    )],
+                    'link': [dict(
+                        source=q_source,
+                        target=q_target,
+                        value=q_value,
+                        color=q_colors
+                    )]
+                },
+                {
+                    'title': {
+                        'text': f"Target: Cash Flow Allocation ({qtr})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'y': 0.95,
+                        'yanchor': 'top'
+                    }
+                }
+            ]
+        ))
+
+    fig.update_layout(
+        title={
+            'text': f"Target: Cash Flow Allocation ({latest['period']})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
+        },
+        height=600,
+        font=dict(size=12),
+        updatemenus=[
+            dict(
+                active=0,
+                buttons=buttons,
+                direction="down",
+                showactive=True,
+                x=1.0,
+                xanchor="right",
+                y=1.15,
+                yanchor="top",
+                bgcolor="white",
+                bordercolor="#2c3e50",
+                font=dict(size=11)
+            )
+        ],
+        annotations=[
+            dict(
+                text="Select Quarter:",
+                x=1.0,
+                xref="paper",
+                y=1.20,
+                yref="paper",
+                align="right",
+                showarrow=False,
+                font=dict(size=11)
+            )
+        ],
+        margin=dict(t=120, b=50, l=50, r=50)
+    )
+
+    output_path = "output/chart_cash_flow_sankey.html"
+    fig.write_html(output_path)
+    print(f"✅ Chart 22 created: {output_path}")
+    print(f"   Data: {len(quarterly_data)} quarters available")
+    print(f"   Default view: {latest['period']} (OCF: ${ocf:.2f}B, FCF: ${fcf:.2f}B)")
+
+    return fig
+
+
 # DEPRECATED: Old time-series trend chart implementation (replaced with peer comparison)
 # This function was replaced on 2026-01-25 per user request to show peer comparison instead
 def _create_cash_conversion_cycle_trend_DEPRECATED(data):
@@ -2707,7 +3245,7 @@ def main():
     data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
-    # Create all 18 charts (7 from Phase 3 + 4 from Phase 4 + 2 new + 1 Phase 6 + 1 Phase 7 + 3 Pillar 2)
+    # Create all 22 charts (7 Phase 3 + 4 Phase 4 + 2 new + 1 Phase 6 + 1 Phase 7 + 3 Pillar 2 + 2 Pillar 3 + 2 Pillar 4)
     create_revenue_vs_inventory_chart(data)
     create_revenue_growth_yoy_chart(data)
     create_margin_analysis_chart(data)
@@ -2733,7 +3271,11 @@ def main():
     create_dupont_analysis_breakdown(data)  # Chart 19
     create_cash_conversion_cycle_chart(data)  # Chart 20
 
-    print("\n✅ All 20 visualizations created in output/ directory")
+    # Pillar 4: Cash Flow Dynamics visualizations
+    create_ocf_vs_capex_chart(data)  # Chart 21
+    create_cash_flow_sankey(data)  # Chart 22
+
+    print("\n✅ All 22 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
     print("     - chart_revenue_vs_inventory.html")
     print("     - chart_revenue_growth_yoy.html")
@@ -2755,6 +3297,8 @@ def main():
     print("     - chart_debt_to_ebitda_trend.html (Chart 18 - Pillar 2)")
     print("     - chart_dupont_analysis.html (Chart 19 - Pillar 3)")
     print("     - chart_cash_conversion_cycle.html (Chart 20 - Pillar 3)")
+    print("     - chart_ocf_vs_capex.html (Chart 21 - Pillar 4)")
+    print("     - chart_cash_flow_sankey.html (Chart 22 - Pillar 4)")
 
 
 if __name__ == "__main__":
