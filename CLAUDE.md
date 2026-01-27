@@ -1809,12 +1809,15 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   - Horizontal dashed gray: Average P/E across peers
   - Vertical dashed gray: Average Revenue Growth
 - **Features**:
-  - **Legend persistence**: Uses `legendgroup` pattern so legend stays visible when switching quarters
+  - **Legend persistence**: All traces have `showlegend=True` with `legendgroup` to prevent duplicates
+    - Critical: Without `showlegend=True` on all traces, legend disappears when switching quarters
+    - `legendgroup` ensures only one legend entry per company despite multiple traces
   - Target marker larger (size=25) with star symbol, highlighted in red
   - Peer markers smaller (size=15) with distinct colors
   - Hover tooltips show period, P/E, growth, stock price, TTM EPS
   - All 5 companies move positions when switching quarters
   - Title updates dynamically with selected quarter
+  - Dropdown args include explicit legend config for persistence
 - **Color Scheme**:
   - Target: Red (#e74c3c)
   - Walmart: Blue (#3498db)
