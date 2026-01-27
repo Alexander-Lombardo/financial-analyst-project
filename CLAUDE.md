@@ -13,52 +13,38 @@ This document is designed for AI assistants (like Claude) to understand the Targ
 - Inventory efficiency tracking
 - Debt health monitoring
 - Risk heatmap generation
+- 24 interactive Plotly charts
 
 **Tech Stack**:
 - Python 3.x
 - BeautifulSoup4 (HTML/XBRL parsing)
 - sec-edgar-downloader (SEC EDGAR API client)
 - python-dotenv (environment configuration)
-- Plotly (interactive visualizations - Phase 3)
+- Plotly (interactive visualizations)
+- yfinance (market data for Pillar 5)
 
 ## Project Structure
 
 ```
 financial-analyst-project/
 ├── financial_analyzer.py       # Main analyzer (core logic)
-├── visualize_data.py           # Plotly visualizations (Phase 3)
+├── visualize_data.py           # Plotly visualizations (24 charts)
 ├── sec_data_fetcher.py         # SEC EDGAR downloader
-├── market_data_fetcher.py      # Yahoo Finance market data (Pillar 5)
-├── create_presentation.py      # PowerPoint generation (optional)
-├── create_google_slides.py     # Google Slides generation (optional)
+├── market_data_fetcher.py      # Yahoo Finance market data
+├── thesis_generator.py         # Investment thesis auto-generation
+├── create_presentation.py      # PowerPoint generation
 ├── requirements.txt            # Python dependencies
 ├── .env                        # SEC credentials (git-ignored)
-├── .env.example                # Template for .env
 ├── data/
-│   ├── Target 10Q/
-│   │   └── sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
-│   └── peer_comparison_data.json  # Peer CCC data (Walmart, Amazon, Costco, Kroger)
+│   ├── Target 10Q/sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
+│   └── peer_comparison_data.json      # Peer CCC data
 ├── output/
-│   ├── target_analysis.json    # Detailed format
-│   ├── target_timeseries.json  # Time-series format (Phase 3+)
-│   ├── target_summary.txt      # Human-readable summary
-│   ├── chart_*.html            # 24 interactive Plotly charts (Phase 3-7 + Pillars 2-5)
-│   ├── chart_expense_breakdown.html  # Chart 14 (Phase 6)
-│   ├── chart_ebitda_bridge.html      # Chart 15 (Phase 7)
-│   ├── chart_ocf_vs_capex.html       # Chart 21 (Pillar 4)
-│   ├── chart_cash_flow_sankey.html   # Chart 22 (Pillar 4)
-│   ├── chart_valuation_scatter.html  # Chart 23 (Pillar 5)
-│   ├── chart_pe_band.html            # Chart 24 (Pillar 5)
-│   ├── ccc_data_table.html     # Chart 20 companion data table (Pillar 3)
-│   └── Target_Financial_Analysis.pptx  # PowerPoint presentation
-├── docs/
-│   └── extended-financial-data-spec.md  # Original specification
-├── test_phase3_*.py            # Phase 3 test suites
-├── test_expense_breakdown_chart.py  # Phase 6 test suite
-├── test_ebitda_bridge_chart.py      # Phase 7 test suite
-├── test_pillar3_operational_efficiency.py  # Pillar 3 test suite
-├── test_pillar4_cash_flow_dynamics.py      # Pillar 4 test suite
-└── test_pillar5_valuation_sentiment.py     # Pillar 5 test suite
+│   ├── target_analysis.json           # Detailed format
+│   ├── target_timeseries.json         # Time-series format
+│   ├── target_summary.txt             # Human-readable summary
+│   ├── chart_*.html                   # 24 interactive Plotly charts
+│   └── Target_Financial_Analysis.pptx # PowerPoint presentation
+└── test_*.py                          # Test suites
 ```
 
 ## Core Components
@@ -68,191 +54,75 @@ financial-analyst-project/
 **Main class**: `TargetFinancialAnalyzer`
 
 **Key Methods**:
+- `__init__()` - Initializes analyzer, sets up quarterly history and risk heatmap tracking
+- `analyze_10k()` - Extracts annual report data (vital_signs, inventory_metrics, debt_metrics)
+- `analyze_10q()` - Extracts quarterly data with YoY comparison and risk flags
+- `_extract_vital_signs()` - **CRITICAL**: Uses direct XBRL tag parsing (not table parsing)
+- `_extract_xbrl_value()` - Dual-format support for modern iXBRL and legacy raw XML
+- `_calculate_inventory_metrics()` - Inventory Turnover Ratio, Days Sales of Inventory
+- `_calculate_debt_metrics()` - Interest Coverage, D/E, D/A, ROE, ROA, D/EBITDA
+- `_calculate_liquidity_metrics()` - Current Ratio, Quick Ratio, Working Capital
+- `_calculate_cashflow_metrics()` - FCF, FCF Margin, cash flow components
+- `_compare_year_over_year()` - Q1 2025 vs Q1 2024, etc.
+- `_extract_risk_flags()` - Tracks shrink, theft, markdown, margin_pressure mentions
+- `export_timeseries_json()` - Time-series optimized JSON for Plotly
 
-#### Initialization
-```python
-def __init__(self, data_dir: str, auto_download: bool = False,
-             user_name: str = None, user_email: str = None)
-```
-- Initializes analyzer with data directory
-- Sets up quarterly history tracking (Phase 2)
-- Sets up risk heatmap tracking (Phase 2)
-- Optionally initializes SEC downloader
-
-#### Analysis Methods
-```python
-def analyze_10k(self, filepath: Path, period: str) -> Dict
-```
-- Extracts annual report data
-- Returns: vital_signs, comparable_sales, inventory_metrics, debt_metrics, strategic_promise
-
-```python
-def analyze_10q(self, filepath: Path, period: str) -> Dict
-```
-- Extracts quarterly report data
-- Compares to baseline (FY2024)
-- Performs year-over-year comparison (Phase 2)
-- Returns: vital_signs, comparable_sales, inventory_metrics, debt_metrics, risk_flags
-
-#### XBRL Extraction (Phase 2 Enhancement + 10-Year Data Fix)
-```python
-def _extract_vital_signs(self, soup: BeautifulSoup, is_annual: bool, raw_content: str = None) -> Dict
-```
-- **CRITICAL**: Uses direct XBRL tag parsing (not table parsing)
-- GAAP taxonomy mappings defined in `GAAP_MAPPINGS` dict
-- Handles Target-specific tags like `us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax`
-- Passes `raw_content` to `_extract_xbrl_value()` for legacy XML format support
-
-```python
-def _extract_xbrl_value(self, soup: BeautifulSoup, gaap_tag: str, raw_content: str = None) -> Optional[float]
-```
-- **Dual-format support** for both modern iXBRL and legacy raw XML formats
-- Method 1: Finds modern `<ix:nonFraction>` tags with matching GAAP tag name
-- Method 2: Uses regex to find legacy raw XML tags (for FY2015-2018 filings)
-- Handles scale attribute (modern: `scale="6"`) and decimals attribute (legacy: `decimals="-6"`)
-- Returns value in millions
-
-**GAAP Mappings Used** (as of Pillar 2):
-```python
-GAAP_MAPPINGS = {
-    'us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax': 'net_sales',
-    'us-gaap:Revenues': 'net_sales',
-    'us-gaap:SalesRevenueNet': 'net_sales',  # Legacy tag for older filings
-    'us-gaap:CostOfGoodsAndServicesSold': 'cost_of_sales',
-    'us-gaap:CostOfGoodsSold': 'cost_of_sales',
-    'us-gaap:CostOfRevenue': 'cost_of_sales',
-    'us-gaap:OperatingIncomeLoss': 'operating_income',
-    'us-gaap:InventoryNet': 'inventory',
-    'us-gaap:InterestExpense': 'interest_expense',
-    'us-gaap:LongTermDebt': 'long_term_debt',
-    'us-gaap:ShortTermBorrowings': 'short_term_debt',
-    'us-gaap:DebtCurrent': 'short_term_debt',
-    # Phase 3: Cash Flow Statement metrics
-    'us-gaap:NetCashProvidedByUsedInOperatingActivities': 'operating_cash_flow',
-    'us-gaap:NetCashProvidedByUsedInInvestingActivities': 'investing_cash_flow',
-    'us-gaap:NetCashProvidedByUsedInFinancingActivities': 'financing_cash_flow',
-    # Net Income (both modern and legacy tags)
-    'us-gaap:NetIncomeLoss': 'net_income',
-    'us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic': 'net_income',  # Legacy tag
-    # Phase 6: SG&A expense for operating expense breakdown
-    'us-gaap:SellingGeneralAndAdministrativeExpense': 'sga_expense',
-    # Phase 7: Depreciation & Amortization for EBITDA calculation
-    'us-gaap:DepreciationDepletionAndAmortization': 'depreciation_amortization',
-    'us-gaap:Depreciation': 'depreciation_amortization',
-    # Pillar 2: Balance Sheet items for Liquidity & Solvency analysis
-    'us-gaap:AssetsCurrent': 'current_assets',
-    'us-gaap:LiabilitiesCurrent': 'current_liabilities',
-    'us-gaap:CashCashEquivalentsAndShortTermInvestments': 'cash_and_equivalents',
-    'us-gaap:CashAndCashEquivalentsAtCarryingValue': 'cash_and_equivalents',  # Fallback
-    'us-gaap:AccountsAndOtherReceivablesNetCurrent': 'current_receivables',
-    'us-gaap:AccountsReceivableNetCurrent': 'current_receivables',  # Fallback
-    'us-gaap:StockholdersEquity': 'stockholders_equity',
-    'us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest': 'stockholders_equity',  # Fallback
-    'us-gaap:Assets': 'total_assets'
-}
-```
-
-#### Phase 2 Enhancements
-
-**Inventory Metrics**:
-```python
-def _calculate_inventory_metrics(self, vital_signs: Dict, period: str) -> Dict
-```
-- Inventory Turnover Ratio = COGS / Inventory
-- Days Sales of Inventory = 365 / Inventory Turnover
-
-**Debt Metrics**:
-```python
-def _calculate_debt_metrics(self, vital_signs: Dict) -> Dict
-```
-- Interest Coverage Ratio = Operating Income / Interest Expense
-- Total Debt = Long-term Debt + Short-term Debt
-- Flags coverage < 2.0x as warning
-
-**Year-over-Year Comparison**:
-```python
-def _compare_year_over_year(self, current_vital_signs: Dict,
-                            quarter_num: str, current_period: str) -> Dict
-```
-- Compares Q1 2025 vs Q1 2024, Q2 2025 vs Q2 2024, etc.
-- Tracks: operating margin, net sales, inventory
-- Flags inventory buildup (inventory growth > sales growth + 5%)
-- Uses `self.quarterly_history` dict to store previous quarters
-
-**Risk Heatmap**:
-```python
-def _extract_risk_flags(self, soup: BeautifulSoup, period: str) -> List[str]
-```
-- Tracks mentions of: shrink, theft, markdown, margin_pressure
-- Populates `self.risk_heatmap` dict
-- Returns human-readable risk flags
-
-```python
-def get_risk_heatmap_summary(self) -> Dict
-```
-- Aggregates risk mentions across all periods
-- Calculates: total_mentions, periods_affected, avg_mentions_per_period
-- Determines trend (increasing/stable/decreasing)
+**GAAP Mappings** (key tags extracted):
+| Category | GAAP Tags |
+|----------|-----------|
+| Revenue | `RevenueFromContractWithCustomerExcludingAssessedTax`, `Revenues`, `SalesRevenueNet` |
+| Cost | `CostOfGoodsAndServicesSold`, `SellingGeneralAndAdministrativeExpense` |
+| Income | `OperatingIncomeLoss`, `NetIncomeLoss`, `NetIncomeLossAvailableToCommonStockholdersBasic` |
+| Cash Flow | `NetCashProvidedByUsedInOperatingActivities`, `PaymentsToAcquirePropertyPlantAndEquipment` |
+| Balance Sheet | `AssetsCurrent`, `LiabilitiesCurrent`, `StockholdersEquity`, `Assets` |
+| D&A | `DepreciationDepletionAndAmortization`, `Depreciation` |
 
 ### 2. `sec_data_fetcher.py`
 
 **Main class**: `SECDataFetcher`
 
-**Purpose**: Download and organize SEC filings from EDGAR
+**Key Methods**:
+- `download_filings()` - Downloads 5 10-Ks + 12 10-Qs from SEC EDGAR
+- `_extract_period_from_file()` - Reads XBRL title tag, returns "FY2024", "Q1 2025", etc.
+- `_extract_period_from_submission()` - Fallback for older filings using full-submission.txt
+
+### 3. `visualize_data.py`
+
+Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
+
+### 4. `market_data_fetcher.py`
+
+**Main class**: `MarketDataFetcher` (Yahoo Finance integration)
 
 **Key Methods**:
-```python
-def download_filings(self, ticker: str = "TGT", num_10k: int = 5,
-                     num_10q: int = 12) -> Dict
-```
-- Downloads filings using `sec-edgar-downloader`
-- Returns metadata: file paths, periods, filing dates
-
-```python
-def _extract_period_from_file(self, filepath: Path, filing_type: str) -> str
-```
-- Reads XBRL file title tag to determine period
-- Returns period labels: "FY2024", "Q1 2025", etc.
-- Handles Target's fiscal year (ends late Jan/early Feb)
+- `get_current_prices()`, `get_historical_prices()` - Fetch stock prices
+- `get_valuation_metrics()` - P/E, P/S, EV/EBITDA, dividend yield
+- `get_historical_pe_for_quarters()` - Calculate Target historical P/E from SEC data
+- Caching: 1 hour for prices, 24 hours for history
 
 ## Data Flow
 
 ```
-1. User runs: python financial_analyzer.py
+1. python financial_analyzer.py
    ↓
-2. SECDataFetcher.download_filings()
-   → Downloads 5 10-Ks + 12 10-Qs from SEC EDGAR
-   → Saves to data/Target 10Q/sec-edgar-filings/
+2. SECDataFetcher downloads 5 10-Ks + 12 10-Qs → data/Target 10Q/sec-edgar-filings/
    ↓
-3. TargetFinancialAnalyzer.run_analysis()
-   → Processes each filing in chronological order
+3. TargetFinancialAnalyzer.run_analysis() processes each filing chronologically
    ↓
-4. For each 10-K:
-   → _extract_vital_signs() using XBRL tags
-   → _calculate_inventory_metrics()
-   → _calculate_debt_metrics()
-   → Set as baseline if FY2024
+4. For each filing: _extract_vital_signs() → _calculate_*_metrics() → compare/flags
    ↓
-5. For each 10-Q:
-   → _extract_vital_signs() using XBRL tags
-   → _calculate_inventory_metrics()
-   → _calculate_debt_metrics()
-   → _extract_risk_flags() + populate heatmap
-   → _compare_to_baseline()
-   → _compare_year_over_year() (Phase 2)
+5. Export: target_analysis.json, target_timeseries.json, target_summary.txt
    ↓
-6. Export results:
-   → export_json() → output/target_analysis.json
-   → export_summary_report() → output/target_summary.txt
+6. python visualize_data.py → 24 interactive HTML charts
 ```
 
 ## JSON Output Structure
 
-**Top-level**:
+**target_analysis.json** (top-level):
 ```json
 {
-  "filings": [...]  // Array of filing objects
-  "risk_heatmap": {...}  // Risk trend aggregation
+  "filings": [...],
+  "risk_heatmap": {...}
 }
 ```
 
@@ -263,34 +133,14 @@ def _extract_period_from_file(self, filepath: Path, filing_type: str) -> str
   "filing_type": "10-Q",
   "vital_signs": {
     "net_sales_billion": 23.846,
-    "cost_of_sales_billion": 17.128,
-    "operating_income_billion": 1.472,
-    "inventory_billion": 13.048,
-    "gross_margin_percent": 28.17,
     "operating_margin_percent": 6.17,
-    "vs_baseline": {
-      "operating_margin_change": 0.95,
-      "operating_margin_trend": "improving"
-    },
-    "vs_year_ago": {  // Phase 2
-      "operating_margin_yoy_change": 0.8,
-      "comparison_period": "Q1 2024",
-      "net_sales_yoy_growth_percent": -1.23,
-      "inventory_yoy_growth_percent": 11.24,
-      "inventory_buildup_warning": "..."
-    }
+    "vs_baseline": {...},
+    "vs_year_ago": {...}
   },
-  "comparable_sales": {...},
-  "inventory_metrics": {  // Phase 2
-    "inventory_turnover_ratio": 1.31,
-    "days_sales_of_inventory": 278.1
-  },
-  "debt_metrics": {  // Phase 2
-    "interest_coverage_ratio": 12.23,
-    "interest_expense_million": 106.0,
-    "operating_income_million": 1296.0,
-    "total_debt_billion": 3.61
-  },
+  "inventory_metrics": {"inventory_turnover_ratio": 1.31, "days_sales_of_inventory": 278.1},
+  "debt_metrics": {"interest_coverage_ratio": 12.23, "total_debt_billion": 3.61},
+  "liquidity_metrics": {"current_ratio": 0.94, "quick_ratio": 0.18},
+  "cashflow_metrics": {"free_cash_flow_billion": 2.84, "fcf_margin_percent": 8.5},
   "risk_flags": [...]
 }
 ```
@@ -299,1646 +149,156 @@ def _extract_period_from_file(self, filepath: Path, filing_type: str) -> str
 
 ### Adding New GAAP Metrics
 
-1. **Identify the GAAP tag**:
-   - Open a downloaded filing in browser
-   - Inspect element to find `<ix:nonFraction name="us-gaap:...">`
-   - Note the tag name
-
-2. **Add to GAAP_MAPPINGS**:
-```python
-# In _extract_vital_signs()
-GAAP_MAPPINGS = {
-    'us-gaap:ResearchAndDevelopmentExpense': 'rd_expense',
-    # ... existing mappings
-}
-```
-
-3. **Value is automatically extracted** and available as `{metric_name}_billion`
-
-4. **Add derived calculations** if needed:
-```python
-# After extraction loop in _extract_vital_signs()
-if 'rd_expense_billion' in vital_signs:
-    rd_intensity = (vital_signs['rd_expense_billion'] /
-                    vital_signs['net_sales_billion']) * 100
-    vital_signs['rd_intensity_percent'] = round(rd_intensity, 2)
-```
+1. Find the GAAP tag in a downloaded filing (inspect `<ix:nonFraction name="us-gaap:...">`)
+2. Add to `GAAP_MAPPINGS` dict in `_extract_vital_signs()`
+3. Value auto-extracted as `{metric_name}_billion`
+4. Add derived calculations if needed
 
 ### Adding New Comparison Metrics
 
-Follow the pattern from Phase 2 YoY comparison:
-
-1. **Create tracking structure** in `__init__()`:
-```python
-self.metric_history = {}  # Store historical values
-```
-
-2. **Populate during analysis**:
-```python
-# In analyze_10q() or analyze_10k()
-self.metric_history[period] = {'metric_value': value}
-```
-
-3. **Create comparison method**:
-```python
-def _compare_metric(self, current, period):
-    if period in self.metric_history:
-        prior = self.metric_history[period]
-        return {'change': current - prior, 'trend': '...'}
-    return {}
-```
+1. Create tracking dict in `__init__()`: `self.metric_history = {}`
+2. Populate during analysis: `self.metric_history[period] = {...}`
+3. Create comparison method using stored history
 
 ### Adding New Risk Patterns
 
-Follow the pattern from `_extract_risk_flags()`:
-
-1. **Define pattern**:
-```python
-new_risk_pattern = r"pattern|keywords|to|match"
-```
-
-2. **Search and track**:
-```python
-matches = re.findall(new_risk_pattern, text, re.IGNORECASE)
-if matches:
-    self.risk_heatmap['new_risk_type'].append((period, len(matches)))
-    flags.append("Risk description")
-```
-
-3. **Initialize in `__init__()`**:
-```python
-self.risk_heatmap = {
-    'new_risk_type': [],  # Add new type
-    # ... existing types
-}
-```
+1. Define regex pattern
+2. Search in `_extract_risk_flags()` and populate `self.risk_heatmap`
 
 ## Common Issues & Solutions
 
-### Issue: XBRL values are null or incorrect scale
-
-**Cause**: Company uses different GAAP tags, scale attributes, or older filings use legacy XML format
-
-**Solution**:
-1. Inspect actual HTML filing and `full-submission.txt` file
-2. Find correct GAAP tag name (check both modern and legacy tag names)
-3. Add to GAAP_MAPPINGS (add both modern and legacy tag variants if needed)
-4. Verify scale/decimals attribute handling in `_extract_xbrl_value()`
-5. For older filings (pre-2019), ensure `full-submission.txt` is being read by `_read_html()`
-
-### Issue: Older filings (FY2015-2018) return NULL values
-
-**Cause**: Legacy XBRL format uses raw XML tags without `<ix:nonfraction>` wrapper
-
-**Solution**:
-- The dual-format `_extract_xbrl_value()` method (Phase 5) automatically handles this
-- Method 2 uses regex to find raw XML tags in `full-submission.txt` content
-- Ensure `_read_html()` is appending `full-submission.txt` to the HTML content
-- Verify GAAP tag names match legacy format (e.g., `SalesRevenueNet`, `NetIncomeLossAvailableToCommonStockholdersBasic`)
-
-### Issue: Quarter comparison not working
-
-**Cause**: `_extract_quarter_number()` not matching period format
-
-**Solution**:
-1. Check period labels in `sec_data_fetcher.py`
-2. Ensure format is "Q1 2025" not "Period 2025-05"
-3. Adjust regex in `_extract_quarter_number()` if needed
-
-### Issue: Missing debt metrics for some quarters
-
-**Expected**: 10-Q filings may not always include debt details
-
-**Not a bug**: Only annual 10-K reports consistently have full debt information
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| XBRL values null | Different GAAP tags or legacy XML format | Add tag variants to GAAP_MAPPINGS; ensure `full-submission.txt` read |
+| Older filings (FY2015-2018) NULL | Legacy raw XML without `<ix:nonfraction>` | Dual-format `_extract_xbrl_value()` handles this automatically |
+| Quarter comparison fails | Period format mismatch | Check `sec_data_fetcher.py` returns "Q1 2025" format |
+| Missing debt metrics | Normal for 10-Q | Only 10-K has full debt info |
 
 ## Development History
 
-### Phase 1: Automated Data Acquisition
-- Implemented `SECDataFetcher` for automatic EDGAR downloads
-- Environment-based SEC credentials (.env file)
-- Git hygiene (ignore downloaded filings)
-
-### Phase 2: Enhanced Analytics (Current)
-- **CRITICAL FIX**: Replaced table parsing with direct XBRL tag extraction
-- Added year-over-year comparison tracking
-- Implemented inventory efficiency metrics (Turnover, DSI)
-- Implemented debt health metrics (Interest Coverage, Total Debt)
-- Built risk heatmap system with trend analysis
-- Enhanced output display with all new metrics
-
-**Phase 2 Success Criteria** (all met ✅):
-1. ✅ XBRL extraction works for all 17 filings (no null values)
-2. ✅ Inventory metrics present in all filings
-3. ✅ Debt metrics present where available (annual reports)
-4. ✅ YoY comparisons for 6+ quarters
-5. ✅ Risk heatmap populated with trend data
-
-### Phase 3: JSON Restructuring & Visualization (Complete) ✅
-- **Dual Export Approach**: Maintains detailed JSON + adds time-series JSON
-- **Temporal Keys**: Added fiscal_year and fiscal_quarter to all filings
-- **Cash Flow Analysis**: 3 new GAAP mappings (operating, investing, financing)
-- **Operating CF Margin**: Calculated as Operating CF / Net Sales × 100
-- **Time-Series Format**: Flat array structure optimized for Plotly
-- **Interactive Visualizations**: 7 Plotly charts created in visualize_data.py
-  1. Revenue vs Inventory Growth (dual-axis line)
-  2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth line)
-  3. Margin Analysis (3-line: Gross, Operating, Net Profit margins Q1 2022-Q3 2025)
-  4. Operating Margin Waterfall (quarterly trend)
-  5. Inventory Efficiency (turnover + DSI)
-  6. Debt Health (coverage ratio + total debt)
-  7. Statement of Cash Flows (3 lines: operating, investing, financing)
-- **New Methods Added**:
-  - `_parse_period_to_fiscal()` - Extracts fiscal_year and fiscal_quarter from period strings
-  - `_calculate_cashflow_metrics()` - Computes cash flow metrics
-  - `export_timeseries_json()` - Exports time-series optimized JSON
-
-**Phase 3 Success Criteria** (all met ✅):
-1. ✅ Dual export approach maintains backward compatibility
-2. ✅ Time-series JSON has flat array structure
-3. ✅ fiscal_year and fiscal_quarter present in all filings
-4. ✅ Cash flow data extracted and charted
-5. ✅ 7 Plotly charts created (including Revenue Growth YoY, Margin Analysis, and Cash Flows)
-6. ✅ All charts are interactive with hover tooltips
-7. ✅ Net profit margin data extracted from us-gaap:NetIncomeLoss tag
-8. ✅ 43/43 RTM requirements met (100% coverage)
-9. ✅ 89 tests passed (98.9% success rate)
-
-### Phase 4: Professional Reports (Complete) ✅
-
-**New Scripts**:
-- `thesis_generator.py` - Investment thesis auto-generation
-  - ThesisGenerator class with 6 analysis methods
-  - Generates Buy/Hold/Sell recommendation from data
-  - Exports investment_thesis.json + console summary
-
-**Extended Scripts**:
-- `visualize_data.py` - 6 new charts added (total 13 in Phase 4, 14 after Phase 6):
-  - Chart 2: Revenue Growth YoY (Phase 3 - dual-axis: revenue bars + YoY growth line)
-  - Chart 3: Margin Analysis (Phase 3 - 3-line: Gross, Operating, Net Profit margins)
-  - Chart 7: Margin bridge waterfall (FY2022 → Q3 2025)
-  - Chart 8: Risk trends stacked area
-  - Chart 9: Risk heatmap grid
-  - Chart 11: Earnings Quality (Net Income vs Operating CF with Cash Conversion Ratio)
-    - **Y-axis scaling fix**: Secondary Y-axis range [-150%, 650%] accommodates negative Q4 values (-104%, -99%) and extreme positive outliers (549%, 506%, 478%)
-    - Negative ratios indicate Q4 periods where Operating CF was negative (calculated as Annual - Q1-Q2-Q3)
-  - Chart 12: Revenue & Net Income Long-Term Trajectory
-    - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
-    - Covers 5-10 year period with calculated Q4 data
-    - Shows long-term trends and profit margin evolution
-  - Chart 13: Revenue & Net Income Annual Trajectory (10-Year Complete Data ✅)
-    - Dual-axis line chart showing correlation between Revenue (blue) and Net Income (green)
-    - Uses ONLY annual fiscal year data from 10-K reports (no quarterly data)
-    - **Complete 10-year period: FY2015 through FY2024** with NO data gaps
-    - Shows long-term trends without quarterly noise
-    - Complements Chart 12 which uses quarterly data with calculated Q4
-- `financial_analyzer.py` - Executive insights extraction:
-  - extract_executive_insights() - Finds inflection points, top trends, warnings
-  - export_executive_insights() - Exports executive_insights.json
-- `create_presentation.py` - 3 new slides:
-  - Investment Thesis (with recommendation)
-  - Margin Bridge Analysis (with summary)
-  - Risk Heatmap (with stats table)
-- `create_presentation.py` - Interactive hyperlinks:
-  - Each chart slide has "📊 Click for interactive version" link
-  - Clicking opens HTML file in browser for full interactivity
-  - Enables access to dropdowns, hover tooltips, zoom features
-
-**Phase 4 Success Criteria** (all met ✅):
-1. ✅ Margin bridge waterfall chart shows Q1 2022 → Q3 2025 quarterly evolution (with calculated Q4)
-2. ✅ Investment thesis auto-generated with Buy/Hold/Sell rating
-3. ✅ Risk heatmap visualizations created (2 charts)
-4. ✅ Executive insights extracted (inflection points, trends, warnings)
-5. ✅ PowerPoint enhanced with 3 new Phase 4 slides
-6. ✅ All outputs professionally formatted and data-driven
-7. ✅ Earnings quality chart created with proper Y-axis scaling for negative and extreme positive values
-
-### Phase 5: 10-Year Historical Data Extraction (Complete) ✅
-
-**Problem**: Older SEC filings (FY2015-FY2018) used a fundamentally different XBRL format that the existing extraction logic couldn't parse, resulting in NULL values for revenue and net income in Chart 13.
-
-**Root Cause Analysis**:
-- Modern filings (FY2022+): Use iXBRL format with `<ix:nonfraction name="us-gaap:TagName">` wrapper
-- Older filings (FY2015-2018): Use raw XML format `<us-gaap:TagName contextRef="..." decimals="...">` without wrapper
-- XBRL data for older filings stored in `full-submission.txt`, not in HTML file
-- Different GAAP tags used: `NetIncomeLossAvailableToCommonStockholdersBasic` (old) vs `NetIncomeLoss` (new)
-
-**Solution Implemented**:
-1. **Enhanced `_read_html()` method** in `financial_analyzer.py`:
-   - Now reads both HTML file and `full-submission.txt`
-   - Appends full-submission.txt content when it exists (for older filings)
-
-2. **Rewrote `_extract_xbrl_value()` method** with dual-format support:
-   - **Method 1** (primary): Modern iXBRL format with `<ix:nonfraction>` wrapper
-   - **Method 2** (fallback): Legacy raw XML format using regex pattern matching
-   - Handles both `scale` attribute (modern) and `decimals` attribute (legacy)
-   - Regex pattern: `<us-gaap:TagName contextRef="...(Q4YTD|FY)..." decimals="..." >value</us-gaap:TagName>`
-
-3. **Added alternative GAAP tag mapping**:
-   - `us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic`: 'net_income' (for FY2015-2021)
-   - Complements existing `us-gaap:NetIncomeLoss`: 'net_income' (for FY2022+)
-
-4. **Enhanced `sec_data_fetcher.py`**:
-   - Added `_extract_period_from_submission()` method to read period dates from `full-submission.txt`
-   - Updated `_extract_period_from_file()` to use submission file as fallback
-   - Improved period label extraction for older 10-K reports
-
-**Results**:
-- ✅ **Complete 10-year data extraction**: FY2015 through FY2024
-- ✅ **Revenue data**: All 10 years successfully extracted (~$70B to ~$107B range)
-- ✅ **Net Income data**: All 10 years successfully extracted (~$2B to ~$7B range)
-- ✅ **Chart 13**: Displays continuous trend lines with NO gaps or missing data points
-- ✅ **Backwards compatible**: Modern filings (FY2022+) continue to work with Method 1
-
-**Technical Details**:
-- Legacy format uses `decimals="-6"` meaning value is in actual dollars (not pre-scaled)
-- All values converted to millions for consistency, then to billions in vital_signs
-- Regex uses `contextRef` filter to match only annual data (Q4YTD or FY)
-- BeautifulSoup cannot find namespace-prefixed tags, hence regex on raw content
-
-**Phase 5 Success Criteria** (all met ✅):
-1. ✅ Dual-format XBRL extraction supports both modern and legacy formats
-2. ✅ All 10 years (FY2015-FY2024) have complete revenue data
-3. ✅ All 10 years (FY2015-FY2024) have complete net income data
-4. ✅ Chart 13 shows continuous lines with no breaks or gaps
-5. ✅ Console output displays "Net Sales: $XX.XXB" for all 10 years during analysis
-6. ✅ Alternative GAAP tag mapping added for legacy net income format
-
-### Phase 6: Operating Expense Breakdown (Complete) ✅
-
-**User Request**: Create Chart 14 showing a 100% stacked bar chart of operating expense breakdown to identify which costs are eating into Target's margins.
-
-**Problem**: Missing SG&A (Selling, General & Administrative) expense data extraction. Without SG&A, cannot show complete expense breakdown.
-
-**Solution Implemented**:
-
-1. **Added SG&A GAAP Mapping** in `financial_analyzer.py` (lines 293-298):
-   - `us-gaap:SellingGeneralAndAdministrativeExpense`: 'sga_expense'
-   - Automatically extracted and converted to billions
-
-2. **Calculate Derived Expense Metrics** (lines 324-336):
-   ```python
-   # SG&A percentage of revenue
-   sga_percent = (sga_expense_billion / net_sales_billion) * 100
-
-   # Other Operating Expenses (derived)
-   # Other = Net Sales - COGS - SG&A - Operating Income
-   other_expenses = net_sales - cogs - sga - operating_income
-   ```
-
-3. **Export Operating Expenses Category** in timeseries JSON (lines 1124-1134):
-   - `cost_of_sales_billion` and `cogs_percent_of_revenue`
-   - `sga_expense_billion` and `sga_percent_of_revenue`
-   - `other_operating_expenses_billion` and `other_expenses_percent_of_revenue`
-
-4. **Created Chart 14 Visualization** in `visualize_data.py` (lines 902-1100):
-   - 100% stacked bar chart showing quarterly expense breakdown
-   - 4 colored segments per bar:
-     - COGS (red) - Cost of goods sold
-     - SG&A (purple) - Selling, general & administrative expenses
-     - Other Operating Expenses (orange) - Depreciation, amortization, etc.
-     - Operating Income (green) - Profit remaining
-   - 15 quarterly bars (Q1 2022 - Q3 2025)
-   - Q4 data calculated from annual 10-K reports
-
-5. **UI Refinement Process**:
-   - **Initial issue**: Title, subtitle, and legend overlapping
-   - **Iteration 1**: Shortened subtitle, increased legend y from 1.02 to 1.08, height 600→700px
-   - **Iteration 2**: Legend y 1.08→1.12, height 700→750px, title y=0.98, margin t=140px, b=80px
-   - **Iteration 3**: Title y 0.98→0.96 to move title down
-   - **Iteration 4 (final)**: Legend y 1.12→1.10 to create clearance from subtitle
-
-   **Final Layout Configuration** (lines 1054-1085):
-   ```python
-   fig.update_layout(
-       barmode='stack',
-       title={
-           'text': "Target: Operating Expense Breakdown (% of Revenue)<br><sub>Quarterly Breakdown: Q1 2022 - Q3 2025</sub>",
-           'y': 0.96,
-           'yanchor': 'top'
-       },
-       height=750,
-       legend=dict(
-           orientation="h",
-           y=1.10,
-           yanchor="bottom"
-       ),
-       margin=dict(t=140, b=80)
-   )
-   ```
-
-6. **PowerPoint Integration** in `create_presentation.py` (lines 894-1054):
-   - Added Slide 10: Operating Expense Breakdown
-   - Clickable hyperlink to interactive chart_expense_breakdown.html
-   - Revenue breakdown showing COGS%, SG&A%, Other%, Operating Income%
-   - Changes vs FY2024 baseline with color-coded trends
-   - Key insight based on which expense is growing fastest
-
-7. **Test Suite** - `test_expense_breakdown_chart.py` (132 lines):
-   ```python
-   def test_sga_extraction():
-       """Verify SG&A extracted for all 22 periods (100% coverage)"""
-
-   def test_percentage_totals():
-       """Verify COGS% + SG&A% + Other% + OI% ≈ 100% (±1% tolerance)"""
-
-   def test_sga_percent_range():
-       """Verify SG&A % in reasonable range (15-25% for retail industry)"""
-
-   def test_chart_file_exists():
-       """Verify chart HTML created and > 10KB"""
-   ```
-
-**Results**:
-- ✅ **SG&A extraction**: 22/22 periods (100% coverage)
-- ✅ **SG&A values**: $4.0B - $6.0B (reasonable for Target's scale)
-- ✅ **SG&A percentages**: 18.88% - 21.91% (within retail industry norm)
-- ✅ **Chart 14 created**: 4.8MB interactive HTML with 15 quarterly bars
-- ✅ **Percentages sum to 100%**: All periods within ±1% tolerance
-- ✅ **All test cases pass**: SG&A extraction, percentage validation, range checks, file creation
-
-**Business Insights Enabled**:
-- **Margin compression analysis**: Can identify if COGS efficiency improving or deteriorating
-- **SG&A growth tracking**: Detect if administrative costs growing faster than revenue
-- **Seasonal patterns**: Q4 typically has higher COGS% due to holiday sales mix
-- **YoY comparisons**: "SG&A growing from 18% to 21% of revenue = margin pressure"
-- **What's eating margins**: Green segment (Operating Income) shrinking over time indicates margin compression
-
-**Key Design Decisions**:
-1. **100% Stacked Bar** over absolute dollars - normalizes for revenue growth, easier to spot margin changes
-2. **Bottom-up stack**: Operating Income (green) at bottom makes margin changes visually obvious
-3. **No R&D**: Target doesn't report R&D expenses (retail company, not tech/pharma)
-4. **"Other" category**: Captures depreciation/amortization and other operating expenses not in COGS or SG&A
-5. **Quarterly focus (2022+)**: Matches existing chart patterns, provides 15 quarters of trend data
-6. **Q4 calculation**: Derived from annual 10-K minus Q1-Q3 for complete fiscal year view
-7. **Color scheme**:
-   - Red (COGS) - largest expense, warm color for cost
-   - Purple (SG&A) - administrative overhead
-   - Orange (Other) - miscellaneous expenses
-   - Green (OI) - profit, positive color
-
-**Phase 6 Success Criteria** (all met ✅):
-1. ✅ SG&A extracted for 22/22 periods (100% coverage)
-2. ✅ SG&A values in range $4-6B (reasonable for Target's scale)
-3. ✅ SG&A % in range 15-25% (retail industry norm: 18.88% - 21.91%)
-4. ✅ Chart 14 HTML file created (4.8MB)
-5. ✅ 15 quarterly bars displayed (Q1 2022 - Q3 2025)
-6. ✅ 100% stacked bars with 4 colored segments
-7. ✅ Percentages sum to 100% ± 1% tolerance
-8. ✅ Chart answers "what's eating into margins" question clearly
-9. ✅ All test cases pass
-10. ✅ UI refinement complete (no overlapping text)
-11. ✅ PowerPoint integration with Slide 10
-
-### Phase 7: EBITDA Bridge Waterfall (Complete) ✅
-
-**User Request**: Create Chart 15 showing an interactive EBITDA bridge waterfall with dropdown menu to switch between 15 quarterly views.
-
-**Problem**: Missing Depreciation & Amortization (D&A) data extraction. Without D&A, cannot calculate EBITDA (Earnings Before Interest, Taxes, Depreciation, and Amortization).
-
-**Solution Implemented**:
-
-1. **Added D&A GAAP Mappings** in `financial_analyzer.py`:
-   - `us-gaap:DepreciationDepletionAndAmortization`: 'depreciation_amortization'
-   - `us-gaap:Depreciation`: 'depreciation_amortization' (fallback)
-   - Automatically extracted and converted to billions
-
-2. **Calculate EBITDA Metric**:
-   ```python
-   # Phase 7: EBITDA calculation
-   # EBITDA = Operating Income + Depreciation & Amortization
-   if 'operating_income_billion' in vital_signs and 'depreciation_amortization_billion' in vital_signs:
-       ebitda = vital_signs['operating_income_billion'] + vital_signs['depreciation_amortization_billion']
-       vital_signs['ebitda_billion'] = round(ebitda, 3)
-
-       if 'net_sales_billion' in vital_signs:
-           ebitda_margin = (ebitda / vital_signs['net_sales_billion']) * 100
-           vital_signs['ebitda_margin_percent'] = round(ebitda_margin, 2)
-   ```
-
-3. **Export D&A and EBITDA Metrics** in timeseries JSON:
-   - `depreciation_amortization_billion`
-   - `ebitda_billion`
-   - `ebitda_margin_percent`
-
-4. **Created Chart 15 Visualization** in `visualize_data.py` (lines 1103-1344):
-   - Interactive waterfall chart showing how Revenue flows to EBITDA
-   - 15 separate waterfall traces (one per quarter, Q1 2022 - Q3 2025)
-   - Dropdown menu to switch between quarters (most recent first)
-   - 6 steps per waterfall:
-     1. **Revenue** (starting point, blue total bar)
-     2. **Less: COGS** (red negative bar)
-     3. **Less: SG&A** (red negative bar)
-     4. **Less: Other Operating Expenses** (red negative bar)
-     5. **Add Back: D&A** (green positive bar - non-cash expense)
-     6. **EBITDA** (final result, blue total bar)
-   - Q4 data calculated from annual 10-K reports
-
-5. **Enhanced X-axis Labels** with two-line descriptions:
-   ```python
-   x_labels = [
-       'Revenue<br>(Starting Point)',
-       'Less: COGS<br>(Cost of Sales)',
-       'Less: SG&A<br>(Admin Expenses)',
-       'Less: Other<br>(Operating Exp)',
-       'Add Back: D&A<br>(Non-Cash)',
-       'EBITDA<br>(Final Result)'
-   ]
-   ```
-
-6. **Added Percentage-of-Revenue Labels** on all bars:
-   - Each bar displays absolute value ($X.XXB) and percentage of revenue
-   - Format: `$XX.XXB (XX.X%)`
-   - Helps identify which expenses are largest relative to revenue
-
-7. **Critical Bug Fix - Dropdown Label Persistence**:
-   - **Problem**: When switching quarters via dropdown, the chart title, x-axis labels, y-axis formatting, and annotations would disappear
-   - **Root Cause**: Dropdown button `args` parameter was passing title as simple string instead of full configuration object
-   - **Solution**: Modified dropdown buttons to pass title as full config object (lines 1260-1275):
-   ```python
-   'args': [
-       {'visible': visible_array},
-       {
-           'title': {
-               'text': f"Target: EBITDA Bridge Waterfall ({q['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
-               'x': 0.5,
-               'xanchor': 'center',
-               'y': 0.97,
-               'yanchor': 'top'
-           }
-       }
-   ]
-   ```
-
-8. **Test Suite** - `test_ebitda_bridge_chart.py` (172 lines):
-   ```python
-   def test_da_extraction():
-       """Verify D&A extracted for all 22 periods (100% coverage)"""
-
-   def test_ebitda_calculation():
-       """Verify EBITDA = Operating Income + D&A formula"""
-
-   def test_ebitda_range():
-       """Verify EBITDA values in reasonable range ($1-8B for Target's quarterly scale)"""
-
-   def test_ebitda_margin():
-       """Verify EBITDA margin in reasonable range (5-15% for retail industry)"""
-
-   def test_chart_file_exists():
-       """Verify chart HTML created and > 10KB"""
-   ```
-
-**Results**:
-- ✅ **D&A extraction**: 22/22 periods (100% coverage)
-- ✅ **D&A values**: $0.5B - $0.7B per quarter (reasonable for Target's scale)
-- ✅ **EBITDA calculation**: All periods pass EBITDA = OI + D&A validation (±$0.01B tolerance)
-- ✅ **EBITDA range**: $0.8B - $7.5B (reasonable quarterly range)
-- ✅ **EBITDA margin**: 6.3% - 13.8% (within retail industry norm of 5-15%)
-- ✅ **Chart 15 created**: Interactive HTML with 15 quarterly waterfalls
-- ✅ **Dropdown menu working**: Switches between quarters without losing labels
-- ✅ **All test cases pass**: D&A extraction, EBITDA calculation, range validation, file creation
-
-**Business Insights Enabled**:
-- **EBITDA as profitability proxy**: Shows earnings power before accounting for capital structure (interest, taxes) and non-cash expenses (D&A)
-- **Bridge visualization**: Clearly shows how revenue flows through operating expenses to EBITDA
-- **D&A add-back highlighted**: Green bar emphasizes that D&A is a non-cash expense, making EBITDA higher than operating income
-- **Quarterly trends**: Dropdown allows comparison across 15 quarters to spot seasonal patterns
-- **Margin compression analysis**: EBITDA margin % shows if profitability improving or deteriorating
-- **Investor-friendly metric**: EBITDA commonly used in valuation (EV/EBITDA multiples)
-
-**Key Design Decisions**:
-1. **Waterfall format** over line chart - shows clear flow from Revenue → EBITDA
-2. **Color coding**:
-   - Blue (totals) - Revenue and EBITDA
-   - Red (expenses) - COGS, SG&A, Other Operating Expenses
-   - Green (add-back) - D&A non-cash expense
-3. **Dropdown menu** over 15 separate charts - saves space, improves UX
-4. **Most recent quarter first** in dropdown - users typically want latest data
-5. **Two-line x-axis labels** - provides context without cluttering
-6. **Percentage labels** - normalizes for revenue growth, easier to spot margin changes
-7. **Title persistence fix** - ensures professional appearance when switching quarters
-8. **Q4 calculation** - Derived from annual 10-K minus Q1-Q3 for complete fiscal year view
-
-**Phase 7 Success Criteria** (all met ✅):
-1. ✅ D&A extracted for 22/22 periods (100% coverage)
-2. ✅ D&A values in range $0.5-0.7B per quarter (reasonable for Target's scale)
-3. ✅ EBITDA calculated correctly (EBITDA = OI + D&A)
-4. ✅ EBITDA margin in range 5-15% (retail industry norm: 6.3% - 13.8%)
-5. ✅ Chart 15 HTML file created
-6. ✅ 15 quarterly waterfalls (Q1 2022 - Q3 2025)
-7. ✅ Dropdown menu working
-8. ✅ Labels persist when switching quarters (bug fixed)
-9. ✅ Enhanced x-axis labels with descriptions
-10. ✅ Percentage-of-revenue labels on all bars
-11. ✅ All test cases pass
-12. ✅ Q4 data calculated from annual 10-K reports
-
-### Pillar 2: Liquidity & Solvency (Risk) Analysis (Complete) ✅
-
-**User Request**: Implement Pillar 2 financial analysis answering: "Can the company pay its bills today and its debts in the future?"
-
-**Requested Metrics**:
-- **Short-term Liquidity**: Current Ratio, Quick Ratio
-- **Capital Structure**: Debt vs Equity mix
-- **Solvency Ratios**: Debt-to-EBITDA, Debt-to-Equity, Return on Equity/Assets
-
-**Requested Visualizations**:
-1. Gauge Chart for Current Ratio (>1.5 healthy zone)
-2. Donut Chart for Capital Structure (Debt vs Equity)
-3. Line Graph for Debt-to-EBITDA trend
-
-**Solution Implemented**:
-
-1. **Added 8 GAAP Balance Sheet Tag Mappings** in `financial_analyzer.py` (lines 299-309):
-   ```python
-   # Pillar 2: Balance Sheet items for Liquidity & Solvency analysis
-   'us-gaap:AssetsCurrent': 'current_assets',
-   'us-gaap:LiabilitiesCurrent': 'current_liabilities',
-   'us-gaap:CashCashEquivalentsAndShortTermInvestments': 'cash_and_equivalents',
-   'us-gaap:CashAndCashEquivalentsAtCarryingValue': 'cash_and_equivalents',  # Fallback
-   'us-gaap:AccountsAndOtherReceivablesNetCurrent': 'current_receivables',
-   'us-gaap:AccountsReceivableNetCurrent': 'current_receivables',  # Fallback
-   'us-gaap:StockholdersEquity': 'stockholders_equity',
-   'us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest': 'stockholders_equity',  # Fallback
-   'us-gaap:Assets': 'total_assets'
-   ```
-
-2. **Created Liquidity Metrics Method** `_calculate_liquidity_metrics()`:
-   - **Current Ratio** = Current Assets / Current Liabilities
-     - Health Flags: >1.5 = healthy, 1.0-1.5 = adequate, <1.0 = warning
-     - Retail industry benchmark: >1.5
-   - **Quick Ratio** = (Cash + Receivables) / Current Liabilities
-     - Health Flags: >1.0 = healthy, 0.8-1.0 = adequate, <0.8 = warning
-     - "Acid test" - excludes inventory from quick assets
-   - **Working Capital** = Current Assets - Current Liabilities (in billions)
-     - Trend Flag: positive/negative
-
-3. **Enhanced Debt Metrics Method** with 6 new solvency ratios:
-   - **Debt-to-Equity Ratio** = Total Debt / Stockholders' Equity
-     - Leverage Profile: <1.0 = conservative, 1.0-2.0 = moderate, >2.0 = aggressive
-   - **Debt-to-Assets Ratio** = Total Debt / Total Assets
-   - **Equity Ratio** = Stockholders' Equity / Total Assets
-   - **Debt-to-EBITDA Ratio** = Total Debt / EBITDA
-     - Health Flags: <3.0 = healthy, 3.0-5.0 = moderate, >5.0 = risky
-     - Shows how many years of EBITDA needed to repay debt
-   - **Return on Equity (ROE)** = (Net Income / Stockholders' Equity) × 100%
-   - **Return on Assets (ROA)** = (Net Income / Total Assets) × 100%
-
-4. **Updated Time-Series JSON Export** with 16 new Pillar 2 fields:
-   - 8 liquidity metrics fields (current_ratio, current_ratio_health, quick_ratio, quick_ratio_health, working_capital_billion, working_capital_trend, current_assets_billion, current_liabilities_billion)
-   - 8 solvency metrics fields (debt_to_equity_ratio, leverage_profile, debt_to_assets_ratio, equity_ratio, debt_to_ebitda_ratio, debt_to_ebitda_health, return_on_equity_percent, return_on_assets_percent)
-
-5. **Chart 16: Current Ratio Gauge with Q4 Calculation** (`create_current_ratio_gauge()`):
-   - Chart Type: Plotly Indicator (Gauge) with multi-trace dropdown menu
-   - Data Source: All quarters Q1 2022 - Q3 2025 (15 quarters total)
-   - Q4 Data: Uses FY year-end values from annual 10-K reports directly as Q4 end values
-     - **Critical Insight**: Current Assets and Current Liabilities are point-in-time balance sheet items, NOT cumulative
-     - Balance sheet items cannot be calculated as Annual - (Q1 + Q2 + Q3) like income statement items
-     - The FY (year-end) balance IS the Q4 end balance
-   - Dropdown Menu: Allows switching between 15 quarterly views (12 from 10-Q + 3 Q4 from 10-K)
-   - Quarter Selection: Most recent quarter first (Q3 2025, Q2 2025, Q1 2025, Q4 2024, Q3 2024, ...)
-   - Color Zones:
-     - Red (<1.0): Warning - Cannot cover current liabilities
-     - Yellow (1.0-1.5): Adequate - Meets minimum
-     - Green (>1.5): Healthy - Strong liquidity
-   - Reference Line: 1.5 (retail industry benchmark)
-   - Delta Display: Shows improvement/decline vs benchmark
-   - Output: `output/chart_current_ratio_gauge.html` (4.6MB)
-
-6. **Chart 17: Capital Structure Donut** (`create_capital_structure_donut()`):
-   - Chart Type: Plotly Pie with hole (Donut) with dropdown menu for fiscal year selection
-   - Data Source: All 10-K annual filings with complete balance sheet data (FY2019-FY2024)
-   - Dropdown Menu: Switch between 6 fiscal years (most recent first)
-   - Segments: Total Debt (Red #ff6666), Stockholders' Equity (Green #66cc66)
-   - Center Annotation: Debt-to-Equity ratio
-   - Hover Template: Shows absolute values in billions + percentage
-   - UI Features:
-     - Fixed donut position and size when toggling periods (domain, automargin=False, autosize=False)
-     - Labels persist when switching fiscal years (textinfo/textposition in dropdown args)
-     - Dropdown positioned on right side (x=1.02) to avoid overlap with chart
-     - Donut shifted left (domain x: [0.05, 0.75]) with D/E annotation at x=0.4
-     - Legend at bottom (y=-0.15) for clean layout
-   - Output: `output/chart_capital_structure_donut.html`
-
-7. **Chart 18: Debt-to-EBITDA Trend** (`create_debt_to_ebitda_trend()`):
-   - Chart Type: Plotly Scatter (Line with markers and text labels)
-   - Color-Coded Markers:
-     - Green: ratio <3.0 (healthy)
-     - Yellow: ratio 3.0-5.0 (moderate)
-     - Red: ratio >5.0 (risky)
-   - Reference Lines: Dashed green at 3.0x, Dashed red at 5.0x
-   - Annotations: Left-positioned with white backgrounds and colored borders (no overlap)
-   - Legend: Bottom horizontal orientation with 4 entries (main line + 3 color zones)
-   - Data Labels: Exact ratio values displayed on each marker
-   - Output: `output/chart_debt_to_ebitda_trend.html`
-   - UI Improvements (daedca5):
-     - Fixed label overlap at top right
-     - Added legend for color-coded health zones
-     - Enhanced layout with better spacing and margins
-     - Data point text labels for easy reading
-
-8. **Test Suite** - `test_pillar2_liquidity_solvency.py` (25 test cases):
-   - Extraction Tests (5): Balance sheet data extraction, sanity checks, coverage
-   - Liquidity Calculation Tests (6): Current Ratio, Quick Ratio, Working Capital formulas and health flags
-   - Solvency Calculation Tests (8): D/E, D/A, Equity Ratio, D/EBITDA, ROE, ROA formulas and health flags
-   - Export Tests (3): Time-series JSON structure validation
-   - Visualization Tests (3): Chart file creation verification
-
-**Results**:
-- ✅ **Balance sheet extraction**: 5/10 annual filings (50% coverage - older filings use different GAAP tags)
-- ✅ **Liquidity metrics**: 18/22 periods calculated (82% coverage)
-- ✅ **Current Ratio values**: 0.94 - 1.37 for recent periods (Target operates lean)
-- ✅ **Quick Ratio values**: 0.18 - 0.43 (typical for retail with high inventory)
-- ✅ **Working Capital**: -$1.34B to +$0.48B (negative indicates efficient working capital management)
-- ✅ **Q4 Current Ratio calculation**: 15 quarters available in Chart 16 dropdown (12 from 10-Q + 3 Q4 from 10-K)
-- ✅ **Balance sheet components exported**: current_assets_billion and current_liabilities_billion added to timeseries JSON
-- ✅ **Solvency ratios**: Calculated for all periods with required data
-- ✅ **ROE**: 20-35% (strong profitability)
-- ✅ **ROA**: 5-10% (healthy for retail)
-- ✅ **D/E Ratio**: 0.19 - 0.30 (conservative leverage)
-- ✅ **All 3 charts created**: Gauge (4.6MB), Donut (4.6MB), Trend (4.6MB)
-- ✅ **All 25 test cases pass**: 100% test success rate
-
-**Business Insights Enabled**:
-- **Liquidity Health**: Current and Quick Ratios answer "Can Target pay bills due in next 12 months?"
-- **Working Capital Efficiency**: Negative WC indicates Target optimizes cash conversion cycle (pays suppliers before collecting from customers)
-- **Capital Structure Analysis**: Low D/E ratio shows conservative financing with equity-heavy structure
-- **Leverage Risk Assessment**: D/EBITDA ratio shows debt sustainability relative to earnings power
-- **Profitability Benchmarking**: ROE and ROA compare Target's returns vs industry peers
-- **Trend Analysis**: Debt-to-EBITDA trend reveals if leverage improving or deteriorating over time
-
-**Key Design Decisions**:
-1. **Gauge Chart** for Current Ratio - intuitive "speedometer" visualization with color zones
-2. **Donut Chart** for Capital Structure - shows debt/equity split at a glance with D/E ratio in center
-3. **Health Thresholds** based on retail industry benchmarks (not generic corporate thresholds)
-4. **Integrated Calculation** - Solvency ratios added to existing `debt_metrics` (DRY principle)
-5. **Fallback GAAP Tags** - Multiple tag variants for backward compatibility with older filings
-6. **Realistic Test Thresholds** - 40% extraction coverage (older filings may lack balance sheet tags)
-
-**Pillar 2 Success Criteria** (all met ✅):
-1. ✅ 8 new GAAP balance sheet tags extracted (50% coverage for annual filings)
-2. ✅ Current Ratio calculated for 18+ periods
-3. ✅ Quick Ratio calculated for 18+ periods
-4. ✅ Working Capital calculated for 18+ periods
-5. ✅ D/E, D/A, Equity ratios calculated for all periods with balance sheet data
-6. ✅ Debt-to-EBITDA calculated for all periods with EBITDA
-7. ✅ ROE and ROA calculated for all periods with net income
-8. ✅ Health flags assigned correctly based on industry thresholds
-9. ✅ Chart 16 (Current Ratio Gauge) created (4.6MB HTML)
-10. ✅ Chart 17 (Capital Structure Donut) created (4.6MB HTML)
-11. ✅ Chart 18 (Debt-to-EBITDA Trend) created (4.6MB HTML)
-12. ✅ All 25 test cases pass
-13. ✅ Visual verification confirms accurate data display
-
-### Pillar 4: Cash Flow Dynamics (Complete) ✅
-
-**User Request**: Implement Pillar 4 financial analysis answering: "Where is the cash coming from, and where is it going?"
-
-**Requested Analysis**:
-- Operating vs Investing vs Financing: Understanding the "three engines" of cash flow
-- Free Cash Flow (FCF): The "gold standard" of cash - what's left after operations and CapEx
-
-**Requested Visualizations**:
-1. Combo Chart (OCF vs CapEx): Bars for OCF/CapEx with line for FCF
-2. Sankey Diagram (Cash Flow): Shows flow of cash from operations into various buckets
-
-**Solution Implemented**:
-
-1. **Added 10 GAAP Cash Flow Component Tag Mappings** in `financial_analyzer.py`:
-   ```python
-   # Pillar 4: Cash Flow Dynamics - CapEx and Financing Components
-   'us-gaap:PaymentsToAcquirePropertyPlantAndEquipment': 'capital_expenditures',
-   'us-gaap:PaymentsForCapitalExpenditures': 'capital_expenditures',  # Fallback
-   'us-gaap:PaymentsOfDividendsCommonStock': 'dividends_paid',
-   'us-gaap:PaymentsOfDividends': 'dividends_paid',  # Fallback
-   'us-gaap:PaymentsForRepurchaseOfCommonStock': 'stock_repurchases',
-   'us-gaap:PaymentsForRepurchaseOfEquity': 'stock_repurchases',  # Fallback
-   'us-gaap:RepaymentsOfLongTermDebt': 'debt_repayments',
-   'us-gaap:RepaymentsOfDebt': 'debt_repayments',  # Fallback
-   'us-gaap:ProceedsFromIssuanceOfLongTermDebt': 'debt_issuance',
-   'us-gaap:ProceedsFromDebt': 'debt_issuance'  # Fallback
-   ```
-
-2. **Enhanced `_calculate_cashflow_metrics()` Method**:
-   - **Free Cash Flow** = Operating Cash Flow - Capital Expenditures
-   - **FCF Margin** = FCF / Revenue × 100
-   - Extracts dividends, stock repurchases, debt repayments for Sankey
-
-3. **Chart 21: OCF vs CapEx Combo Chart** (`create_ocf_vs_capex_chart()`):
-   - Grouped bars for OCF (green) and CapEx (red)
-   - Line with markers for FCF (blue) on secondary y-axis
-   - 15 quarters with calculated Q4 from annual reports
-   - Text labels showing dollar values on all data points
-
-4. **Chart 22: Cash Flow Sankey Diagram** (`create_cash_flow_sankey()`):
-   - 7 nodes: OCF, FCF, CapEx, Dividends, Buybacks, Debt Repayment, Retained Cash
-   - Color-coded flows showing cash allocation
-   - Dropdown menu for quarter selection (15 quarters: Q1 2022 - Q3 2025)
-   - Q4 data calculated from annual 10-K (Q4 = Annual - Q1 - Q2 - Q3)
-   - Interactive highlighting on hover
-
-5. **Test Suite** - `test_pillar4_cash_flow_dynamics.py` (18 test cases):
-   - CapEx extraction coverage and value validation
-   - FCF formula verification (FCF = OCF - CapEx)
-   - Cash flow component extraction tests
-   - Chart file creation verification
-
-**Results**:
-- ✅ **CapEx extraction**: 22/22 periods (100% coverage)
-- ✅ **CapEx range**: $0.67B - $5.53B (reasonable for Target's scale)
-- ✅ **FCF calculation**: 22/22 periods (100% coverage)
-- ✅ **FCF formula verified**: All periods pass FCF = OCF - CapEx
-- ✅ **FCF margin**: -14.4% to 8.5% (varies by quarter, some negative during heavy CapEx)
-- ✅ **Dividends**: 22/22 periods (100% coverage)
-- ✅ **Stock repurchases**: 20/22 periods (90.9% coverage)
-- ✅ **Debt repayments**: 19/22 periods (86.4% coverage)
-- ✅ **Chart 21 created**: 4.8MB interactive HTML
-- ✅ **Chart 22 created**: 4.9MB interactive HTML with dropdown
-- ✅ **All 18 test cases pass**: 100% success rate
-
-**Business Insights Enabled**:
-- **Cash Generation Quality**: FCF shows true cash available after reinvestment
-- **Capital Allocation Strategy**: Sankey visualizes prioritization (reinvestment vs returns)
-- **Investment Intensity**: CapEx/Revenue ratio reveals reinvestment rate
-- **Shareholder Return Profile**: Dividends + buybacks as % of FCF
-- **Deleveraging Pace**: Debt repayment relative to FCF generation
-
-**Pillar 4 Success Criteria** (all met ✅):
-1. ✅ CapEx extracted for 100% of periods
-2. ✅ FCF calculated correctly for all periods
-3. ✅ Cash flow components extracted for Sankey
-4. ✅ Chart 21 (OCF vs CapEx) shows 15 quarters with FCF line
-5. ✅ Chart 22 (Sankey) shows cash flow allocation with dropdown
-6. ✅ All 18 test cases pass
-7. ✅ Documentation updated
-
-### Pillar 5: Valuation & Market Sentiment (Complete) ✅
-
-**User Request**: Implement Pillar 5 financial analysis answering: "Is the stock fairly priced compared to its peers and historical norms?"
-
-**Requested Analysis**:
-- Real-time valuation metrics (P/E, P/S, EV/EBITDA, Dividend Yield)
-- Peer comparison (Target vs WMT, COST, AMZN, KR)
-- Historical valuation context
-
-**Requested Visualizations**:
-1. Scatter Plot (P/E vs Revenue Growth): Find undervalued outliers
-2. Area Chart (Historical P/E Band): Show current valuation vs historical range
-
-**Solution Implemented**:
-
-1. **Created `market_data_fetcher.py` Module**:
-   - `MarketDataFetcher` class for Yahoo Finance API integration
-   - Methods:
-     - `get_current_prices()` - Fetch current stock prices
-     - `get_historical_prices(ticker, period)` - Get historical price data
-     - `get_valuation_metrics()` - Fetch P/E, P/S, EV/EBITDA, dividend yield
-     - `get_peer_comparison()` - Compare Target vs retail peers
-     - `get_target_valuation_summary()` - Valuation status (Undervalued/Fair/Overvalued)
-     - `get_quarter_end_price(ticker, date)` - Get stock price for specific date
-     - `get_historical_pe_for_quarters(quarters_data)` - Calculate Target historical P/E from SEC data
-     - `get_historical_pe_for_ticker(ticker, dates)` - Calculate peer historical P/E via price scaling
-   - Features:
-     - Caching with configurable TTL (1 hour for prices, 24 hours for history)
-     - Graceful fallback to cached data if API fails
-     - Configurable ticker list (default: TGT, WMT, COST, AMZN, KR)
-     - Timezone-aware date handling for historical price lookups
-
-2. **Chart 23: Valuation vs Growth Scatter with Dropdown** (`create_valuation_vs_growth_scatter()`):
-   - **Dropdown menu**: 11 quarters (Q1 2023 - Q3 2025) including calculated Q4 periods
-   - X-axis: Revenue Growth YoY (%)
-   - Y-axis: Historical P/E Ratio (calculated for selected quarter)
-   - Markers: Target (large red star) + 4 peers (smaller, color-coded)
-   - **Historical P/E for all companies**: Target from SEC TTM EPS, peers via price-ratio scaling
-   - **Q4 calculation**: Q4 = FY - Q1 - Q2 - Q3 (revenue, net income)
-   - Quadrant annotations:
-     - Upper-left: "Overvalued Zone" (high P/E, low growth)
-     - Lower-right: "Undervalued Zone" (low P/E, high growth)
-   - Reference lines: Average P/E (horizontal), Average Growth (vertical)
-   - Features:
-     - `legendgroup` pattern for legend persistence when switching quarters
-     - All 5 companies move positions when switching quarters
-     - Hover tooltips show period, P/E, growth, stock price, TTM EPS
-
-3. **Chart 24: Historical P/E Band Area Chart** (`create_pe_band_area_chart()`):
-   - X-axis: Time (5-year history)
-   - Primary Y-axis: Stock price
-   - Overlay: P/E valuation bands (shaded areas)
-     - Green zone: P/E < 12 (historically undervalued)
-     - Yellow zone: P/E 12-18 (fair value)
-     - Red zone: P/E > 18 (historically overvalued)
-   - Current price marker with P/E annotation
-   - 5-year EPS calculation from SEC data
-
-4. **Test Suite** - `test_pillar5_valuation_sentiment.py` (16 test cases):
-   - `TestMarketDataFetcher`: API functionality, caching, data validation
-   - `TestValuationCharts`: Chart file existence and content verification
-   - `TestValuationMetricsCalculation`: P/E, P/S, dividend yield validation
-
-**Results**:
-- ✅ **Market data fetching**: All 5 tickers fetch successfully
-- ✅ **P/E ratios validated**: Range 10-60x (reasonable for retail sector)
-- ✅ **P/S ratios validated**: All positive values
-- ✅ **Dividend yields validated**: Range 0-15% (reasonable)
-- ✅ **Historical prices**: 200+ data points for 1-year history
-- ✅ **Caching working**: Second fetch uses cached data
-- ✅ **Chart 23 created**: Scatter plot with quadrant labels
-- ✅ **Chart 24 created**: P/E band area chart with valuation zones
-- ✅ **All 16 test cases pass**: 100% success rate
-
-**Business Insights Enabled**:
-- **Relative Valuation**: Where does Target sit vs peers on P/E-Growth spectrum?
-- **Value Identification**: Lower-right quadrant = potential undervalued opportunities
-- **Historical Context**: Is current P/E above or below historical average?
-- **Valuation Zones**: Quick visual assessment of overvalued/undervalued status
-- **Dividend Comparison**: Yield comparison across retail peers
-
-**Key Design Decisions**:
-1. **yfinance Integration**: Free, reliable API for real-time market data
-2. **Caching Strategy**: Avoids rate limits, enables offline chart viewing
-3. **Quadrant Labels**: Immediately communicates valuation implications
-4. **Peer Selection**: WMT, COST, AMZN, KR represent direct retail competitors
-5. **P/E Bands**: Based on Target's historical P/E range (not industry-wide)
-
-**Pillar 5 Success Criteria** (all met ✅):
-1. ✅ market_data_fetcher.py created with MarketDataFetcher class
-2. ✅ yfinance dependency added to requirements.txt
-3. ✅ Current prices fetched for 5 tickers
-4. ✅ Valuation metrics (P/E, P/S, dividend yield) extracted
-5. ✅ Peer comparison data structured for visualization
-6. ✅ Historical price data fetched (5-year period)
-7. ✅ Chart 23 (Valuation Scatter) created with quadrant labels
-8. ✅ Chart 24 (P/E Band) created with valuation zones
-9. ✅ All 16 test cases pass
-10. ✅ Documentation updated
+| Phase/Pillar | Status | Key Deliverable |
+|--------------|--------|-----------------|
+| Phase 1 | ✅ | SEC EDGAR auto-download, .env credentials |
+| Phase 2 | ✅ | XBRL extraction, YoY comparison, risk heatmap, inventory/debt metrics |
+| Phase 3 | ✅ | Time-series JSON, 7 Plotly charts, cash flow metrics |
+| Phase 4 | ✅ | Investment thesis, margin bridge, risk charts, earnings quality |
+| Phase 5 | ✅ | 10-year historical data (dual XBRL format for FY2015-2018) |
+| Phase 6 | ✅ | Expense breakdown chart (SG&A extraction) |
+| Phase 7 | ✅ | EBITDA bridge waterfall (D&A extraction) |
+| Pillar 2 | ✅ | Liquidity & solvency ratios (Current/Quick Ratio, D/E, ROE/ROA), 3 charts |
+| Pillar 3 | ✅ | DuPont analysis, CCC peer comparison, 2 charts |
+| Pillar 4 | ✅ | Cash flow dynamics (FCF, Sankey), 2 charts |
+| Pillar 5 | ✅ | Valuation metrics (P/E bands, peer scatter), 2 charts |
 
 ## Testing & Verification
 
-### Quick Test
 ```bash
-# Run analyzer (includes executive insights export - Phase 4)
+# Run analyzer
 python3 financial_analyzer.py
 
-# Run visualizations (creates 24 charts: Phases 3-7 + Pillars 2-5)
+# Generate visualizations (24 charts)
 python3 visualize_data.py
 
-# Generate investment thesis (Phase 4)
+# Generate investment thesis
 python3 thesis_generator.py
 
-# Create PowerPoint presentation (Phase 4, Phase 6 & Phase 7)
+# Create PowerPoint
 python3 create_presentation.py
 
-# Open charts in browser
-open output/chart_margin_bridge.html
-open output/chart_risk_trends.html
-open output/chart_expense_breakdown.html  # Phase 6
-open output/chart_ebitda_bridge.html      # Phase 7
-open output/chart_ocf_vs_capex.html       # Pillar 4
-open output/chart_cash_flow_sankey.html   # Pillar 4
-open output/chart_valuation_scatter.html  # Pillar 5
-open output/chart_pe_band.html            # Pillar 5
-open output/Target_Financial_Analysis.pptx
-# Note: PowerPoint has static PNG images. Click "📊 Click for interactive version"
-# link on any chart slide to open HTML with dropdowns, hover, and zoom features.
+# Run test suites
+python3 test_phase3_comprehensive.py      # 43 RTM requirements
+python3 test_expense_breakdown_chart.py   # Phase 6
+python3 test_ebitda_bridge_chart.py       # Phase 7
+python3 test_pillar2_liquidity_solvency.py # 25 tests
+python3 test_pillar3_operational_efficiency.py # 10 tests
+python3 test_pillar4_cash_flow_dynamics.py # 18 tests
+python3 test_pillar5_valuation_sentiment.py # 16 tests
 ```
-
-### Comprehensive Verification (Phase 3)
-Run the complete test suite:
-```bash
-# RTM Compliance Tests (43 requirements)
-python3 test_phase3_comprehensive.py
-
-# Deep Verification Tests (37 tests for data quality)
-python3 test_phase3_deep_verification.py
-
-# Integration Tests (9 end-to-end workflow tests)
-python3 test_phase3_integration.py
-```
-
-### Phase 6 Verification
-Test Chart 14 (Operating Expense Breakdown):
-```bash
-# Phase 6: Chart 14 validation tests
-python3 test_expense_breakdown_chart.py
-```
-
-**Expected results**:
-- ✅ SG&A extracted for 22/22 periods
-- ✅ SG&A % in range 18.88% - 21.91%
-- ✅ All percentages sum to ~100% (±1% tolerance)
-- ✅ Chart file created (>10KB)
-
-### Phase 7 Verification
-Test Chart 15 (EBITDA Bridge Waterfall):
-```bash
-# Phase 7: Chart 15 validation tests
-python3 test_ebitda_bridge_chart.py
-```
-
-**Expected results**:
-- ✅ D&A extracted for 22/22 periods (100% coverage)
-- ✅ D&A values in range $0.5-0.7B per quarter
-- ✅ EBITDA = OI + D&A (±$0.01B tolerance)
-- ✅ EBITDA margin in range 5-15% (retail industry norm)
-- ✅ Chart file created (>10KB)
-
-### Pillar 2 Verification
-Test Liquidity & Solvency Analysis:
-```bash
-# Pillar 2: Comprehensive test suite (25 tests)
-python3 test_pillar2_liquidity_solvency.py
-```
-
-**Expected results**:
-- ✅ Balance sheet extraction: 5/10 annual filings (50% coverage)
-- ✅ Liquidity metrics calculated for 18/22 periods (82% coverage)
-- ✅ Current Ratio values: 0.94 - 1.37 (reasonable for retail)
-- ✅ Quick Ratio values: 0.18 - 0.43 (typical for high-inventory retail)
-- ✅ Solvency ratios calculated for all periods with required data
-- ✅ ROE: 20-35%, ROA: 5-10%
-- ✅ All 3 Pillar 2 charts created (gauge, donut, trend)
-- ✅ All 25/25 tests pass (100% success rate)
-
-### Pillar 3 Verification
-Test Operational Efficiency Analysis:
-```bash
-# Pillar 3: Comprehensive test suite (10 tests)
-python3 test_pillar3_operational_efficiency.py
-```
-
-**Expected results**:
-- ✅ Accounts Payable extracted for 18/22 periods (81.8% coverage)
-- ✅ Asset Turnover calculated for 22/22 periods (100% coverage, range: 1.68 - 2.02)
-- ✅ DSO calculated for 5/22 periods (22.7% coverage - receivables only in annual 10-K filings)
-- ✅ DPO calculated for 18/22 periods (81.8% coverage, normalized range: 56.8 - 75.4 days)
-- ✅ CCC calculated correctly for 5 annual periods (CCC = DSI + DSO - DPO, range: 31.4 - 71.2 days)
-- ✅ DuPont components calculated for all periods with balance sheet data
-- ✅ DuPont formula validated: ROE = PM × AT × FL (±1% tolerance)
-- ✅ All 2 Pillar 3 charts created (DuPont Analysis, Cash Conversion Cycle)
-- ✅ All 10/10 tests pass (100% success rate)
-
-**Chart 20 Enhancement (Flexible Quarterly/Annual Data Detection)**:
-- Chart 20 now intelligently detects quarterly receivables availability
-- **For Target**: Uses annual data (5 periods: FY2020-FY2024) because receivables not reported in 10-Q filings
-- **For other companies**: If receivables available in 10-Q (≥8 quarters), automatically uses quarterly data with calculated Q4
-- Console output shows data source: "Using X periods (receivables available/only in 10-K filings)"
-- Chart subtitle displays data frequency: "Annual data: FY2020 - FY2024" or "Quarterly data: Q1 2022 - Q3 2025"
-- Makes the tool reusable across companies with different reporting practices
-
-### Pillar 4 Verification
-Test Cash Flow Dynamics Analysis:
-```bash
-# Pillar 4: Comprehensive test suite (18 tests)
-python3 test_pillar4_cash_flow_dynamics.py
-```
-
-**Expected results**:
-- ✅ CapEx extracted for 22/22 periods (100% coverage)
-- ✅ CapEx range: $0.67B - $5.53B (reasonable for Target's scale)
-- ✅ Free Cash Flow calculated for 22/22 periods
-- ✅ FCF = OCF - CapEx formula verified for all periods
-- ✅ FCF margin range: -14.4% to 8.5% (varies by quarter)
-- ✅ Dividends extracted for 22/22 periods (100% coverage)
-- ✅ Stock repurchases extracted for 20/22 periods (90.9% coverage)
-- ✅ Debt repayments extracted for 19/22 periods (86.4% coverage)
-- ✅ Chart 21 (OCF vs CapEx) created with 15 quarters
-- ✅ Chart 22 (Cash Flow Sankey) created with fiscal year dropdown
-- ✅ All 18/18 tests pass (100% success rate)
-
-### Pillar 5 Verification
-Test Valuation & Market Sentiment Analysis:
-```bash
-# Pillar 5: Comprehensive test suite (16 tests)
-python3 test_pillar5_valuation_sentiment.py
-```
-
-**Expected results**:
-- ✅ MarketDataFetcher initialized with 5 tickers (TGT, WMT, COST, AMZN, KR)
-- ✅ Current prices fetched for all tickers (TGT price $10-$500 range)
-- ✅ Valuation metrics extracted (P/E, P/S, dividend yield)
-- ✅ P/E ratios in range 0-100 (reasonable for retail)
-- ✅ P/S ratios positive for all companies
-- ✅ Dividend yields in range 0-20%
-- ✅ Peer comparison structured with averages
-- ✅ Historical prices: 100+ data points for 1-year period
-- ✅ Cache functionality working (second fetch uses cache)
-- ✅ Chart 23 (Valuation Scatter) created with required elements
-- ✅ Chart 24 (P/E Band) created with valuation zones
-- ✅ Target valuation summary generated with status
-- ✅ All 16/16 tests pass (100% success rate)
-
-**Overall Expected Results**:
-- 22 total filings (10 10-Ks + 12 10-Qs)
-- FY2024 net_sales_billion ~106.6B
-- All filings have inventory_metrics, debt_metrics, cashflow_metrics, liquidity_metrics, efficiency_metrics (where applicable)
-- All filings have fiscal_year and fiscal_quarter fields
-- 6+ filings have vs_year_ago comparisons
-- Risk heatmap shows shrink trend increasing
-- 24 interactive HTML charts generated (Charts 1-15 from Phases 3-7 + Charts 16-18 from Pillar 2 + Charts 19-20 from Pillar 3 + Charts 21-22 from Pillar 4 + Charts 23-24 from Pillar 5)
-- All test suites pass
 
 ## Environment Setup
 
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
-
-# 2. Configure SEC credentials
-cp .env.example .env
-# Edit .env with your name and email
-
-# 3. Run analyzer
+cp .env.example .env  # Edit with your SEC name/email
 python3 financial_analyzer.py
-
-# 4. Generate visualizations
 python3 visualize_data.py
-
-# 5. View charts
 open output/chart_cash_flows.html
 ```
 
-## Quarterly Data Calculation (Phase 3 Enhancement)
+## Q4 Data Calculation
 
-### Q4 Data from 10-K Annual Reports
+Target files 10-Q for Q1-Q3 only. Q4 is calculated from 10-K annual reports:
 
-Target only files 10-Q reports for Q1, Q2, and Q3. Q4 data is calculated from annual 10-K reports:
+**Income Statement Items** (cumulative):
+- Q4 = Annual - (Q1 + Q2 + Q3)
+- Applies to: Revenue, COGS, SG&A, Net Income, Operating Income, Cash Flows
 
-**Implementation** (in `visualize_data.py`):
-```python
-# Step 1: Collect Q1-Q3 from 10-Q filings
-quarterly_data = []
-for i, period in enumerate(data['periods']):
-    if period['filing_type'] == '10-Q':
-        quarterly_data.append({
-            'period': period['period'],
-            'fiscal_year': period['fiscal_year'],
-            'revenue': revenue[i],
-            'inventory': inventory[i]
-        })
+**Balance Sheet Items** (point-in-time):
+- Q4 = FY year-end value directly from 10-K
+- Applies to: Inventory, Current Assets, Current Liabilities, Total Assets, Equity
 
-# Step 2: Calculate Q4 from 10-K annual reports
-for i, period in enumerate(data['periods']):
-    if period['filing_type'] == '10-K':
-        fy = period['fiscal_year']
-        annual_revenue = revenue[i]
+**YTD to Standalone Conversion** (for cash flows in 10-Q):
+- Q1 = Q1 YTD (as-is)
+- Q2 = Q2 YTD - Q1 YTD
+- Q3 = Q3 YTD - Q2 YTD
+- Q4 = Annual - Q3 YTD
 
-        # Find Q1, Q2, Q3 for this fiscal year
-        q1_rev = q2_rev = q3_rev = None
-        for q in quarterly_data:
-            if q['fiscal_year'] == fy:
-                if 'Q1' in q['period']:
-                    q1_rev = q['revenue']
-                # ... match Q2, Q3
+## Chart Catalog
 
-        # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
-        if q1_rev and q2_rev and q3_rev:
-            q4_revenue = annual_revenue - (q1_rev + q2_rev + q3_rev)
-            quarterly_data.append({
-                'period': f'Q4 {fy}',
-                'fiscal_year': fy,
-                'revenue': q4_revenue,
-                'inventory': annual_inventory  # Year-end balance
-            })
-```
+All 24 interactive Plotly charts created by `visualize_data.py`:
 
-**Key Principles**:
-- **Income Statement Items** (cumulative over period):
-  - Q4 Revenue = Annual Total - (Q1 + Q2 + Q3)
-  - Q4 COGS, SG&A, Operating Expenses = Annual - (Q1 + Q2 + Q3)
-  - Used in Charts 1, 2, 4, 14, 15 (Revenue, Expenses, EBITDA)
-- **Balance Sheet Items** (point-in-time snapshot):
-  - Q4 Inventory = Year-end inventory from 10-K (NOT calculated as Annual - Q1 - Q2 - Q3)
-  - Q4 Current Assets = Year-end value from 10-K
-  - Q4 Current Liabilities = Year-end value from 10-K
-  - The FY year-end balance IS the Q4 end balance
-  - Used in Chart 16 (Current Ratio Gauge)
-- Fiscal year totals (10-K) are **never displayed** in charts to avoid distortion
-- Results in 15 complete quarters: Q1 2022 through Q3 2025
+| # | Chart Name | File | Type | Purpose |
+|---|------------|------|------|---------|
+| 1 | Revenue vs Inventory | chart_revenue_vs_inventory.html | Dual-axis line | Identify inventory buildup |
+| 2 | Revenue Growth YoY | chart_revenue_yoy_growth.html | Bars + line | Revenue with YoY % |
+| 3 | Margin Analysis | chart_margin_analysis.html | 3-line | Gross/Operating/Net margins |
+| 4 | Operating Margin Waterfall | chart_operating_margin_waterfall.html | Waterfall | Quarterly margin changes |
+| 5 | Inventory Efficiency | chart_inventory_efficiency.html | Dual-axis | Turnover + DSI |
+| 6 | Debt Health | chart_debt_health.html | Dual-axis | Coverage ratio + debt |
+| 7 | Cash Flows | chart_cash_flows.html | 3-line | OCF/ICF/FCF |
+| 8 | Margin Bridge | chart_margin_bridge.html | Waterfall | Margin evolution Q1 2022→Q3 2025 |
+| 9 | Risk Trends | chart_risk_trends.html | Stacked area | Risk mentions over time |
+| 10 | Risk Heatmap | chart_risk_heatmap.html | Heatmap | Risk intensity by period |
+| 11 | Earnings Quality | chart_earnings_quality.html | Bars + line | Net Income vs OCF |
+| 12 | Revenue/NI Long-term | chart_revenue_netincome_longterm.html | Dual-axis | Quarterly with calc Q4 |
+| 13 | Revenue/NI Annual | chart_revenue_netincome_annual.html | Dual-axis | 10-year FY2015-FY2024 |
+| 14 | Expense Breakdown | chart_expense_breakdown.html | 100% stacked bar | COGS/SG&A/Other/OI |
+| 15 | EBITDA Bridge | chart_ebitda_bridge.html | Waterfall + dropdown | Revenue→EBITDA flow |
+| 16 | Current Ratio Gauge | chart_current_ratio_gauge.html | Gauge + dropdown | Liquidity health |
+| 17 | Capital Structure | chart_capital_structure_donut.html | Donut + dropdown | Debt vs Equity |
+| 18 | Debt-to-EBITDA | chart_debt_to_ebitda_trend.html | Line + markers | Leverage trend |
+| 19 | DuPont Analysis | chart_dupont_analysis.html | Grouped bar + dropdown | ROE decomposition |
+| 20 | Cash Conversion Cycle | chart_cash_conversion_cycle.html | Grouped bar + dropdown | CCC peer comparison |
+| 21 | OCF vs CapEx | chart_ocf_vs_capex.html | Bars + line | FCF visualization |
+| 22 | Cash Flow Sankey | chart_cash_flow_sankey.html | Sankey + dropdown | Cash allocation |
+| 23 | Valuation Scatter | chart_valuation_scatter.html | Scatter + dropdown | P/E vs Growth |
+| 24 | P/E Band | chart_pe_band.html | Area | Historical valuation zones |
 
-**Why This Matters**:
-- Reveals seasonal patterns (Q4 consistently 20-35% higher revenue)
-- Enables proper YoY comparisons (Q4 2024 vs Q4 2023)
-- Prevents mixing annual and quarterly data in visualizations
-
-## Complete Chart Catalog
-
-All 20 interactive Plotly charts created by `visualize_data.py`:
-
-### Chart 1: Revenue vs Inventory Growth (Phase 3)
-- **Type**: Dual-axis line chart
-- **Purpose**: Identify inventory buildup vs revenue growth
-- **File**: `chart_revenue_vs_inventory.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025)
-
-### Chart 2: Revenue Growth Year-over-Year (Phase 3)
-- **Type**: Dual-axis (bars + line)
-- **Purpose**: Show absolute revenue with YoY growth percentage
-- **File**: `chart_revenue_yoy_growth.html`
-- **Data**: 15 quarters with YoY % change
-
-### Chart 3: Margin Analysis (Phase 3)
-- **Type**: 3-line chart
-- **Purpose**: Track Gross, Operating, and Net Profit margins over time
-- **File**: `chart_margin_analysis.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025)
-
-### Chart 4: Operating Margin Waterfall (Phase 3)
-- **Type**: Waterfall chart
-- **Purpose**: Visualize quarterly operating margin changes
-- **File**: `chart_operating_margin_waterfall.html`
-- **Data**: 15 quarters
-
-### Chart 5: Inventory Efficiency (Phase 3)
-- **Type**: Dual-axis (line + bars)
-- **Purpose**: Track Inventory Turnover and Days Sales of Inventory
-- **File**: `chart_inventory_efficiency.html`
-- **Data**: 15 quarters
-
-### Chart 6: Debt Health (Phase 3)
-- **Type**: Dual-axis (line + bars)
-- **Purpose**: Monitor Interest Coverage Ratio and Total Debt
-- **File**: `chart_debt_health.html`
-- **Data**: Available quarters with debt data
-
-### Chart 7: Statement of Cash Flows (Phase 3)
-- **Type**: 3-line chart
-- **Purpose**: Track Operating, Investing, and Financing cash flows
-- **File**: `chart_cash_flows.html`
-- **Data**: 15 quarters
-
-### Chart 8: Margin Bridge Waterfall (Phase 4)
-- **Type**: Waterfall chart
-- **Purpose**: Show operating margin evolution with quarterly changes
-- **File**: `chart_margin_bridge.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025) with calculated Q4
-- **Q4 Calculation**: Q4 operating margin calculated from annual 10-K data
-  - Q4 Revenue = Annual - (Q1 + Q2 + Q3)
-  - Q4 Operating Income = Annual - (Q1 + Q2 + Q3)
-  - Q4 Margin = Q4 Operating Income / Q4 Revenue × 100
-- **Note**: FY periods excluded to show pure quarterly progression
-
-### Chart 9: Risk Trends (Phase 4)
-- **Type**: Stacked area chart
-- **Purpose**: Visualize risk mentions over time (shrink, theft, markdown, margin pressure)
-- **File**: `chart_risk_trends.html`
-- **Data**: All periods with risk flags
-
-### Chart 10: Risk Heatmap Grid (Phase 4)
-- **Type**: Heatmap (2D grid)
-- **Purpose**: Show intensity of risk types across periods
-- **File**: `chart_risk_heatmap.html`
-- **Data**: Risk mention counts by period and type
-
-### Chart 11: Earnings Quality (Phase 4)
-- **Type**: Dual-axis (bars + line)
-- **Purpose**: Compare Net Income vs Operating Cash Flow with Cash Conversion Ratio
-- **File**: `chart_earnings_quality.html`
-- **Data**: 15 quarters
-- **Note**: Y-axis range [-150%, 650%] accommodates negative Q4 values and extreme positive outliers
-
-### Chart 12: Revenue & Net Income Long-Term Trajectory (Phase 4)
-- **Type**: Dual-axis line chart
-- **Purpose**: Show correlation between Revenue and Net Income with calculated Q4 data
-- **File**: `chart_revenue_netincome_longterm.html`
-- **Data**: Quarterly data Q1 2022 - Q3 2025 (includes calculated Q4)
-
-### Chart 13: Revenue & Net Income Annual Trajectory (Phase 5)
-- **Type**: Dual-axis line chart
-- **Purpose**: Show 10-year trends without quarterly noise
-- **File**: `chart_revenue_netincome_annual.html`
-- **Data**: FY2015 - FY2024 (annual 10-K reports only)
-- **Note**: Complete 10-year data with NO gaps
-
-### Chart 14: Operating Expense Breakdown (Phase 6)
-- **Type**: 100% stacked bar chart
-- **Purpose**: Identify which costs are eating into margins
-- **File**: `chart_expense_breakdown.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025)
-- **Segments**: COGS (red), SG&A (purple), Other Expenses (orange), Operating Income (green)
-- **Note**: Each bar sums to 100% of revenue
-
-### Chart 15: EBITDA Bridge Waterfall (Phase 7)
-- **Type**: Interactive waterfall chart with dropdown menu
-- **Purpose**: Visualize how Revenue flows to EBITDA through operating expenses
-- **File**: `chart_ebitda_bridge.html`
-- **Data**: 15 quarterly waterfalls (Q1 2022 - Q3 2025)
-- **Steps**: Revenue → Less COGS → Less SG&A → Less Other → Add D&A → EBITDA
-- **Features**:
-  - Dropdown menu to switch between quarters (most recent first)
-  - Enhanced two-line x-axis labels with descriptions
-  - Percentage-of-revenue labels on all bars
-  - Color-coded: Blue (totals), Red (expenses), Green (D&A add-back)
-  - Title and labels persist when switching quarters (critical bug fix)
-- **Note**: Shows EBITDA calculation (Operating Income + D&A) as waterfall visualization
-
-### Chart 16: Current Ratio Gauge with Q4 Calculation (Pillar 2)
-- **Type**: Plotly Indicator (Gauge) with dropdown menu for quarter selection
-- **Purpose**: Visual "speedometer" showing if Current Ratio is in healthy zone (>1.5) across all quarters
-- **File**: `chart_current_ratio_gauge.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods from annual 10-K reports
-- **Q4 Calculation**: Uses FY year-end values directly as Q4 end values (balance sheet items are point-in-time, not cumulative)
-- **Dropdown Menu**: Switch between 15 quarterly views (most recent first)
-- **Color Zones**:
-  - Red (<1.0): Warning - Cannot cover current liabilities
-  - Yellow (1.0-1.5): Adequate liquidity
-  - Green (>1.5): Healthy liquidity (retail benchmark)
-- **Features**: Delta display shows improvement/decline vs 1.5 benchmark
-
-### Chart 17: Capital Structure Donut (Pillar 2)
-- **Type**: Plotly Pie with hole (Donut) with dropdown menu for fiscal year selection
-- **Purpose**: Show capital structure split between Total Debt and Stockholders' Equity at a glance
-- **File**: `chart_capital_structure_donut.html`
-- **Data**: 6 fiscal years (FY2019-FY2024) from annual 10-K filings with complete balance sheet data
-- **Dropdown Menu**: Switch between fiscal years (most recent first)
-- **Segments**: Total Debt (Red #ff6666), Stockholders' Equity (Green #66cc66)
-- **Features**:
-  - Center annotation displays Debt-to-Equity ratio
-  - Fixed position and size when toggling between fiscal years
-  - Labels persist when switching periods
-  - Dropdown positioned on right side to avoid overlap
-  - Clean layout with legend at bottom
-
-### Chart 18: Debt-to-EBITDA Trend (Pillar 2)
-- **Type**: Plotly Scatter (Line with markers and text labels)
-- **Purpose**: Track leverage trend over time - shows if company becoming more/less risky
-- **File**: `chart_debt_to_ebitda_trend.html`
-- **Data**: All quarterly periods with debt and EBITDA data (6 fiscal years: FY2019-FY2024)
-- **Color-Coded Markers**:
-  - Green: ratio <3.0x (healthy leverage)
-  - Yellow: ratio 3.0-5.0x (moderate leverage)
-  - Red: ratio >5.0x (risky leverage)
-- **Features**:
-  - Reference lines at 3.0x (healthy threshold) and 5.0x (risky threshold)
-  - Annotations positioned on left side with white backgrounds and colored borders
-  - Data point text labels showing exact ratio values (e.g., "0.35x")
-  - Legend at bottom explaining color-coded health zones
-  - Height: 550px for better readability
-- **UI Improvements** (daedca5):
-  - Fixed label overlap by moving reference line annotations to left side (x=0.02)
-  - Added legend entries for Healthy/Moderate/Risky zones with colored markers
-  - Enhanced subtitle with "(Healthy: <3.0x)" context
-  - Data values displayed on each marker for easy reading
-
-### Chart 19: DuPont Analysis Breakdown (Pillar 3)
-- **Type**: Grouped bar chart with dropdown menu for quarter selection
-- **Purpose**: Decompose ROE into its three multiplicative components to understand what drives profitability
-- **File**: `chart_dupont_analysis.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025) from 10-Q filings only, with calculated Q4 periods
-- **Formula**: ROE = Profit Margin × Asset Turnover × Financial Leverage
-- **Components**:
-  - Profit Margin (%) = Net Income / Revenue × 100 (Blue bars)
-  - Asset Turnover (x) = Revenue / Total Assets (Orange bars)
-  - Financial Leverage (x) = Total Assets / Stockholders' Equity (Purple bars)
-  - ROE (%) = Return on Equity (Green bars - final result)
-- **Q4 Calculation Method**:
-  - Income statement items (Revenue, Net Income): Q4 = Annual - (Q1 + Q2 + Q3)
-  - Balance sheet items (Total Assets, Equity): Q4 = FY year-end values directly from 10-K
-  - Calculated for FY2022, FY2023, FY2024 (Q4 2022: ROE=7.81%, Q4 2023: ROE=10.28%, Q4 2024: ROE=7.50%)
-- **Features**:
-  - **Quarterly-only data**: Filters to 10-Q filings only (excludes annual FY periods to avoid scale distortion)
-  - **Fixed Y-axis scaling**: Range [0, 11.31] consistent across all 15 periods for proper visual comparison
-  - **Dropdown menu**: Switch between quarters (most recent first)
-  - **Value labels**: Each bar displays exact value with appropriate unit (% or x)
-  - **Y-axis persistence**: Range preserved when switching periods via dropdown (critical bug fix)
-- **Color Scheme**:
-  - Blue (#3498db): Profit Margin and ROE (profitability metrics)
-  - Orange (#e67e22): Asset Turnover (efficiency metric)
-  - Purple (#9b59b6): Financial Leverage (capital structure metric)
-  - Green (#27ae60): ROE result (final return metric)
-- **Business Insights**:
-  - Answers "What drives Target's ROE - margins, efficiency, or leverage?"
-  - Shows if ROE changes driven by improving margins vs better asset utilization vs increased leverage
-  - Quarterly granularity reveals seasonal patterns (Q4 typically lower ROE due to holiday promotions)
-  - Fixed Y-axis enables direct comparison: "Q3 2024 ROE dropped to 4.44% from Q2 2024's 5.12%"
-- **Implementation Details** (commit f32156d):
-  - Location: `visualize_data.py` lines 2010-2271
-  - Data filtering: `if period['filing_type'] != '10-Q': continue` ensures quarterly-only data
-  - Fixed range calculation: `y_max = max(all_values) * 1.1` across all periods
-  - Dropdown args preserve range: `'yaxis': {'range': [y_min, y_max]}`
-  - Q4 back-calculation: Total Assets = Annual Revenue / Annual Asset Turnover, Stockholders Equity = Total Assets / Annual Financial Leverage
-- **Key Design Decisions**:
-  1. **Quarterly-only filtering**: Removes annual FY periods to prevent Y-axis distortion (annual ROE ~25-50%, quarterly ROE ~5-10%)
-  2. **Q4 calculation**: Enables complete 15-quarter view with calculated Q4 2022, Q4 2023, Q4 2024
-  3. **Fixed Y-axis**: User-requested fix to enable proper visual comparison across periods
-  4. **Grouped bars**: Shows all 4 components side-by-side for easy ratio interpretation
-  5. **Formula in subtitle**: Reinforces that ROE is multiplicative product of 3 components
-
-### Chart 20: Cash Conversion Cycle - Peer Comparison with Dropdown (Pillar 3)
-- **Type**: Plotly grouped bar chart with dropdown menu for period selection
-- **Purpose**: Compare Target's CCC evolution against retail industry peers to assess competitive position over time
-- **File**: `chart_cash_conversion_cycle.html`
-- **Data**:
-  - **Target**: 5 historical periods (FY2020-FY2024) from timeseries JSON
-  - **Peers**: Static FY2024 benchmark (Walmart, Costco, Amazon, Kroger) from peer_comparison_data.json
-- **Companies**: Target, Walmart, Costco, Amazon, Kroger
-- **Dropdown Menu**: Switch between 5 fiscal years to see Target's CCC evolution
-  - Most recent period (FY2024) selected by default
-  - **Target bars change** per selected period (shows historical CCC components)
-  - **Peer bars remain constant** (FY2024 benchmark for all periods)
-  - Subtitle updates dynamically: "Target: [Selected Period] vs Peers: FY2024 Benchmark"
-- **Formula**: CCC = DSI + DSO - DPO (lower is better, negative indicates collecting cash before paying suppliers)
-- **Components**: 4 bars per company (DSI, DSO, DPO, CCC)
-- **Color Scheme**:
-  - DSI (Days in Inventory): Red (#e74c3c)
-  - DSO (Days to Collect): Orange (#f39c12)
-  - DPO (Days to Pay Suppliers): Blue (#3498db)
-  - CCC (Total Cycle): Green (#27ae60), thicker border (width=2)
-  - Target: Full saturation (opacity=1.0), Peers: 70% opacity (0.7)
-- **Data Sources**:
-  - **Target data**: Extracted from `output/target_timeseries.json` (all periods with complete CCC)
-  - **Peer data**: Manually curated in `data/peer_comparison_data.json` (requires external sourcing from peer 10-K filings)
-  - Helper functions:
-    - `_get_all_ccc_data(data)` - Extracts ALL Target CCC periods (sorted chronologically)
-    - `_get_latest_ccc_data(data)` - Extracts Target's most recent CCC (used by other functions)
-    - `_load_peer_comparison_data()` - Reads peer comparison JSON file
-- **Peer Data Structure** (data/peer_comparison_data.json):
-  ```json
-  {
-    "cash_conversion_cycle": {
-      "last_updated": "2024-01-31",
-      "fiscal_year": 2024,
-      "companies": {
-        "Walmart": {"dsi": 43.0, "dso": 4.2, "dpo": 48.5, "ccc": -1.3},
-        "Costco": {"dsi": 30.5, "dso": 4.8, "dpo": 35.0, "ccc": 0.3},
-        "Amazon": {"dsi": 38.2, "dso": 20.1, "dpo": 75.8, "ccc": -17.5},
-        "Kroger": {"dsi": 28.7, "dso": 3.9, "dpo": 31.2, "ccc": 1.4}
-      }
-    }
-  }
-  ```
-- **Features**:
-  - Reference line at 60 days (retail industry benchmark for healthy CCC)
-  - Reference line at 0 days (for context, shows negative CCC values possible)
-  - Grouped bars (barmode='group') with 4 bars per company
-  - Text labels on bars showing exact values (e.g., "74.9", "3.5")
-  - Hover tooltips show company name and metric value
-  - **Legend persistence**: Uses `'legendonly'` visibility state for legend-defining traces to keep legend visible when toggling periods
-  - Legend at bottom (horizontal orientation)
-  - Responsive design with proper margins (l=80px, r=100px, t=100px, b=120px)
-  - Width: 1000px, Height: 600px
-  - Y-axis range: [-70, 175] to accommodate Amazon DPO (159.9) and CCC (-51.6) with text label padding
-- **Companion Data Table**: `output/ccc_data_table.html`
-  - Standalone HTML table showing 5-year CCC data for Target and all peers
-  - Info icon with modal popup explaining CCC formula (DSI + DSO - DPO)
-  - Color-coded CCC values: green (negative/efficient), red (positive)
-  - Data sourced from `peer_comparison_data.json`
-- **Business Insights**:
-  - **Answers**: "How has Target's Cash Conversion Cycle position improved or worsened vs retail industry peers over the past 5 years?"
-  - **Trend Analysis**: See if Target's CCC improving (decreasing) or worsening (increasing) over time
-  - **Component Evolution**: Identify if DSI, DSO, or DPO driving changes in competitive position
-  - **Competitive Positioning**: Track Target's position vs static industry benchmark
-  - **Target's Current Position**: CCC ~1.9 days (FY2024) positions Target competitive among retail peers
-  - **Best-in-Class**: Amazon (-17.5 days) and Walmart (-1.3 days) have negative CCCs = collect cash before paying suppliers
-  - **Component Comparison** (using FY2024 data):
-    - **DSI**: Target's 60.8 days vs peers (28-43 days) → improvement opportunity in inventory turns
-    - **DSO**: Target's 3.4 days competitive (3.9-4.8 days) → mostly credit card sales, efficient collection
-    - **DPO**: Target's 62.3 days strong (31-76 days) → good supplier payment terms
-  - **Negative CCC Insight**: Negative values indicate working capital as financing source, not use of cash
-  - **Static Peer Comparison Rationale**: Peer data represents current industry standard (FY2024), shows Target's evolution relative to today's competitive benchmark
-- **Implementation Details** (visualize_data.py):
-  - Location: lines 2298-2626
-  - Helper functions:
-    - `_get_all_ccc_data(data)` (lines 2298-2342): Extracts ALL Target CCC periods with complete data
-    - `_get_latest_ccc_data(data)` (lines 2345-2357): Extracts Target's most recent CCC (wrapper around _get_all_ccc_data)
-    - `_load_peer_comparison_data()` (lines 2269-2295): Loads peer CCC data from JSON file
-  - Main chart function: `create_cash_conversion_cycle_chart(data)` (lines 2360-2626)
-  - **Dropdown Implementation**:
-    - Total traces: 5 periods × 5 companies × 4 bars = 100 traces
-    - Visibility control: Only traces for selected period visible
-    - Button configuration: Most recent period first (reverse iteration)
-    - Title updates dynamically when switching periods
-  - Returns Plotly Figure object with grouped bars and dropdown menu
-- **Replaced Implementation** (2026-01-25):
-  - Previous: Multi-line trend chart showing Target's CCC evolution over time
-  - Current: Grouped bar chart comparing Target vs 4 retail peers
-  - Change reason: User requested peer comparison to assess competitive position
-  - Deprecated function: `_create_cash_conversion_cycle_trend_DEPRECATED()` kept for reference
-  - Data availability constraint: Target receivables only in 10-K (22.7% coverage overall)
-- **Key Design Decisions**:
-  1. **Intelligent detection**: Makes tool reusable across companies with different reporting practices
-  2. **8-quarter threshold**: Ensures minimum 2 years of data for meaningful quarterly analysis
-  3. **Graceful fallback**: Always works even if receivables sparse (uses annual data)
-  4. **Console transparency**: Clear messages show which data source selected and why
-  5. **Chart subtitle**: Dynamic subtitle shows data frequency (Quarterly/Annual) and period range
-  6. **Q4 calculation**: Uses year-end balance sheet + annual income statement for consistency with 365-day formulas
-
-### Chart 21: Operating Cash Flow vs Capital Expenditures (Pillar 4)
-- **Type**: Combo chart (bars + lines) with single y-axis
-- **Purpose**: Show the relationship between OCF and CapEx, with the gap representing Free Cash Flow
-- **File**: `chart_ocf_vs_capex.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods
-- **Elements**:
-  - Green bars: Operating Cash Flow
-  - Red line with markers: Capital Expenditures
-  - Blue line with diamond markers: Free Cash Flow
-- **CRITICAL: YTD to Standalone Conversion**:
-  - 10-Q cash flow values are cumulative YTD, NOT standalone quarters
-  - Chart converts to standalone quarterly values:
-    - Q1 = Q1 YTD (as-is)
-    - Q2 = Q2 YTD - Q1 YTD
-    - Q3 = Q3 YTD - Q2 YTD
-    - Q4 = Annual - Q3 YTD
-  - Verified: Q1+Q2+Q3+Q4 = Annual for all fiscal years
-- **Features**:
-  - Single y-axis for all metrics ($ Billions)
-  - Text labels on all data points showing $ values
-  - Zero reference line
-  - Q4 data calculated from annual 10-K reports
-  - Hover tooltips with unified x-axis mode
-- **Key Insight**: The gap between OCF bars and CapEx line represents Free Cash Flow
-- **Business Insights**:
-  - Answers "Is Target generating enough operating cash to fund its capital investments?"
-  - Q3 2022 shows -$2.87B OCF (inventory crisis quarter)
-  - Q4 periods typically strong cash generation ($3.29B - $3.47B)
-  - Typical Target quarterly FCF: -$4.67B to +$2.44B
-- **Implementation**: `visualize_data.py` function `create_ocf_vs_capex_chart()`
-
-### Chart 22: Cash Flow Sankey Diagram (Pillar 4)
-- **Type**: Plotly Sankey diagram with dropdown menu for quarter selection
-- **Purpose**: Visualize where cash flows from Operating Cash Flow to various uses (the "three engines")
-- **File**: `chart_cash_flow_sankey.html`
-- **Data**: 15 quarters (Q1 2022 - Q3 2025) including calculated Q4 periods
-- **Dropdown Menu**: Switch between quarters (most recent first)
-- **Nodes** (7 total):
-  1. **Operating Cash Flow** (source) - Green, shows total OCF
-  2. **Free Cash Flow** (intermediate) - Blue, OCF minus CapEx
-  3. **Capital Expenditures** - Red, reinvestment in business
-  4. **Dividends** - Purple, shareholder returns
-  5. **Stock Buybacks** - Orange, shareholder returns
-  6. **Debt Repayment** - Yellow, deleveraging
-  7. **Retained Cash** - Light Green, remaining cash
-- **Flows**:
-  - OCF → CapEx (reinvestment)
-  - OCF → FCF (remaining after CapEx)
-  - FCF → Dividends, Buybacks, Debt Repayment, Retained
-- **Features**:
-  - Interactive flow highlighting on hover
-  - Color-coded flows matching destination node colors
-  - Dollar values displayed in node labels
-  - Dropdown updates all node values and flows
-  - Title updates dynamically with selected quarter
-  - Q4 data calculated from annual 10-K (Q4 = Annual - Q1 - Q2 - Q3)
-- **GAAP Tags Used**:
-  - `us-gaap:PaymentsToAcquirePropertyPlantAndEquipment`: CapEx
-  - `us-gaap:PaymentsOfDividendsCommonStock`: Dividends
-  - `us-gaap:PaymentsForRepurchaseOfCommonStock`: Stock buybacks
-  - `us-gaap:RepaymentsOfLongTermDebt`: Debt repayment
-- **Business Insights**:
-  - Answers "Where does Target's cash go?"
-  - Shows cash allocation priorities (reinvestment vs shareholder returns)
-  - Q3 2025: OCF $3.48B → CapEx $0.64B → FCF $2.84B (example latest quarter)
-  - Visualizes capital allocation strategy quarter-over-quarter
-  - Reveals seasonal patterns in cash usage (Q4 typically higher CapEx)
-- **Implementation**: `visualize_data.py` function `create_cash_flow_sankey()`
-
-### Chart 23: Valuation vs Growth Scatter with Quarterly Dropdown (Pillar 5)
-- **Type**: Plotly Scatter chart with dropdown menu for quarter selection
-- **Purpose**: Track how Target and peers' valuation positions have evolved over time
-- **File**: `chart_valuation_scatter.html`
-- **Data**: 11 quarters (Q1 2023 - Q3 2025) including calculated Q4 periods
-- **Companies**: Target (TGT), Walmart (WMT), Costco (COST), Amazon (AMZN), Kroger (KR)
-- **Dropdown Menu**: Switch between 11 quarterly views (most recent first)
-- **Axes**:
-  - X-axis: Revenue Growth YoY (%)
-  - Y-axis: P/E Ratio (historical for selected quarter)
-- **Historical P/E Calculation**:
-  - **Target**: Calculated from SEC TTM net income + Yahoo Finance stock prices
-    - TTM EPS = (Q1 + Q2 + Q3 + Q4 Net Income) / Shares Outstanding
-    - P/E = Stock Price at Quarter End / TTM EPS
-  - **Peers**: Price-ratio scaled approximation
-    - Historical P/E ≈ Current P/E × (Historical Price / Current Price)
-    - Assumes EPS relatively stable over 2-3 year period
-- **Q4 Data Calculation**:
-  - Q4 not in 10-Q filings, calculated from annual 10-K
-  - Q4 Revenue = FY Revenue - Q1 - Q2 - Q3
-  - Q4 Revenue Growth = (Q4 Current / Q4 Prior - 1) × 100
-  - Q4 TTM Net Income = Full fiscal year net income from 10-K
-  - Q4 Quarter End Date = January of next calendar year (e.g., Q4 2024 → 2025-01-31)
-- **Quadrant Labels**:
-  - Upper-left: "Overvalued Zone" (high P/E, low growth)
-  - Lower-right: "Undervalued Zone" (low P/E, high growth)
-- **Reference Lines**:
-  - Horizontal dashed gray: Average P/E across peers
-  - Vertical dashed gray: Average Revenue Growth
-- **Features**:
-  - **Legend persistence**: All traces have `showlegend=True` with `legendgroup` to prevent duplicates
-    - Critical: Without `showlegend=True` on all traces, legend disappears when switching quarters
-    - `legendgroup` ensures only one legend entry per company despite multiple traces
-  - Target marker larger (size=25) with star symbol, highlighted in red
-  - Peer markers smaller (size=15) with distinct colors
-  - Hover tooltips show period, P/E, growth, stock price, TTM EPS
-  - All 5 companies move positions when switching quarters
-  - Title updates dynamically with selected quarter
-  - Dropdown args include explicit legend config for persistence
-- **Color Scheme**:
-  - Target: Red (#e74c3c)
-  - Walmart: Blue (#3498db)
-  - Costco: Purple (#9b59b6)
-  - Amazon: Teal (#1abc9c)
-  - Kroger: Orange (#f39c12)
-- **Helper Functions**:
-  - `_get_quarterly_valuation_data(data)`: Extracts quarterly data and calculates Q4 periods
-  - `_get_ttm_quarters(quarter, fiscal_year)`: Returns 4 quarters for TTM calculation
-- **MarketDataFetcher Methods**:
-  - `get_historical_pe_for_quarters(quarters_data)`: Calculates Target historical P/E from SEC data
-  - `get_historical_pe_for_ticker(ticker, dates)`: Calculates peer historical P/E via price scaling
-  - `get_quarter_end_price(ticker, date)`: Gets stock price for specific date
-- **Business Insights**:
-  - Answers "How has Target's valuation position evolved over time?"
-  - Track if Target is becoming more/less attractive vs peers
-  - See how market valued companies at different points in time
-  - Compare current positioning to historical positioning
-- **Implementation**: `visualize_data.py` function `create_valuation_vs_growth_scatter()`
-
-### Chart 24: Historical P/E Band Area Chart with Dynamic Percentile Bands (Pillar 5)
-- **Type**: Plotly area chart with price line overlay and dynamic valuation bands
-- **Purpose**: Show if current valuation is above or below historical norms using data-driven percentile bands
-- **File**: `chart_pe_band.html`
-- **Data**:
-  - 5-year historical prices from Yahoo Finance (~750 trading days)
-  - TTM EPS calculated from SEC quarterly filings
-  - P/E calculated for each trading day (Price / TTM EPS)
-- **Dynamic P/E Band Calculation**:
-  - Calculates P/E ratio for each trading day over 5-year period
-  - Bands based on statistical percentiles of Target's actual P/E distribution:
-    - 10th percentile: ~10.5x (historically very cheap)
-    - 25th percentile: ~11.9x (undervalued threshold)
-    - 50th percentile: ~14.9x (median/historical average)
-    - 75th percentile: ~16.6x (overvalued threshold)
-    - 90th percentile: ~23.4x (historically very expensive)
-  - Bands curve as TTM EPS changes over time (not flat horizontal lines)
-- **Valuation Zones** (stacked areas):
-  - Dark green: Below 25th percentile (historically undervalued)
-  - Light green: 25th-50th percentile (fair value - low)
-  - Yellow: 50th-75th percentile (fair value - high)
-  - Red: Above 75th percentile (historically overvalued)
-- **Elements**:
-  - Stock price line (dark, 2.5px width) on top of zones
-  - Median P/E reference line (dashed)
-  - Current valuation annotation with:
-    - Current price
-    - Current P/E ratio
-    - Percentile rank (e.g., "29th percentile")
-    - Valuation status (Undervalued/Fair Value Low/Fair Value High/Overvalued)
-- **Helper Function**: `_calculate_historical_pe_series(data, fetcher)`
-  - Builds quarterly TTM EPS lookup from SEC data
-  - Uses ~460M shares outstanding for Target
-  - For each trading day, finds most recent quarterly TTM EPS
-  - Returns DataFrame with Date, Close, TTM_EPS, PE_Ratio columns
-- **Features**:
-  - 5-year time range for historical context
-  - Bands adjust dynamically as earnings grow/shrink over time
-  - Current position annotation shows percentile rank
-  - Interactive hover showing price on each trading day
-  - Color-coded valuation status in annotation border
-- **Business Insights**:
-  - Answers "Is Target's current valuation high or low vs its OWN history?"
-  - Data-driven: Uses actual P/E distribution, not arbitrary fixed bands
-  - Bands curve with earnings: Shows true buying opportunities accounting for EPS growth
-  - Current position: e.g., "P/E 12.7x at 29th percentile = Fair Value (Low)"
-  - Time context: See where price touched each valuation zone historically
-- **Implementation**: `visualize_data.py` functions:
-  - `_calculate_historical_pe_series()` (helper)
-  - `create_pe_band_area_chart()` (main chart)
+**Notes**:
+- Charts with "dropdown" have quarter/period selectors
+- All charts display 15 quarters (Q1 2022 - Q3 2025) with calculated Q4
+- PowerPoint has static PNG images; click "📊 Click for interactive version" for full HTML
 
 ## Key Learnings
 
-### XBRL Parsing Best Practices
-
-1. **Always use direct tag extraction** over table parsing:
-   - Tables structures vary across filings
-   - XBRL tags are standardized by US-GAAP
-   - More reliable and maintainable
-
-2. **Handle scale attributes properly**:
-   - `scale="6"` means multiply by 10^6 (millions)
-   - Always check scale before assuming unit
-
-3. **Company-specific tags exist**:
-   - Target uses `RevenueFromContractWithCustomerExcludingAssessedTax`
-   - Not all companies use generic `Revenues` tag
-   - Always inspect actual filings first
+### XBRL Parsing
+- **Always use direct tag extraction** over table parsing (tables vary, XBRL tags are standardized)
+- Handle `scale` attribute: `scale="6"` = multiply by 10^6
+- Company-specific tags exist (Target uses `RevenueFromContractWithCustomerExcludingAssessedTax`)
+- Legacy filings (FY2015-2018) use raw XML format without `<ix:nonfraction>` wrapper
 
 ### Data Quality
-
-- **Quarterly debt data is sparse**: Don't expect full debt metrics in every 10-Q
-- **Inventory turnover is quarterly**: Annual formula / 4 != quarterly ratio
-- **Risk mentions are noisy**: "promotional" can be positive or negative context
-- **Q4 Operating Cash Flow can be negative**: When calculated as Annual - (Q1+Q2+Q3), if quarterly filings report cumulative cash flows that exceed the annual total, Q4 will be negative
-  - Example: FY2023 Annual OCF = $8.62B, but Q1-Q3 cumulative = $10.00B → Q4 = -$1.37B
-  - This affects Cash Conversion Ratio calculations (Operating CF / Net Income × 100), producing negative ratios
-  - Chart Y-axis must accommodate negative values: Earnings Quality chart uses range [-150%, 650%]
+- Quarterly debt data is sparse (10-K has full info)
+- Q4 Operating Cash Flow can be negative when calculated from annual - cumulative
+- Risk mentions are noisy ("promotional" can be positive or negative)
 
 ### Performance
-
-- Parsing 17 filings takes ~30-60 seconds
-- Most time spent in BeautifulSoup HTML parsing
-- XBRL extraction is fast once HTML is parsed
+- Parsing 17 filings: ~30-60 seconds
+- Most time in BeautifulSoup HTML parsing
 
 ## Contact & Support
 
-For issues or questions:
-- File GitHub issue at: https://github.com/anthropics/claude-code/issues
-- Reference this documentation when asking AI assistants for help
+- GitHub issues: https://github.com/anthropics/claude-code/issues
 - Include `output/target_analysis.json` snippet when reporting data issues
 
 ## License
