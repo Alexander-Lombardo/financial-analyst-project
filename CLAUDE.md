@@ -498,9 +498,13 @@ self.risk_heatmap = {
   - Investment Thesis (with recommendation)
   - Margin Bridge Analysis (with summary)
   - Risk Heatmap (with stats table)
+- `create_presentation.py` - Interactive hyperlinks:
+  - Each chart slide has "📊 Click for interactive version" link
+  - Clicking opens HTML file in browser for full interactivity
+  - Enables access to dropdowns, hover tooltips, zoom features
 
 **Phase 4 Success Criteria** (all met ✅):
-1. ✅ Margin bridge waterfall chart shows FY2022 → Q3 2025 evolution
+1. ✅ Margin bridge waterfall chart shows Q1 2022 → Q3 2025 quarterly evolution (with calculated Q4)
 2. ✅ Investment thesis auto-generated with Buy/Hold/Sell rating
 3. ✅ Risk heatmap visualizations created (2 charts)
 4. ✅ Executive insights extracted (inflection points, trends, warnings)
@@ -1193,6 +1197,8 @@ open output/chart_cash_flow_sankey.html   # Pillar 4
 open output/chart_valuation_scatter.html  # Pillar 5
 open output/chart_pe_band.html            # Pillar 5
 open output/Target_Financial_Analysis.pptx
+# Note: PowerPoint has static PNG images. Click "📊 Click for interactive version"
+# link on any chart slide to open HTML with dropdowns, hover, and zoom features.
 ```
 
 ### Comprehensive Verification (Phase 3)
@@ -1461,9 +1467,14 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
 
 ### Chart 8: Margin Bridge Waterfall (Phase 4)
 - **Type**: Waterfall chart
-- **Purpose**: Show margin evolution from FY2022 to Q3 2025
+- **Purpose**: Show operating margin evolution with quarterly changes
 - **File**: `chart_margin_bridge.html`
-- **Data**: Multi-year trend with key inflection points
+- **Data**: 15 quarters (Q1 2022 - Q3 2025) with calculated Q4
+- **Q4 Calculation**: Q4 operating margin calculated from annual 10-K data
+  - Q4 Revenue = Annual - (Q1 + Q2 + Q3)
+  - Q4 Operating Income = Annual - (Q1 + Q2 + Q3)
+  - Q4 Margin = Q4 Operating Income / Q4 Revenue × 100
+- **Note**: FY periods excluded to show pure quarterly progression
 
 ### Chart 9: Risk Trends (Phase 4)
 - **Type**: Stacked area chart
