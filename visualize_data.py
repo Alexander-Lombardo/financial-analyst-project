@@ -1478,52 +1478,107 @@ def create_ebitda_bridge_waterfall(data):
 
 
 def create_margin_bridge_waterfall(data):
-    """Chart 6: Operating Margin Bridge (FY2022 → Q3 2025)
+    """Chart 6: Operating Margin Bridge (Q1 2022 → Q3 2025)
 
-    Waterfall chart showing operating margin evolution from FY2022 baseline
-    through Q3 2025, with quarterly changes.
+    Waterfall chart showing operating margin evolution with quarterly data only.
+    Q4 values are calculated from annual 10-K reports (Q4 = Annual - Q1 - Q2 - Q3).
     """
-    periods = [p['period'] for p in data['periods']]
+    periods = data['periods']
+    revenue = data['metrics']['revenue']['net_sales_billion']
     margins = data['metrics']['margins']['operating_margin_percent']
 
-    # Get FY2022 onwards (find the index)
-    fy2022_idx = None
-    for i, p in enumerate(data['periods']):
-        if p['period'] == 'FY2022':
-            fy2022_idx = i
-            break
+    # Calculate operating income from margin and revenue
+    # Operating Income = Revenue × (Operating Margin % / 100)
+    operating_income = []
+    for i in range(len(revenue)):
+        if revenue[i] and margins[i]:
+            oi = revenue[i] * (margins[i] / 100)
+            operating_income.append(round(oi, 3))
+        else:
+            operating_income.append(None)
 
-    if fy2022_idx is None:
-        print("⚠️  Warning: FY2022 not found, using first period as baseline")
-        fy2022_idx = 0
+    # Step 1: Collect quarterly data from 10-Q filings (FY2022 onwards)
+    quarterly_data = []
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-Q' and period['fiscal_year'] >= 2022:
+            rev = revenue[i]
+            oi = operating_income[i]
+            if rev and oi:
+                margin = (oi / rev) * 100
+                quarterly_data.append({
+                    'period': period['period'],
+                    'fiscal_year': period['fiscal_year'],
+                    'fiscal_quarter': period['fiscal_quarter'],
+                    'revenue': rev,
+                    'operating_income': oi,
+                    'operating_margin': round(margin, 2)
+                })
 
-    # Extract periods and margins from FY2022 onwards
-    relevant_periods = periods[fy2022_idx:]
-    relevant_margins = margins[fy2022_idx:]
+    # Step 2: Calculate Q4 from annual 10-K reports (Q4 = Annual - Q1 - Q2 - Q3)
+    for i, period in enumerate(periods):
+        if period['filing_type'] == '10-K' and period['fiscal_year'] >= 2022:
+            fy = period['fiscal_year']
+            annual_rev = revenue[i]
+            annual_oi = operating_income[i]
 
-    # Build waterfall data
+            # Find Q1, Q2, Q3 for this fiscal year
+            q1 = q2 = q3 = None
+            for q in quarterly_data:
+                if q['fiscal_year'] == fy:
+                    if q['fiscal_quarter'] == 1:
+                        q1 = q
+                    elif q['fiscal_quarter'] == 2:
+                        q2 = q
+                    elif q['fiscal_quarter'] == 3:
+                        q3 = q
+
+            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
+            if all([q1, q2, q3, annual_rev, annual_oi]):
+                q4_rev = annual_rev - (q1['revenue'] + q2['revenue'] + q3['revenue'])
+                q4_oi = annual_oi - (q1['operating_income'] + q2['operating_income'] + q3['operating_income'])
+                if q4_rev > 0:
+                    q4_margin = (q4_oi / q4_rev) * 100
+                    quarterly_data.append({
+                        'period': f'Q4 {fy}',
+                        'fiscal_year': fy,
+                        'fiscal_quarter': 4,
+                        'revenue': q4_rev,
+                        'operating_income': q4_oi,
+                        'operating_margin': round(q4_margin, 2)
+                    })
+
+    # Step 3: Sort chronologically by fiscal year and quarter
+    quarterly_data.sort(key=lambda x: (x['fiscal_year'], x['fiscal_quarter']))
+
+    if not quarterly_data:
+        print("⚠️  Warning: No quarterly margin data found")
+        return None
+
+    # Step 4: Build waterfall data
     measure_types = []
     x_labels = []
     y_values = []
 
-    # Starting point
+    # Starting point (first quarter)
+    first_q = quarterly_data[0]
     measure_types.append('absolute')
-    x_labels.append('FY2022 Baseline')
-    y_values.append(relevant_margins[0] if relevant_margins[0] is not None else 0)
+    x_labels.append(f"{first_q['period']} Baseline")
+    y_values.append(first_q['operating_margin'])
 
     # Quarterly deltas
-    for i in range(1, len(relevant_margins)):
-        if relevant_margins[i] is not None and relevant_margins[i-1] is not None:
-            delta = relevant_margins[i] - relevant_margins[i-1]
-            measure_types.append('relative')
-            x_labels.append(relevant_periods[i])
-            y_values.append(delta)
+    for i in range(1, len(quarterly_data)):
+        current = quarterly_data[i]
+        previous = quarterly_data[i-1]
+        delta = current['operating_margin'] - previous['operating_margin']
+        measure_types.append('relative')
+        x_labels.append(current['period'])
+        y_values.append(round(delta, 2))
 
-    # Ending point (total)
+    # Ending point (total) - shows current margin level
+    last_q = quarterly_data[-1]
     measure_types.append('total')
-    x_labels.append('Q3 2025 Current')
-    latest_margin = [m for m in relevant_margins if m is not None][-1]
-    y_values.append(latest_margin)
+    x_labels.append(f"{last_q['period']} Current")
+    y_values.append(last_q['operating_margin'])
 
     fig = go.Figure(go.Waterfall(
         name="Operating Margin",
@@ -1535,11 +1590,11 @@ def create_margin_bridge_waterfall(data):
         connector={"line": {"color": "rgb(63, 63, 63)"}},
         decreasing={"marker": {"color": "red"}},
         increasing={"marker": {"color": "green"}},
-        totals={"marker": {"color": "blue"}}
+        totals={"marker": {"color": "purple"}}
     ))
 
     fig.update_layout(
-        title="Target: Operating Margin Bridge (FY2022-Q3 2025)",
+        title="Target: Operating Margin Bridge (Q1 2022 - Q3 2025)<br><sub>Quarterly changes with calculated Q4</sub>",
         xaxis_title="Period",
         yaxis_title="Operating Margin %",
         showlegend=False,

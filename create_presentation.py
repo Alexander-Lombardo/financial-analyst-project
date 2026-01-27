@@ -356,7 +356,7 @@ def add_chart_slide(prs, title, chart_file, description):
         )
 
         # Description (bottom)
-        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.5))
+        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.0))
         desc_frame = desc_box.text_frame
         desc_frame.word_wrap = True
 
@@ -364,6 +364,18 @@ def add_chart_slide(prs, title, chart_file, description):
         p.text = description
         p.font.size = Pt(12)
         p.font.color.rgb = RGBColor(100, 100, 100)
+
+        # Add hyperlink to interactive HTML version
+        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.6), Inches(9), Inches(0.4))
+        link_frame = link_box.text_frame
+        p = link_frame.paragraphs[0]
+        run = p.add_run()
+        run.text = "📊 Click for interactive version"
+        run.font.size = Pt(11)
+        run.font.color.rgb = RGBColor(0, 102, 204)  # Blue link color
+        run.font.underline = True
+        chart_path = Path(f"output/{chart_file}").resolve()
+        run.hyperlink.address = str(chart_path)
     else:
         # Fallback: show description and hyperlink if image not found
         desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(1.5))
