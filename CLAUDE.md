@@ -1838,30 +1838,56 @@ All 20 interactive Plotly charts created by `visualize_data.py`:
   - Compare current positioning to historical positioning
 - **Implementation**: `visualize_data.py` function `create_valuation_vs_growth_scatter()`
 
-### Chart 24: Historical P/E Band Area Chart (Pillar 5)
-- **Type**: Plotly area chart with price line overlay
-- **Purpose**: Show if current valuation is above or below historical norms
+### Chart 24: Historical P/E Band Area Chart with Dynamic Percentile Bands (Pillar 5)
+- **Type**: Plotly area chart with price line overlay and dynamic valuation bands
+- **Purpose**: Show if current valuation is above or below historical norms using data-driven percentile bands
 - **File**: `chart_pe_band.html`
-- **Data**: 5-year historical prices from Yahoo Finance + SEC EPS data
+- **Data**:
+  - 5-year historical prices from Yahoo Finance (~750 trading days)
+  - TTM EPS calculated from SEC quarterly filings
+  - P/E calculated for each trading day (Price / TTM EPS)
+- **Dynamic P/E Band Calculation**:
+  - Calculates P/E ratio for each trading day over 5-year period
+  - Bands based on statistical percentiles of Target's actual P/E distribution:
+    - 10th percentile: ~10.5x (historically very cheap)
+    - 25th percentile: ~11.9x (undervalued threshold)
+    - 50th percentile: ~14.9x (median/historical average)
+    - 75th percentile: ~16.6x (overvalued threshold)
+    - 90th percentile: ~23.4x (historically very expensive)
+  - Bands curve as TTM EPS changes over time (not flat horizontal lines)
+- **Valuation Zones** (stacked areas):
+  - Dark green: Below 25th percentile (historically undervalued)
+  - Light green: 25th-50th percentile (fair value - low)
+  - Yellow: 50th-75th percentile (fair value - high)
+  - Red: Above 75th percentile (historically overvalued)
 - **Elements**:
-  - Stock price line (primary y-axis)
-  - P/E valuation bands (shaded areas):
-    - Green zone: P/E < 12 (historically undervalued)
-    - Yellow zone: P/E 12-18 (fair value range)
-    - Red zone: P/E > 18 (historically overvalued)
-  - Current price marker with P/E annotation
+  - Stock price line (dark, 2.5px width) on top of zones
+  - Median P/E reference line (dashed)
+  - Current valuation annotation with:
+    - Current price
+    - Current P/E ratio
+    - Percentile rank (e.g., "29th percentile")
+    - Valuation status (Undervalued/Fair Value Low/Fair Value High/Overvalued)
+- **Helper Function**: `_calculate_historical_pe_series(data, fetcher)`
+  - Builds quarterly TTM EPS lookup from SEC data
+  - Uses ~460M shares outstanding for Target
+  - For each trading day, finds most recent quarterly TTM EPS
+  - Returns DataFrame with Date, Close, TTM_EPS, PE_Ratio columns
 - **Features**:
   - 5-year time range for historical context
-  - EPS calculated from SEC Net Income / Shares Outstanding
-  - P/E bands based on Target's historical valuation range
-  - Interactive hover showing price and implied P/E
-  - Zone labels indicating valuation status
+  - Bands adjust dynamically as earnings grow/shrink over time
+  - Current position annotation shows percentile rank
+  - Interactive hover showing price on each trading day
+  - Color-coded valuation status in annotation border
 - **Business Insights**:
-  - Answers "Is Target's current valuation high or low vs history?"
-  - Green band periods = historical buying opportunities
-  - Red band periods = historically expensive
-  - Current position shows relative valuation assessment
-- **Implementation**: `visualize_data.py` function `create_pe_band_area_chart()`
+  - Answers "Is Target's current valuation high or low vs its OWN history?"
+  - Data-driven: Uses actual P/E distribution, not arbitrary fixed bands
+  - Bands curve with earnings: Shows true buying opportunities accounting for EPS growth
+  - Current position: e.g., "P/E 12.7x at 29th percentile = Fair Value (Low)"
+  - Time context: See where price touched each valuation zone historically
+- **Implementation**: `visualize_data.py` functions:
+  - `_calculate_historical_pe_series()` (helper)
+  - `create_pe_band_area_chart()` (main chart)
 
 ## Key Learnings
 

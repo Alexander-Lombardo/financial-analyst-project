@@ -3774,12 +3774,104 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     return fig
 
 
+def _calculate_historical_pe_series(data, fetcher):
+    """
+    Calculate P/E ratio for each trading day over 5-year period.
+
+    Uses SEC quarterly filings for TTM EPS and Yahoo Finance for daily prices.
+    For each trading day, finds the most recent quarterly TTM EPS and calculates P/E.
+
+    Args:
+        data: Time-series data from target_timeseries.json
+        fetcher: MarketDataFetcher instance
+
+    Returns:
+        DataFrame with columns: Date, Close, TTM_EPS, PE_Ratio
+        Returns None if insufficient data
+    """
+    import pandas as pd
+    import numpy as np
+
+    # Get 5-year price history
+    history = fetcher.get_historical_prices('TGT', '5y')
+    if history.empty:
+        return None
+
+    # Get quarterly data with TTM net income from SEC filings
+    quarterly_data = _get_quarterly_valuation_data(data)
+    if not quarterly_data:
+        return None
+
+    # Build quarterly TTM EPS lookup from SEC data
+    # Shares outstanding approximation (~460M shares for Target)
+    shares_outstanding = 460_000_000
+
+    eps_lookup = {}  # date string -> TTM EPS
+    for q in quarterly_data:
+        ttm_ni = q['ttm_net_income_billion'] * 1_000_000_000  # Convert to dollars
+        ttm_eps = ttm_ni / shares_outstanding
+        eps_lookup[q['quarter_end_date']] = ttm_eps
+
+    if not eps_lookup:
+        return None
+
+    # Sort quarter end dates chronologically
+    sorted_quarters = sorted(eps_lookup.keys())
+
+    # For each trading day, find applicable TTM EPS (most recent quarter end)
+    results = []
+
+    for idx in range(len(history)):
+        row = history.iloc[idx]
+        # Handle both index-based and column-based date
+        if 'Date' in history.columns:
+            date = pd.to_datetime(row['Date'])
+        else:
+            date = history.index[idx]
+            if not isinstance(date, pd.Timestamp):
+                date = pd.to_datetime(date)
+
+        price = row['Close']
+
+        # Find most recent quarter end date before this trading day
+        applicable_eps = None
+        for q_date in sorted_quarters:
+            q_datetime = pd.to_datetime(q_date)
+            # Make both timezone-naive for comparison
+            if q_datetime.tzinfo is not None:
+                q_datetime = q_datetime.tz_localize(None)
+            if date.tzinfo is not None:
+                date_compare = date.tz_localize(None)
+            else:
+                date_compare = date
+
+            if q_datetime <= date_compare:
+                applicable_eps = eps_lookup[q_date]
+
+        if applicable_eps and applicable_eps > 0:
+            pe_ratio = price / applicable_eps
+            results.append({
+                'Date': date,
+                'Close': price,
+                'TTM_EPS': applicable_eps,
+                'PE_Ratio': pe_ratio
+            })
+
+    if not results:
+        return None
+
+    return pd.DataFrame(results)
+
+
 def create_pe_band_area_chart(data, market_data=None):
     """
-    Chart 24: Historical P/E Band Area Chart
+    Chart 24: Historical P/E Band Area Chart with Dynamic Percentile Bands
 
-    Shows Target's stock price over time with valuation bands
-    to indicate if it's trading above/below historical averages.
+    Shows Target's stock price over time overlaid with valuation bands based on
+    Target's actual historical P/E distribution. Bands curve as earnings change.
+
+    The valuation bands are calculated from percentiles of Target's historical
+    P/E ratios, providing data-driven context for current valuation.
 
     Args:
         data: Time-series data from target_timeseries.json
@@ -3790,161 +3882,174 @@ def create_pe_band_area_chart(data, market_data=None):
     """
     import plotly.graph_objects as go
     from market_data_fetcher import MarketDataFetcher
+    from scipy import stats
     import pandas as pd
+    import numpy as np
 
     # Fetch market data if not provided
     try:
         fetcher = MarketDataFetcher()
-        history = fetcher.get_historical_prices('TGT', '5y')
-        metrics = fetcher.get_valuation_metrics()
     except Exception as e:
-        print(f"⚠️ Warning: Could not fetch market data: {e}")
+        print(f"⚠️ Warning: Could not initialize MarketDataFetcher: {e}")
         print("   Skipping Chart 24 (requires Yahoo Finance API)")
         return None
 
-    if history.empty:
-        print("⚠️ Warning: No historical price data for Chart 24")
+    # Calculate historical P/E series using SEC data and Yahoo Finance prices
+    pe_df = _calculate_historical_pe_series(data, fetcher)
+
+    if pe_df is None or pe_df.empty:
+        print("⚠️ Warning: Could not calculate historical P/E series for Chart 24")
         return None
 
-    # Get Target's trailing twelve months EPS from SEC data
-    # Use most recent annual net income / shares outstanding approximation
-    # For simplicity, use yfinance EPS or calculate from P/E and price
-    target_data = metrics.get('TGT', {})
-    current_pe = target_data.get('pe_ratio', 15)
-    current_price = target_data.get('price', 100)
+    # Calculate percentile thresholds from the P/E distribution
+    pe_values = pe_df['PE_Ratio'].dropna()
 
-    # Estimate EPS
-    if current_pe and current_price:
-        eps_estimate = current_price / current_pe
-    else:
-        eps_estimate = 8.0  # Fallback estimate for Target
+    if len(pe_values) < 50:  # Need reasonable sample size
+        print(f"⚠️ Warning: Insufficient P/E data points ({len(pe_values)}) for Chart 24")
+        return None
 
-    # Calculate theoretical price levels for P/E bands
-    # Using estimated EPS to create valuation zones
-    pe_bands = {
-        'undervalued': 10,  # P/E < 10
-        'fair_low': 15,     # P/E 10-15
-        'fair_high': 20,    # P/E 15-20
-        'overvalued': 25    # P/E > 20
+    bands = {
+        'p10': np.percentile(pe_values, 10),   # Historically cheap
+        'p25': np.percentile(pe_values, 25),   # Fair value - low
+        'p50': np.percentile(pe_values, 50),   # Median (historical average)
+        'p75': np.percentile(pe_values, 75),   # Fair value - high
+        'p90': np.percentile(pe_values, 90),   # Historically expensive
     }
+
+    # Calculate price at each P/E band for each date
+    # Price at P/E band = TTM_EPS × P/E_threshold
+    pe_df['price_p10'] = pe_df['TTM_EPS'] * bands['p10']
+    pe_df['price_p25'] = pe_df['TTM_EPS'] * bands['p25']
+    pe_df['price_p50'] = pe_df['TTM_EPS'] * bands['p50']
+    pe_df['price_p75'] = pe_df['TTM_EPS'] * bands['p75']
+    pe_df['price_p90'] = pe_df['TTM_EPS'] * bands['p90']
 
     # Create figure
     fig = go.Figure()
 
-    # Prepare price data
-    if 'Date' in history.columns:
-        dates = pd.to_datetime(history['Date'])
-        prices = history['Close'].values
-    else:
-        dates = history.index
-        prices = history['Close'].values
-
-    # Calculate P/E band price levels based on EPS
-    # These are approximate - actual EPS changes over time
-    undervalued_price = eps_estimate * pe_bands['undervalued']
-    fair_low_price = eps_estimate * pe_bands['fair_low']
-    fair_high_price = eps_estimate * pe_bands['fair_high']
-    overvalued_price = eps_estimate * pe_bands['overvalued']
-
-    # Add shaded areas for valuation zones (from bottom to top)
-
-    # Undervalued zone (green) - below P/E 10
+    # Add shaded valuation zones (stacked areas from bottom to top)
+    # Zone 1: Green (undervalued) - Below 25th percentile
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=[undervalued_price] * len(dates),
+        x=pe_df['Date'],
+        y=pe_df['price_p25'],
         fill='tozeroy',
-        fillcolor='rgba(46, 204, 113, 0.3)',
+        fillcolor='rgba(46, 204, 113, 0.35)',  # Green
         line=dict(width=0),
-        name='Undervalued (P/E < 10)',
+        name=f'Undervalued (P/E < {bands["p25"]:.1f}x)',
         showlegend=True,
         hoverinfo='skip'
     ))
 
-    # Fair value lower zone (light green) - P/E 10-15
+    # Zone 2: Light green - 25th to 50th percentile
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=[fair_low_price] * len(dates),
+        x=pe_df['Date'],
+        y=pe_df['price_p50'],
         fill='tonexty',
-        fillcolor='rgba(46, 204, 113, 0.15)',
+        fillcolor='rgba(46, 204, 113, 0.15)',  # Light green
         line=dict(width=0),
-        name='Fair Value Low (P/E 10-15)',
+        name=f'Fair Value Low (P/E {bands["p25"]:.1f}-{bands["p50"]:.1f}x)',
         showlegend=True,
         hoverinfo='skip'
     ))
 
-    # Fair value upper zone (yellow) - P/E 15-20
+    # Zone 3: Yellow - 50th to 75th percentile
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=[fair_high_price] * len(dates),
+        x=pe_df['Date'],
+        y=pe_df['price_p75'],
         fill='tonexty',
-        fillcolor='rgba(241, 196, 15, 0.2)',
+        fillcolor='rgba(241, 196, 15, 0.25)',  # Yellow
         line=dict(width=0),
-        name='Fair Value High (P/E 15-20)',
+        name=f'Fair Value High (P/E {bands["p50"]:.1f}-{bands["p75"]:.1f}x)',
         showlegend=True,
         hoverinfo='skip'
     ))
 
-    # Overvalued zone (red) - P/E > 20
+    # Zone 4: Red - Above 75th percentile (to 90th for visualization)
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=[overvalued_price] * len(dates),
+        x=pe_df['Date'],
+        y=pe_df['price_p90'],
         fill='tonexty',
-        fillcolor='rgba(231, 76, 60, 0.15)',
+        fillcolor='rgba(231, 76, 60, 0.2)',  # Red
         line=dict(width=0),
-        name='Overvalued (P/E > 20)',
+        name=f'Overvalued (P/E > {bands["p75"]:.1f}x)',
         showlegend=True,
         hoverinfo='skip'
     ))
 
-    # Add stock price line (on top of zones)
+    # Overlay stock price line (on top of shaded zones)
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=prices,
+        x=pe_df['Date'],
+        y=pe_df['Close'],
         mode='lines',
         name='TGT Stock Price',
-        line=dict(color='#2c3e50', width=2),
-        hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Price: $%{y:.2f}<extra></extra>"
+        line=dict(color='#2c3e50', width=2.5),
+        hovertemplate=(
+            "<b>%{x|%Y-%m-%d}</b><br>"
+            "Price: $%{y:.2f}<br>"
+            "<extra></extra>"
+        )
     ))
 
-    # Add P/E band reference lines with labels
-    for pe_val, label, color in [
-        (pe_bands['undervalued'], 'P/E = 10x', '#27ae60'),
-        (pe_bands['fair_low'], 'P/E = 15x', '#f39c12'),
-        (pe_bands['fair_high'], 'P/E = 20x', '#e67e22'),
-        (pe_bands['overvalued'], 'P/E = 25x', '#e74c3c')
-    ]:
-        price_level = eps_estimate * pe_val
-        fig.add_hline(
-            y=price_level,
-            line_dash="dot",
-            line_color=color,
-            line_width=1,
-            annotation_text=f"{label} (${price_level:.0f})",
-            annotation_position="right",
-            annotation_font_color=color
-        )
+    # Add median P/E reference line (dashed)
+    fig.add_trace(go.Scatter(
+        x=pe_df['Date'],
+        y=pe_df['price_p50'],
+        mode='lines',
+        name=f'Median P/E ({bands["p50"]:.1f}x)',
+        line=dict(color='#2c3e50', width=1.5, dash='dash'),
+        hoverinfo='skip'
+    ))
 
-    # Add current P/E annotation
-    if current_pe and current_price:
-        fig.add_annotation(
-            x=dates.iloc[-1] if hasattr(dates, 'iloc') else dates[-1],
-            y=current_price,
-            text=f"<b>Current</b><br>${current_price:.2f}<br>P/E: {current_pe:.1f}x",
-            showarrow=True,
-            arrowhead=2,
-            arrowcolor='#2c3e50',
-            ax=-50,
-            ay=-40,
-            font=dict(size=11, color='#2c3e50'),
-            bgcolor="white",
-            bordercolor='#2c3e50',
-            borderwidth=1
-        )
+    # Calculate current percentile rank for annotation
+    current_pe = pe_df['PE_Ratio'].iloc[-1]
+    current_price = pe_df['Close'].iloc[-1]
+    current_eps = pe_df['TTM_EPS'].iloc[-1]
+    current_percentile = stats.percentileofscore(pe_values, current_pe)
+
+    # Determine valuation status
+    if current_percentile < 25:
+        valuation_status = "Undervalued"
+        status_color = "#27ae60"  # Green
+    elif current_percentile < 50:
+        valuation_status = "Fair Value (Low)"
+        status_color = "#2ecc71"  # Light green
+    elif current_percentile < 75:
+        valuation_status = "Fair Value (High)"
+        status_color = "#f39c12"  # Yellow/Orange
+    else:
+        valuation_status = "Overvalued"
+        status_color = "#e74c3c"  # Red
+
+    # Add current valuation annotation
+    fig.add_annotation(
+        x=pe_df['Date'].iloc[-1],
+        y=current_price,
+        text=(
+            f"<b>Current</b><br>"
+            f"${current_price:.2f}<br>"
+            f"P/E: {current_pe:.1f}x<br>"
+            f"Percentile: {current_percentile:.0f}%<br>"
+            f"<b>{valuation_status}</b>"
+        ),
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor=status_color,
+        ax=-80,
+        ay=-50,
+        font=dict(size=11, color='#2c3e50'),
+        bgcolor="white",
+        bordercolor=status_color,
+        borderwidth=2
+    )
 
     # Update layout
     fig.update_layout(
         title={
-            'text': f"Target: Historical Price with P/E Valuation Bands<br><sub>Pillar 5: 5-Year Price History with Estimated Valuation Zones (EPS ≈ ${eps_estimate:.2f})</sub>",
+            'text': (
+                f"Target: Historical Price with Dynamic P/E Valuation Bands<br>"
+                f"<sub>Pillar 5: Bands based on Target's historical P/E distribution "
+                f"(Median: {bands['p50']:.1f}x, Current: {current_pe:.1f}x)</sub>"
+            ),
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -3952,17 +4057,17 @@ def create_pe_band_area_chart(data, market_data=None):
         },
         xaxis_title="Date",
         yaxis_title="Stock Price ($)",
-        height=600,
-        width=1000,
+        height=650,
+        width=1100,
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.15,
+            y=-0.22,
             xanchor="center",
             x=0.5
         ),
-        margin=dict(l=80, r=120, t=100, b=100),
+        margin=dict(l=80, r=100, t=100, b=140),
         plot_bgcolor='white',
         xaxis=dict(
             gridcolor='lightgray',
@@ -3979,9 +4084,11 @@ def create_pe_band_area_chart(data, market_data=None):
     output_path = "output/chart_pe_band.html"
     fig.write_html(output_path)
     print(f"✅ Chart 24 created: {output_path}")
-    print(f"   Data: 5-year price history for TGT")
-    print(f"   Current: ${current_price:.2f} @ P/E {current_pe:.1f}x")
-    print(f"   Estimated EPS: ${eps_estimate:.2f}")
+    print(f"   Data: {len(pe_df)} trading days with P/E calculated")
+    print(f"   P/E Percentiles: 10th={bands['p10']:.1f}x, 25th={bands['p25']:.1f}x, "
+          f"50th={bands['p50']:.1f}x, 75th={bands['p75']:.1f}x, 90th={bands['p90']:.1f}x")
+    print(f"   Current: ${current_price:.2f} @ P/E {current_pe:.1f}x ({current_percentile:.0f}th percentile)")
+    print(f"   Status: {valuation_status}")
 
     return fig
 
