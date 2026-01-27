@@ -8,6 +8,27 @@ from plotly.subplots import make_subplots
 from pathlib import Path
 
 
+def export_chart(fig, html_path: str, width: int = 1200, height: int = 600):
+    """Export chart as both HTML and PNG for PowerPoint embedding.
+
+    Args:
+        fig: Plotly figure object
+        html_path: Path for HTML file (PNG will use same name with .png extension)
+        width: PNG image width in pixels (default 1200)
+        height: PNG image height in pixels (default 600)
+    """
+    # Export interactive HTML
+    fig.write_html(html_path)
+
+    # Export static PNG for PowerPoint embedding
+    png_path = html_path.replace('.html', '.png')
+    try:
+        fig.write_image(png_path, width=width, height=height, scale=2)
+    except Exception as e:
+        print(f"   ⚠️ PNG export failed for {png_path}: {e}")
+        print("   Install kaleido: pip install kaleido")
+
+
 def load_timeseries_data(filepath: str = "output/target_timeseries.json"):
     """Load time-series JSON data."""
     with open(filepath, 'r') as f:
@@ -111,7 +132,7 @@ def create_revenue_vs_inventory_chart(data):
         yaxis_title="$ Billions"
     )
 
-    fig.write_html("output/chart_revenue_vs_inventory.html")
+    export_chart(fig, "output/chart_revenue_vs_inventory.html")
     print("✅ Chart created: output/chart_revenue_vs_inventory.html")
     return fig
 
@@ -234,7 +255,7 @@ def create_revenue_growth_yoy_chart(data):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    fig.write_html("output/chart_revenue_growth_yoy.html")
+    export_chart(fig, "output/chart_revenue_growth_yoy.html")
     print("✅ Chart created: output/chart_revenue_growth_yoy.html")
     return fig
 
@@ -338,7 +359,7 @@ def create_margin_analysis_chart(data):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    fig.write_html("output/chart_margin_analysis.html")
+    export_chart(fig, "output/chart_margin_analysis.html")
     print("✅ Chart created: output/chart_margin_analysis.html")
     return fig
 
@@ -375,7 +396,7 @@ def create_operating_margin_waterfall(data):
         height=500
     )
 
-    fig.write_html("output/chart_operating_margin_waterfall.html")
+    export_chart(fig, "output/chart_operating_margin_waterfall.html")
     print("✅ Chart created: output/chart_operating_margin_waterfall.html")
     return fig
 
@@ -410,7 +431,7 @@ def create_inventory_efficiency_chart(data):
         height=500
     )
 
-    fig.write_html("output/chart_inventory_efficiency.html")
+    export_chart(fig, "output/chart_inventory_efficiency.html")
     print("✅ Chart created: output/chart_inventory_efficiency.html")
     return fig
 
@@ -449,7 +470,7 @@ def create_debt_health_chart(data):
         height=500
     )
 
-    fig.write_html("output/chart_debt_health.html")
+    export_chart(fig, "output/chart_debt_health.html")
     print("✅ Chart created: output/chart_debt_health.html")
     return fig
 
@@ -610,7 +631,7 @@ def create_cash_flows_chart(data):
                     xanchor="right", x=1)
     )
 
-    fig.write_html("output/chart_cash_flows.html")
+    export_chart(fig, "output/chart_cash_flows.html")
     print("✅ Chart created: output/chart_cash_flows.html")
     return fig
 
@@ -786,7 +807,7 @@ def create_earnings_quality_chart(data):
         )
     )
 
-    fig.write_html("output/chart_earnings_quality.html")
+    export_chart(fig, "output/chart_earnings_quality.html")
     print("✅ Chart created: output/chart_earnings_quality.html")
     return fig
 
@@ -923,7 +944,7 @@ def create_revenue_netincome_longterm_chart(data):
         )
     )
 
-    fig.write_html("output/chart_revenue_netincome_longterm.html")
+    export_chart(fig, "output/chart_revenue_netincome_longterm.html")
     print("✅ Chart created: output/chart_revenue_netincome_longterm.html")
     return fig
 
@@ -1006,7 +1027,7 @@ def create_revenue_netincome_annual_chart(data):
         )
     )
 
-    fig.write_html("output/chart_revenue_netincome_annual.html")
+    export_chart(fig, "output/chart_revenue_netincome_annual.html")
     print("✅ Chart created: output/chart_revenue_netincome_annual.html")
     return fig
 
@@ -1207,7 +1228,7 @@ def create_expense_breakdown_chart(data):
     )
 
     # Step 7: Export
-    fig.write_html("output/chart_expense_breakdown.html")
+    export_chart(fig, "output/chart_expense_breakdown.html", height=750)
     print("✅ Chart 14 created: output/chart_expense_breakdown.html")
     return fig
 
@@ -1451,7 +1472,7 @@ def create_ebitda_bridge_waterfall(data):
         margin=dict(t=120, b=100, l=80, r=40)
     )
 
-    fig.write_html("output/chart_ebitda_bridge.html")
+    export_chart(fig, "output/chart_ebitda_bridge.html", height=700)
     print("✅ Chart 15 created: output/chart_ebitda_bridge.html")
     return fig
 
@@ -1525,7 +1546,7 @@ def create_margin_bridge_waterfall(data):
         height=600
     )
 
-    fig.write_html("output/chart_margin_bridge.html")
+    export_chart(fig, "output/chart_margin_bridge.html")
     print("✅ Chart created: output/chart_margin_bridge.html")
     return fig
 
@@ -1581,7 +1602,7 @@ def create_risk_trends_chart():
                     xanchor="right", x=1)
     )
 
-    fig.write_html("output/chart_risk_trends.html")
+    export_chart(fig, "output/chart_risk_trends.html")
     print("✅ Chart created: output/chart_risk_trends.html")
     return fig
 
@@ -1634,7 +1655,7 @@ def create_risk_heatmap_grid():
         height=400
     )
 
-    fig.write_html("output/chart_risk_heatmap_grid.html")
+    export_chart(fig, "output/chart_risk_heatmap_grid.html", height=400)
     print("✅ Chart created: output/chart_risk_heatmap_grid.html")
     return fig
 
@@ -1799,7 +1820,7 @@ def create_current_ratio_gauge(data):
         ]
     )
 
-    fig.write_html("output/chart_current_ratio_gauge.html")
+    export_chart(fig, "output/chart_current_ratio_gauge.html")
     print("✅ Chart 16 created: output/chart_current_ratio_gauge.html")
     return fig
 
@@ -1970,7 +1991,7 @@ def create_capital_structure_donut(data):
         ]
     )
 
-    fig.write_html("output/chart_capital_structure_donut.html")
+    export_chart(fig, "output/chart_capital_structure_donut.html")
     print("✅ Chart 17 created: output/chart_capital_structure_donut.html")
     return fig
 
@@ -2114,7 +2135,7 @@ def create_debt_to_ebitda_trend(data):
         ]
     )
 
-    fig.write_html("output/chart_debt_to_ebitda_trend.html")
+    export_chart(fig, "output/chart_debt_to_ebitda_trend.html")
     print("✅ Chart 18 created: output/chart_debt_to_ebitda_trend.html")
     return fig
 
@@ -2373,7 +2394,7 @@ def create_dupont_analysis_breakdown(data):
 
     # Save chart
     output_path = 'output/chart_dupont_analysis.html'
-    fig.write_html(output_path)
+    export_chart(fig, output_path, height=700)
     print(f"✅ Chart 19 created: {output_path}")
     return fig
 
@@ -2771,6 +2792,11 @@ def create_cash_conversion_cycle_chart(data):
     output_path = 'output/chart_cash_conversion_cycle.html'
     config = {'displayModeBar': True, 'responsive': True}
     fig.write_html(output_path, config=config)
+    # Export PNG for PowerPoint
+    try:
+        fig.write_image(output_path.replace('.html', '.png'), width=1200, height=600, scale=2)
+    except Exception as e:
+        print(f"   ⚠️ PNG export failed: {e}")
 
     print(f"✅ Chart 20 created: {output_path}")
     print(f"   Chart type: Peer comparison with dropdown ({len(target_ccc_periods)} periods)")
@@ -2996,7 +3022,7 @@ def create_ocf_vs_capex_chart(data):
     fig.update_xaxes(title_text="Quarter", tickangle=-45)
 
     output_path = "output/chart_ocf_vs_capex.html"
-    fig.write_html(output_path)
+    export_chart(fig, output_path)
     print(f"✅ Chart 21 created: {output_path}")
     print(f"   Data: {len(periods)} quarters with OCF, CapEx, and FCF")
 
@@ -3381,7 +3407,7 @@ def create_cash_flow_sankey(data):
     )
 
     output_path = "output/chart_cash_flow_sankey.html"
-    fig.write_html(output_path)
+    export_chart(fig, output_path)
     print(f"✅ Chart 22 created: {output_path}")
     print(f"   Data: {len(quarterly_data)} quarters available")
     print(f"   Default view: {latest['period']} (OCF: ${ocf:.2f}B, FCF: ${fcf:.2f}B)")
@@ -3918,7 +3944,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
 
     # Save chart
     output_path = "output/chart_valuation_scatter.html"
-    fig.write_html(output_path)
+    export_chart(fig, output_path)
     print(f"✅ Chart 23 created: {output_path}")
     print(f"   {len(valid_quarters)} quarters available in dropdown")
     print(f"   Latest: {latest_q['period']} - P/E={latest_q['pe_ratio']:.1f}x, Growth={latest_q['revenue_growth']:.1f}%")
@@ -4234,7 +4260,7 @@ def create_pe_band_area_chart(data, market_data=None):
 
     # Save chart
     output_path = "output/chart_pe_band.html"
-    fig.write_html(output_path)
+    export_chart(fig, output_path)
     print(f"✅ Chart 24 created: {output_path}")
     print(f"   Data: {len(pe_df)} trading days with P/E calculated")
     print(f"   P/E Percentiles: 10th={bands['p10']:.1f}x, 25th={bands['p25']:.1f}x, "

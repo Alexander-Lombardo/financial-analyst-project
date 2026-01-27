@@ -22,3 +22,9 @@ plotly>=5.0.0
 
 # Market Data (Pillar 5 - Valuation & Market Sentiment)
 yfinance>=0.2.36
+
+# Dashboard (5-Pillar Financial Analysis)
+streamlit>=1.32.0
+
+# Static image export for PowerPoint embedding
+kaleido>=0.2.1

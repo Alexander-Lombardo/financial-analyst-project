@@ -1,5 +1,12 @@
 """
 Create PowerPoint presentation from Target financial analysis
+
+Organized into 5 Pillars of Financial Analysis:
+1. Growth & Revenue - Is the business growing?
+2. Profitability & Margins - How efficiently is the company generating profits?
+3. Liquidity & Solvency - Can the company pay its bills today and debts in the future?
+4. Operational Efficiency - How well is the company using its assets?
+5. Valuation & Risk - Is the stock fairly priced, and what are the risks?
 """
 
 import json
@@ -12,10 +19,181 @@ from pptx.dml.color import RGBColor
 from thesis_generator import ThesisGenerator
 
 
-def create_target_presentation():
-    """Create comprehensive PowerPoint presentation."""
+# =============================================================================
+# CHART CONFIGURATION - All 24 charts organized by pillar
+# =============================================================================
 
-    # Generate investment thesis (Phase 4)
+CHART_CONFIG = {
+    # Pillar 1: Growth & Revenue (4 charts)
+    "pillar_1": {
+        "title": "Growth & Revenue",
+        "question": "How is the business growing?",
+        "charts": [
+            {
+                "title": "Revenue & Net Income (10-Year)",
+                "file": "chart_revenue_netincome_annual.html",
+                "description": "Shows Target's 10-year revenue and net income trajectory from annual 10-K filings. Look for consistent growth and whether profits keep pace with revenue."
+            },
+            {
+                "title": "Revenue Growth YoY",
+                "file": "chart_revenue_growth_yoy.html",
+                "description": "Tracks year-over-year revenue growth rates by quarter. Reveals acceleration or deceleration in growth momentum."
+            },
+            {
+                "title": "Revenue vs Inventory Growth",
+                "file": "chart_revenue_vs_inventory.html",
+                "description": "Compares revenue growth to inventory buildup. Inventory growing faster than sales signals potential markdown risk."
+            },
+            {
+                "title": "Revenue & Net Income (Quarterly)",
+                "file": "chart_revenue_netincome_longterm.html",
+                "description": "Quarterly view with calculated Q4 data showing seasonal patterns. Q4 (holiday season) typically shows peak revenue."
+            },
+        ]
+    },
+
+    # Pillar 2: Profitability & Margins (6 charts)
+    "pillar_2": {
+        "title": "Profitability & Margins",
+        "question": "How efficiently is the company generating profits?",
+        "charts": [
+            {
+                "title": "Margin Analysis (Gross/Operating/Net)",
+                "file": "chart_margin_analysis.html",
+                "description": "Three margin lines tracking profitability over time. Compression between lines reveals where profits leak."
+            },
+            {
+                "title": "Margin Bridge Waterfall",
+                "file": "chart_margin_bridge.html",
+                "description": "Waterfall showing margin evolution from FY2022 baseline. Green bars = improvement, red bars = deterioration."
+            },
+            {
+                "title": "Operating Expense Breakdown",
+                "file": "chart_expense_breakdown.html",
+                "description": "100% stacked bars showing cost structure. Watch for SG&A creep eating into margins."
+            },
+            {
+                "title": "EBITDA Bridge",
+                "file": "chart_ebitda_bridge.html",
+                "description": "Shows how revenue flows to EBITDA through operating expenses. The D&A add-back reveals capital intensity."
+            },
+            {
+                "title": "Operating Margin Waterfall",
+                "file": "chart_operating_margin_waterfall.html",
+                "description": "Quarterly margin changes as waterfall. Identifies seasonal patterns and pressure points."
+            },
+            {
+                "title": "Earnings Quality",
+                "file": "chart_earnings_quality.html",
+                "description": "Compares Net Income to Operating Cash Flow. High-quality earnings convert to cash consistently."
+            },
+        ]
+    },
+
+    # Pillar 3: Liquidity & Solvency (5 charts)
+    "pillar_3": {
+        "title": "Liquidity & Solvency",
+        "question": "Can the company pay its bills today and debts in the future?",
+        "charts": [
+            {
+                "title": "Current Ratio Gauge",
+                "file": "chart_current_ratio_gauge.html",
+                "description": "Measures short-term liquidity. Below 1.0 is warning (liabilities exceed assets); above 1.5 is healthy for retail."
+            },
+            {
+                "title": "Capital Structure",
+                "file": "chart_capital_structure_donut.html",
+                "description": "Shows debt vs equity mix. Higher debt = higher risk but potentially higher returns on equity."
+            },
+            {
+                "title": "Debt-to-EBITDA Trend",
+                "file": "chart_debt_to_ebitda_trend.html",
+                "description": "Key leverage metric showing how many years of earnings to repay debt. Below 3x is healthy; above 5x is risky."
+            },
+            {
+                "title": "Debt Health (Interest Coverage)",
+                "file": "chart_debt_health.html",
+                "description": "Interest coverage ratio tracking. Above 3x is comfortable; below 2x requires monitoring."
+            },
+            {
+                "title": "Statement of Cash Flows",
+                "file": "chart_cash_flows.html",
+                "description": "Three cash flow lines: Operating, Investing, Financing. Operating should be consistently positive."
+            },
+        ]
+    },
+
+    # Pillar 4: Operational Efficiency (4 charts)
+    "pillar_4": {
+        "title": "Operational Efficiency",
+        "question": "How well is the company using its assets?",
+        "charts": [
+            {
+                "title": "DuPont Analysis",
+                "file": "chart_dupont_analysis.html",
+                "description": "Decomposes ROE into Profit Margin x Asset Turnover x Financial Leverage. Shows what drives returns."
+            },
+            {
+                "title": "Inventory Efficiency",
+                "file": "chart_inventory_efficiency.html",
+                "description": "Tracks turnover ratio and days on hand. Faster turns = less capital tied up in inventory."
+            },
+            {
+                "title": "Cash Conversion Cycle",
+                "file": "chart_cash_conversion_cycle.html",
+                "description": "Days to convert inventory to cash vs retail peers. Lower is better; negative means suppliers finance operations."
+            },
+            {
+                "title": "OCF vs CapEx",
+                "file": "chart_ocf_vs_capex.html",
+                "description": "Operating cash vs capital spending. The gap between them is Free Cash Flow available for shareholders."
+            },
+        ]
+    },
+
+    # Pillar 5: Valuation & Risk (5 charts)
+    "pillar_5": {
+        "title": "Valuation & Risk",
+        "question": "Is the stock fairly priced, and what are the risks?",
+        "charts": [
+            {
+                "title": "Valuation vs Growth",
+                "file": "chart_valuation_scatter.html",
+                "description": "P/E ratio vs revenue growth for Target and peers. Lower-right quadrant = undervalued opportunities."
+            },
+            {
+                "title": "Historical P/E Band",
+                "file": "chart_pe_band.html",
+                "description": "Current price vs historical valuation range. Below 25th percentile = historically undervalued."
+            },
+            {
+                "title": "Cash Flow Sankey",
+                "file": "chart_cash_flow_sankey.html",
+                "description": "Visualizes cash allocation: CapEx, dividends, buybacks, debt repayment. Shows management priorities."
+            },
+            {
+                "title": "Risk Trends",
+                "file": "chart_risk_trends.html",
+                "description": "Stacked area of risk mentions (shrink, theft, markdown) over time. Rising trends signal increasing concerns."
+            },
+            {
+                "title": "Risk Heatmap",
+                "file": "chart_risk_heatmap_grid.html",
+                "description": "Intensity grid showing risk types by period. Dark cells = high concern in that area."
+            },
+        ]
+    },
+}
+
+
+# =============================================================================
+# MAIN PRESENTATION FUNCTION
+# =============================================================================
+
+def create_target_presentation():
+    """Create comprehensive PowerPoint presentation organized by 5 pillars."""
+
+    # Generate investment thesis
     print("   Generating investment thesis...")
     thesis_gen = ThesisGenerator()
     thesis_gen.export_thesis()
@@ -23,9 +201,9 @@ def create_target_presentation():
     # Load analysis data
     with open('output/target_analysis.json', 'r') as f:
         full_data = json.load(f)
-        data = full_data['filings']  # Extract filings array
+        data = full_data['filings']
 
-    # Load timeseries data for Phase 4 charts
+    # Load timeseries data
     with open('output/target_timeseries.json', 'r') as f:
         timeseries_data = json.load(f)
 
@@ -38,89 +216,210 @@ def create_target_presentation():
     prs.slide_width = Inches(10)
     prs.slide_height = Inches(7.5)
 
-    # Slide 1: Title
+    # === INTRODUCTION (3 slides) ===
+    print("   Creating introduction slides...")
     add_title_slide(prs)
-
-    # Slide 2: Executive Summary
     add_executive_summary(prs, data)
-
-    # Slide 3: Investment Thesis (Phase 4)
     add_investment_thesis_slide(prs, thesis)
 
-    # Slide 4: Baseline (FY2024)
-    add_baseline_slide(prs, data[10])
+    # === PILLAR 1: Growth & Revenue (5 slides) ===
+    print("   Creating Pillar 1: Growth & Revenue...")
+    pillar = CHART_CONFIG["pillar_1"]
+    add_pillar_section_slide(prs, 1, pillar["title"], pillar["question"])
+    for chart in pillar["charts"]:
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
 
-    # Slide 5: Revenue vs Inventory Growth (Phase 3 Chart)
-    add_revenue_vs_inventory_slide(prs, timeseries_data)
+    # === PILLAR 2: Profitability & Margins (7 slides) ===
+    print("   Creating Pillar 2: Profitability & Margins...")
+    pillar = CHART_CONFIG["pillar_2"]
+    add_pillar_section_slide(prs, 2, pillar["title"], pillar["question"])
+    for chart in pillar["charts"]:
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
 
-    # Slide 6: Operating Margin Waterfall (Phase 3 Chart)
-    add_operating_margin_waterfall_slide(prs, timeseries_data)
+    # === PILLAR 3: Liquidity & Solvency (6 slides) ===
+    print("   Creating Pillar 3: Liquidity & Solvency...")
+    pillar = CHART_CONFIG["pillar_3"]
+    add_pillar_section_slide(prs, 3, pillar["title"], pillar["question"])
+    for chart in pillar["charts"]:
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
 
-    # Slide 7: Inventory Efficiency (Phase 3 Chart)
-    add_inventory_efficiency_slide(prs, timeseries_data)
+    # === PILLAR 4: Operational Efficiency (5 slides) ===
+    print("   Creating Pillar 4: Operational Efficiency...")
+    pillar = CHART_CONFIG["pillar_4"]
+    add_pillar_section_slide(prs, 4, pillar["title"], pillar["question"])
+    for chart in pillar["charts"]:
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
 
-    # Slide 8: Debt Health (Phase 3 Chart)
-    add_debt_health_slide(prs, timeseries_data)
-
-    # Slide 9: Cash Flows (Phase 3 Chart)
-    add_cash_flows_slide(prs, timeseries_data)
-
-    # Slide 10: Operating Expense Breakdown (Chart 14 - Phase 6)
-    add_expense_breakdown_slide(prs, timeseries_data)
-
-    # Slide 11: Q1 2025 Analysis
-    add_quarter_slide(prs, data[14], data[10])
-
-    # Slide 12: Q2 2025 Analysis
-    add_quarter_slide(prs, data[15], data[10])
-
-    # Slide 13: Q3 2025 Analysis - RED FLAGS
-    add_q3_warning_slide(prs, data[16], data[10])
-
-    # Slide 14: Margin Bridge Analysis (Phase 4)
-    add_margin_bridge_slide(prs, timeseries_data, full_data)
-
-    # Slide 15: Risk Heatmap (Phase 4)
-    add_risk_heatmap_slide(prs, full_data)
-
-    # Slide 16: Debt & Leverage Analysis
-    add_debt_analysis_slide(prs)
-
-    # Slide 17: Key Risks & Recommendations
-    add_recommendations_slide(prs, data)
+    # === PILLAR 5: Valuation & Risk (6 slides) ===
+    print("   Creating Pillar 5: Valuation & Risk...")
+    pillar = CHART_CONFIG["pillar_5"]
+    add_pillar_section_slide(prs, 5, pillar["title"], pillar["question"])
+    for chart in pillar["charts"]:
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
 
     # Save presentation
     output_path = 'output/Target_Financial_Analysis.pptx'
     prs.save(output_path)
-    print(f"✅ Presentation created: {output_path}")
-    print("   17 slides total including:")
-    print("     • Investment Thesis slide (Phase 4)")
-    print("     • Revenue vs Inventory Growth (Phase 3)")
-    print("     • Operating Margin Waterfall (Phase 3)")
-    print("     • Inventory Efficiency (Phase 3)")
-    print("     • Debt Health (Phase 3)")
-    print("     • Cash Flows (Phase 3)")
-    print("     • Operating Expense Breakdown (Chart 14 - Phase 6)")
-    print("     • Margin Bridge Analysis (Phase 4)")
-    print("     • Risk Heatmap (Phase 4)")
-    print("     • Links to all 14 interactive Plotly charts ✅")
+
+    # Summary output
+    total_charts = sum(len(p["charts"]) for p in CHART_CONFIG.values())
+    total_slides = 3 + 5 + len(CHART_CONFIG)  # intro + section dividers + charts
+
+    print(f"\n   Presentation created: {output_path}")
+    print(f"   {3 + 5 * 2 + total_charts} slides total:")
+    print("     - 3 introduction slides (Title, Executive Summary, Investment Thesis)")
+    print("     - 5 pillar section dividers")
+    print(f"     - {total_charts} chart slides across 5 pillars")
+    print("     - Charts embedded as PNG images (run visualize_data.py first)")
+
     return output_path
 
+
+# =============================================================================
+# PILLAR SECTION SLIDE
+# =============================================================================
+
+def add_pillar_section_slide(prs, pillar_num, title, question):
+    """Add a pillar section divider slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Colored banner at top
+    banner = slide.shapes.add_shape(1, Inches(0), Inches(2.5), Inches(10), Inches(2))
+    banner.fill.solid()
+    banner.fill.fore_color.rgb = RGBColor(204, 0, 0)  # Target red
+    banner.line.color.rgb = RGBColor(204, 0, 0)
+
+    # Pillar number
+    num_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.7), Inches(9), Inches(0.6))
+    num_frame = num_box.text_frame
+    p = num_frame.paragraphs[0]
+    p.text = f"PILLAR {pillar_num}"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Pillar title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.3), Inches(9), Inches(0.8))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = title
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Guiding question below banner
+    q_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.0), Inches(9), Inches(0.5))
+    q_frame = q_box.text_frame
+    p = q_frame.paragraphs[0]
+    p.text = f'"{question}"'
+    p.font.size = Pt(24)
+    p.font.italic = True
+    p.font.color.rgb = RGBColor(100, 100, 100)
+    p.alignment = PP_ALIGN.CENTER
+
+
+# =============================================================================
+# GENERIC CHART SLIDE
+# =============================================================================
+
+def add_chart_slide(prs, title, chart_file, description):
+    """Add a chart slide with embedded PNG image.
+
+    Embeds the static PNG version of the chart directly in the slide.
+    Falls back to hyperlink if PNG not found.
+    """
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title (top)
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.2), Inches(9), Inches(0.5))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = title
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
+
+    # Check for PNG image
+    image_file = chart_file.replace('.html', '.png')
+    image_path = Path(f"output/{image_file}")
+
+    if image_path.exists():
+        # Embed chart image (center of slide)
+        slide.shapes.add_picture(
+            str(image_path),
+            left=Inches(0.5),
+            top=Inches(0.8),
+            width=Inches(9),
+            height=Inches(4.5)
+        )
+
+        # Description (bottom)
+        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.5))
+        desc_frame = desc_box.text_frame
+        desc_frame.word_wrap = True
+
+        p = desc_frame.paragraphs[0]
+        p.text = description
+        p.font.size = Pt(12)
+        p.font.color.rgb = RGBColor(100, 100, 100)
+    else:
+        # Fallback: show description and hyperlink if image not found
+        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(1.5))
+        desc_frame = desc_box.text_frame
+        desc_frame.word_wrap = True
+
+        p = desc_frame.paragraphs[0]
+        p.text = description
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(60, 60, 60)
+        p.space_after = Pt(12)
+
+        # Hyperlink fallback
+        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.0), Inches(9), Inches(1.0))
+        link_frame = link_box.text_frame
+
+        p = link_frame.paragraphs[0]
+        p.text = "Click to view interactive chart:"
+        p.font.size = Pt(14)
+        p.font.bold = True
+        p.space_after = Pt(8)
+
+        p = link_frame.add_paragraph()
+        chart_path = Path(f"output/{chart_file}").resolve()
+
+        run = p.add_run()
+        run.text = f"   {chart_file}"
+        run.font.size = Pt(16)
+        run.font.color.rgb = RGBColor(0, 0, 255)
+        run.font.underline = True
+        run.hyperlink.address = str(chart_path)
+
+        # Placeholder indicator
+        indicator_box = slide.shapes.add_textbox(Inches(1), Inches(4.5), Inches(8), Inches(2))
+        indicator_frame = indicator_box.text_frame
+
+        p = indicator_frame.paragraphs[0]
+        p.text = f"[Chart image not found: {image_file}]"
+        p.font.size = Pt(16)
+        p.font.color.rgb = RGBColor(150, 150, 150)
+        p.font.italic = True
+        p.alignment = PP_ALIGN.CENTER
+
+
+# =============================================================================
+# INTRODUCTION SLIDES
+# =============================================================================
 
 def add_title_slide(prs):
     """Add title slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
 
     # Title
-    left = Inches(1)
-    top = Inches(2.5)
-    width = Inches(8)
-    height = Inches(1)
-
-    title_box = slide.shapes.add_textbox(left, top, width, height)
+    title_box = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(8), Inches(1))
     tf = title_box.text_frame
     tf.text = "Target Corporation"
-
     p = tf.paragraphs[0]
     p.font.size = Pt(54)
     p.font.bold = True
@@ -128,7 +427,7 @@ def add_title_slide(prs):
     p.alignment = PP_ALIGN.CENTER
 
     # Subtitle
-    subtitle_box = slide.shapes.add_textbox(left, Inches(3.5), width, Inches(0.5))
+    subtitle_box = slide.shapes.add_textbox(Inches(1), Inches(3.5), Inches(8), Inches(0.5))
     tf = subtitle_box.text_frame
     tf.text = "Financial Analysis Report"
     p = tf.paragraphs[0]
@@ -136,50 +435,63 @@ def add_title_slide(prs):
     p.alignment = PP_ALIGN.CENTER
 
     # Period
-    period_box = slide.shapes.add_textbox(left, Inches(4.2), width, Inches(0.4))
+    period_box = slide.shapes.add_textbox(Inches(1), Inches(4.2), Inches(8), Inches(0.4))
     tf = period_box.text_frame
-    tf.text = "FY2024 - Q3 2025"
+    tf.text = "5 Pillars of Financial Analysis | 24 Interactive Charts"
     p = tf.paragraphs[0]
-    p.font.size = Pt(24)
+    p.font.size = Pt(20)
     p.font.color.rgb = RGBColor(128, 128, 128)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Data coverage
+    coverage_box = slide.shapes.add_textbox(Inches(1), Inches(4.8), Inches(8), Inches(0.4))
+    tf = coverage_box.text_frame
+    tf.text = "Data: FY2015 - Q3 2025"
+    p = tf.paragraphs[0]
+    p.font.size = Pt(16)
+    p.font.color.rgb = RGBColor(150, 150, 150)
     p.alignment = PP_ALIGN.CENTER
 
 
 def add_executive_summary(prs, data):
     """Add executive summary slide."""
-    slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title only
-    title = slide.shapes.title
-    title.text = "Executive Summary"
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.6))
+    tf = title_box.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Executive Summary"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
 
     # Key findings box
-    left = Inches(0.5)
-    top = Inches(1.5)
-    width = Inches(9)
-    height = Inches(5.5)
-
-    text_box = slide.shapes.add_textbox(left, top, width, height)
+    text_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.2), Inches(9), Inches(6))
     tf = text_box.text_frame
     tf.word_wrap = True
 
-    # Baseline metrics
-    baseline = data[0]['vital_signs']
-    q3 = data[3]['vital_signs']
+    # Get baseline and latest data
+    baseline = data[10]['vital_signs'] if len(data) > 10 else data[0]['vital_signs']
+    latest = data[-1]['vital_signs'] if data else {}
 
     findings = [
         ("FY2024 Baseline Performance", [
-            f"• Net Sales: ${baseline['net_sales_billion']:.2f}B",
-            f"• Operating Margin: {baseline['operating_margin_percent']:.2f}%",
-            f"• Gross Margin: {baseline['gross_margin_percent']:.2f}%",
+            f"Net Sales: ${baseline.get('net_sales_billion', 0):.2f}B",
+            f"Operating Margin: {baseline.get('operating_margin_percent', 0):.2f}%",
+            f"Gross Margin: {baseline.get('gross_margin_percent', 0):.2f}%",
         ]),
-        ("Q3 2025 - Critical Weakness Detected", [
-            f"• Operating Margin: {q3['operating_margin_percent']:.2f}% ({q3['vs_baseline']['operating_margin_change']:+.2f}% vs baseline) ⚠️",
-            f"• Inventory: ${q3['inventory_billion']:.2f}B (+{((q3['inventory_billion']/baseline['inventory_billion']-1)*100):.1f}%) 🚨",
-            f"• Debt increased 7.5% while operating income declined",
+        ("Latest Quarter Highlights", [
+            f"Operating Margin: {latest.get('operating_margin_percent', 0):.2f}%",
+            f"Inventory: ${latest.get('inventory_billion', 0):.2f}B",
+            "See pillar charts for detailed trends",
         ]),
-        ("Key Risk Flags", [
-            "• Interest coverage deteriorated from 9.7x to 1.5x",
-            "• Shrink/theft mentioned in all quarters",
-            "• Inventory buildup suggests potential clearance ahead",
+        ("5 Pillars Covered", [
+            "1. Growth & Revenue - 4 charts",
+            "2. Profitability & Margins - 6 charts",
+            "3. Liquidity & Solvency - 5 charts",
+            "4. Operational Efficiency - 4 charts",
+            "5. Valuation & Risk - 5 charts",
         ]),
     ]
 
@@ -193,1302 +505,30 @@ def add_executive_summary(prs, data):
 
         for bullet in bullets:
             p = tf.add_paragraph()
-            p.text = bullet
+            p.text = f"   {bullet}"
             p.level = 0
             p.font.size = Pt(14)
             p.space_after = Pt(3)
 
         p = tf.add_paragraph()
         p.space_after = Pt(12)
-
-
-def add_revenue_vs_inventory_slide(prs, timeseries_data):
-    """Add Revenue vs Inventory Growth slide (Phase 3 Chart 1)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Revenue vs Inventory Growth Trend"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Dual-axis chart comparing revenue and inventory growth over time:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_revenue_vs_inventory.html").resolve()
-
-    run = p.add_run()
-    run.text = "Revenue vs Inventory Interactive Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get latest data points
-    revenue = timeseries_data['metrics']['revenue']['net_sales_billion']
-    inventory = timeseries_data['metrics']['inventory']['inventory_billion']
-    periods = timeseries_data['periods']
-
-    # Find Q3 2024 and Q3 2025 for apples-to-apples quarterly comparison
-    q3_2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'Q3 2024'), None)
-    q3_2025_idx = next((i for i, p in enumerate(periods) if p['period'] == 'Q3 2025'), None)
-
-    if q3_2024_idx is not None and q3_2025_idx is not None:
-        q3_2024_rev = revenue[q3_2024_idx]
-        q3_2025_rev = revenue[q3_2025_idx]
-        q3_2024_inv = inventory[q3_2024_idx]
-        q3_2025_inv = inventory[q3_2025_idx]
-
-        p = summary_frame.paragraphs[0]
-        p.text = "Key Insights (Q3 2024 vs Q3 2025):"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Revenue comparison
-        p = summary_frame.add_paragraph()
-        p.text = "Revenue (Quarterly):"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2024: ${q3_2024_rev:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2025: ${q3_2025_rev:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-        p.space_after = Pt(8)
-
-        # Inventory comparison
-        p = summary_frame.add_paragraph()
-        p.text = "Inventory:"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2024: ${q3_2024_inv:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2025: ${q3_2025_inv:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-        p.space_after = Pt(12)
-
-        # Calculate year-over-year growth rates
-        rev_growth = ((q3_2025_rev / q3_2024_rev) - 1) * 100
-        inv_growth = ((q3_2025_inv / q3_2024_inv) - 1) * 100
-
-        p = summary_frame.add_paragraph()
-        p.text = "Year-over-Year Growth:"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(6)
-
-        p = summary_frame.add_paragraph()
-        emoji = "✅" if rev_growth > 0 else "⚠️"
-        p.text = f"{emoji} Revenue: {rev_growth:+.1f}% YoY"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        emoji = "⚠️" if inv_growth > rev_growth + 5 else "✅"
-        p.text = f"{emoji} Inventory: {inv_growth:+.1f}% YoY"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        if inv_growth > rev_growth + 5:
-            p = summary_frame.add_paragraph()
-            p.text = f"🚨 Warning: Inventory growing {inv_growth - rev_growth:.1f}pp faster than revenue"
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(255, 0, 0)
-            p.font.bold = True
-            p.level = 1
-
-
-def add_operating_margin_waterfall_slide(prs, timeseries_data):
-    """Add Operating Margin Waterfall slide (Phase 3 Chart 2)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Operating Margin Waterfall - Quarterly Trend"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Waterfall chart showing quarterly operating margin changes:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_operating_margin_waterfall.html").resolve()
-
-    run = p.add_run()
-    run.text = "Operating Margin Waterfall Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get margin data
-    margins = timeseries_data['metrics']['margins']['operating_margin_percent']
-    periods = timeseries_data['periods']
-
-    # Find FY2024 baseline and Q3 2025
-    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
-    q3_2025_idx = next((i for i, p in enumerate(periods) if p['period'] == 'Q3 2025'), None)
-
-    if fy2024_idx is not None and q3_2025_idx is not None:
-        fy2024_margin = margins[fy2024_idx]
-        q3_2025_margin = margins[q3_2025_idx]
-        total_change = q3_2025_margin - fy2024_margin
-
-        p = summary_frame.paragraphs[0]
-        p.text = "Key Insights:"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Baseline
-        p = summary_frame.add_paragraph()
-        p.text = f"• FY2024 Baseline: {fy2024_margin:.2f}%"
-        p.font.size = Pt(14)
-        p.space_after = Pt(4)
-
-        # Current
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2025 Current: {q3_2025_margin:.2f}%"
-        p.font.size = Pt(14)
-        p.space_after = Pt(4)
-
-        # Net change
-        p = summary_frame.add_paragraph()
-        emoji = "✅" if total_change > 0 else "⚠️"
-        p.text = f"{emoji} Net Change: {total_change:+.2f} percentage points"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if total_change > 0 else RGBColor(255, 0, 0)
-        p.font.bold = True
-        p.space_after = Pt(12)
-
-        # Calculate best and worst quarters
-        quarterly_margins = []
-        for i, period in enumerate(periods):
-            if period['filing_type'] == '10-Q' and margins[i] is not None:
-                quarterly_margins.append((period['period'], margins[i]))
-
-        if len(quarterly_margins) >= 2:
-            quarterly_margins.sort(key=lambda x: x[1])
-            worst_q = quarterly_margins[0]
-            best_q = quarterly_margins[-1]
-
-            p = summary_frame.add_paragraph()
-            p.text = "Quarterly Performance Range:"
-            p.font.size = Pt(14)
-            p.font.bold = True
-            p.space_after = Pt(6)
-
-            p = summary_frame.add_paragraph()
-            p.text = f"• Worst Quarter: {worst_q[0]} at {worst_q[1]:.2f}%"
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(255, 0, 0)
-            p.level = 1
-
-            p = summary_frame.add_paragraph()
-            p.text = f"• Best Quarter: {best_q[0]} at {best_q[1]:.2f}%"
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(0, 128, 0)
-            p.level = 1
-            p.space_after = Pt(12)
-
-        # Key observation
-        p = summary_frame.add_paragraph()
-        p.text = "📈 The waterfall chart shows quarter-over-quarter margin changes, helping identify inflection points and trends over time."
-        p.font.size = Pt(13)
-        p.font.color.rgb = RGBColor(70, 70, 70)
-
-
-def add_inventory_efficiency_slide(prs, timeseries_data):
-    """Add Inventory Efficiency slide (Phase 3 Chart 3)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Inventory Efficiency Metrics"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Dual-axis chart tracking Inventory Turnover Ratio and Days Sales of Inventory:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_inventory_efficiency.html").resolve()
-
-    run = p.add_run()
-    run.text = "Inventory Efficiency Interactive Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get inventory metrics
-    turnover = timeseries_data['metrics']['inventory']['inventory_turnover_ratio']
-    dsi = timeseries_data['metrics']['inventory']['days_sales_of_inventory']
-    periods = timeseries_data['periods']
-
-    # Find latest quarterly data
-    latest_q_idx = None
-    for i in range(len(periods) - 1, -1, -1):
-        if periods[i]['filing_type'] == '10-Q' and turnover[i] is not None:
-            latest_q_idx = i
-            break
-
-    # Find FY2024 baseline
-    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
-
-    if latest_q_idx is not None and fy2024_idx is not None:
-        latest_turnover = turnover[latest_q_idx]
-        latest_dsi = dsi[latest_q_idx]
-        latest_period = periods[latest_q_idx]['period']
-
-        baseline_turnover = turnover[fy2024_idx]
-        baseline_dsi = dsi[fy2024_idx]
-
-        p = summary_frame.paragraphs[0]
-        p.text = "Key Insights:"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Inventory Turnover section
-        p = summary_frame.add_paragraph()
-        p.text = "Inventory Turnover Ratio (higher is better):"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• FY2024 Baseline: {baseline_turnover:.2f}x"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• {latest_period}: {latest_turnover:.2f}x"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        turnover_change = latest_turnover - baseline_turnover
-        emoji = "✅" if turnover_change > 0 else "⚠️"
-        p = summary_frame.add_paragraph()
-        p.text = f"{emoji} Change: {turnover_change:+.2f}x"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if turnover_change > 0 else RGBColor(255, 0, 0)
-        p.level = 1
-        p.space_after = Pt(10)
-
-        # Days Sales of Inventory section
-        p = summary_frame.add_paragraph()
-        p.text = "Days Sales of Inventory (lower is better):"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• FY2024 Baseline: {baseline_dsi:.1f} days"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• {latest_period}: {latest_dsi:.1f} days"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        dsi_change = latest_dsi - baseline_dsi
-        emoji = "✅" if dsi_change < 0 else "⚠️"
-        p = summary_frame.add_paragraph()
-        p.text = f"{emoji} Change: {dsi_change:+.1f} days"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if dsi_change < 0 else RGBColor(255, 0, 0)
-        p.level = 1
-        p.space_after = Pt(12)
-
-        # Interpretation
-        p = summary_frame.add_paragraph()
-        if turnover_change < 0 or dsi_change > 0:
-            p.text = "⚠️ Inventory efficiency has deteriorated - items are taking longer to sell"
-            p.font.color.rgb = RGBColor(255, 0, 0)
-        else:
-            p.text = "✅ Inventory efficiency has improved - faster inventory turnover"
-            p.font.color.rgb = RGBColor(0, 128, 0)
-        p.font.size = Pt(13)
-        p.font.bold = True
-
-
-def add_debt_health_slide(prs, timeseries_data):
-    """Add Debt Health slide (Phase 3 Chart 4)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Debt Health & Interest Coverage"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Dual-axis chart tracking Interest Coverage Ratio and Total Debt:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_debt_health.html").resolve()
-
-    run = p.add_run()
-    run.text = "Debt Health Interactive Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get debt metrics
-    coverage = timeseries_data['metrics']['debt']['interest_coverage_ratio']
-    total_debt = timeseries_data['metrics']['debt']['total_debt_billion']
-    periods = timeseries_data['periods']
-
-    # Find latest quarterly data
-    latest_q_idx = None
-    for i in range(len(periods) - 1, -1, -1):
-        if periods[i]['filing_type'] == '10-Q' and coverage[i] is not None:
-            latest_q_idx = i
-            break
-
-    # Find FY2024 baseline
-    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
-
-    if latest_q_idx is not None and fy2024_idx is not None:
-        latest_coverage = coverage[latest_q_idx]
-        latest_debt = total_debt[latest_q_idx]
-        latest_period = periods[latest_q_idx]['period']
-
-        baseline_coverage = coverage[fy2024_idx]
-        baseline_debt = total_debt[fy2024_idx]
-
-        # Skip if missing critical data
-        if baseline_coverage is None or baseline_debt is None or latest_coverage is None or latest_debt is None:
-            p = summary_frame.paragraphs[0]
-            p.text = "⚠️ Insufficient debt data available for comparison. Please check annual 10-K reports for complete debt metrics."
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(255, 140, 0)
-            return
-
-        p = summary_frame.paragraphs[0]
-        p.text = "Key Insights:"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Interest Coverage section
-        p = summary_frame.add_paragraph()
-        p.text = "Interest Coverage Ratio (higher is better):"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• FY2024 Baseline: {baseline_coverage:.2f}x"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• {latest_period}: {latest_coverage:.2f}x"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        coverage_change = latest_coverage - baseline_coverage
-        emoji = "✅" if coverage_change > 0 else "⚠️"
-        p = summary_frame.add_paragraph()
-        p.text = f"{emoji} Change: {coverage_change:+.2f}x"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if coverage_change > 0 else RGBColor(255, 0, 0)
-        p.level = 1
-
-        # Warning if below 2.0x
-        if latest_coverage < 2.0:
-            p = summary_frame.add_paragraph()
-            p.text = "🚨 CRITICAL: Coverage below 2.0x threshold!"
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(255, 0, 0)
-            p.font.bold = True
-            p.level = 1
-
-        p.space_after = Pt(10)
-
-        # Total Debt section
-        p = summary_frame.add_paragraph()
-        p.text = "Total Debt:"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(4)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• FY2024 Baseline: ${baseline_debt:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• {latest_period}: ${latest_debt:.2f}B"
-        p.font.size = Pt(14)
-        p.level = 1
-
-        debt_change = latest_debt - baseline_debt
-        debt_pct_change = (debt_change / baseline_debt) * 100
-        emoji = "⚠️" if debt_change > 0 else "✅"
-        p = summary_frame.add_paragraph()
-        p.text = f"{emoji} Change: ${debt_change:+.2f}B ({debt_pct_change:+.1f}%)"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(255, 0, 0) if debt_change > 0 else RGBColor(0, 128, 0)
-        p.level = 1
-        p.space_after = Pt(12)
-
-        # Overall assessment
-        p = summary_frame.add_paragraph()
-        if coverage_change < -2.0 and debt_change > 0:
-            p.text = "🚨 CRITICAL: Deteriorating coverage + rising debt = elevated financial risk"
-            p.font.color.rgb = RGBColor(255, 0, 0)
-        elif coverage_change < 0 and debt_change > 0:
-            p.text = "⚠️ WARNING: Both coverage declining and debt increasing"
-            p.font.color.rgb = RGBColor(255, 140, 0)
-        else:
-            p.text = "Debt health metrics require monitoring"
-            p.font.color.rgb = RGBColor(100, 100, 100)
-        p.font.size = Pt(13)
-        p.font.bold = True
-
-
-def add_cash_flows_slide(prs, timeseries_data):
-    """Add Cash Flows slide (Phase 3 Chart 5)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Cash Flow Analysis"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Stacked bar chart showing Operating, Investing, and Financing cash flows:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_cash_flows.html").resolve()
-
-    run = p.add_run()
-    run.text = "Cash Flows Interactive Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get cash flow metrics
-    operating_cf = timeseries_data['metrics']['cash_flows']['operating_cash_flow_billion']
-    investing_cf = timeseries_data['metrics']['cash_flows']['investing_cash_flow_billion']
-    financing_cf = timeseries_data['metrics']['cash_flows']['financing_cash_flow_billion']
-    periods = timeseries_data['periods']
-
-    # Find latest quarterly data
-    latest_q_idx = None
-    for i in range(len(periods) - 1, -1, -1):
-        if periods[i]['filing_type'] == '10-Q' and operating_cf[i] is not None:
-            latest_q_idx = i
-            break
-
-    # Find FY2024 baseline
-    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
-
-    if latest_q_idx is not None and fy2024_idx is not None:
-        latest_operating = operating_cf[latest_q_idx]
-        latest_investing = investing_cf[latest_q_idx]
-        latest_financing = financing_cf[latest_q_idx]
-        latest_period = periods[latest_q_idx]['period']
-
-        baseline_operating = operating_cf[fy2024_idx]
-
-        p = summary_frame.paragraphs[0]
-        p.text = f"Latest Cash Flows ({latest_period}):"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Operating cash flow
-        p = summary_frame.add_paragraph()
-        emoji = "✅" if latest_operating > 0 else "⚠️"
-        p.text = f"{emoji} Operating Activities: ${latest_operating:.2f}B"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if latest_operating > 0 else RGBColor(255, 0, 0)
-        p.level = 0
-
-        # Investing cash flow
-        p = summary_frame.add_paragraph()
-        p.text = f"• Investing Activities: ${latest_investing:.2f}B"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(100, 100, 100)
-        p.level = 0
-
-        # Financing cash flow
-        p = summary_frame.add_paragraph()
-        p.text = f"• Financing Activities: ${latest_financing:.2f}B"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(100, 100, 100)
-        p.level = 0
-        p.space_after = Pt(12)
-
-        # Net cash flow
-        net_cf = latest_operating + latest_investing + latest_financing
-        p = summary_frame.add_paragraph()
-        p.text = f"Net Cash Flow: ${net_cf:.2f}B"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor(0, 128, 0) if net_cf > 0 else RGBColor(255, 0, 0)
-        p.space_after = Pt(12)
-
-        # YoY comparison for operating CF
-        if baseline_operating is not None:
-            p = summary_frame.add_paragraph()
-            p.text = "Operating Cash Flow vs FY2024:"
-            p.font.size = Pt(14)
-            p.font.bold = True
-            p.space_after = Pt(4)
-
-            p = summary_frame.add_paragraph()
-            p.text = f"• FY2024: ${baseline_operating:.2f}B"
-            p.font.size = Pt(14)
-            p.level = 1
-
-            p = summary_frame.add_paragraph()
-            p.text = f"• {latest_period}: ${latest_operating:.2f}B (quarterly)"
-            p.font.size = Pt(14)
-            p.level = 1
-            p.space_after = Pt(12)
-
-        # Key insight
-        p = summary_frame.add_paragraph()
-        if latest_operating > 0 and net_cf > 0:
-            p.text = "✅ Positive operating cash flow indicates healthy core business operations"
-            p.font.color.rgb = RGBColor(0, 128, 0)
-        elif latest_operating > 0 and net_cf < 0:
-            p.text = "⚠️ Operating CF positive but net CF negative due to investing/financing outflows"
-            p.font.color.rgb = RGBColor(255, 140, 0)
-        else:
-            p.text = "🚨 Negative operating cash flow requires immediate attention"
-            p.font.color.rgb = RGBColor(255, 0, 0)
-        p.font.size = Pt(13)
-        p.font.bold = True
-
-
-def add_expense_breakdown_slide(prs, timeseries_data):
-    """Add Operating Expense Breakdown slide (Chart 14 - Phase 6)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Operating Expense Breakdown"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "100% Stacked Bar Chart showing what's eating into margins:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📊 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_expense_breakdown.html").resolve()
-
-    run = p.add_run()
-    run.text = "Operating Expense Breakdown Interactive Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets with key insights
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    # Get expense metrics
-    cogs_pct = timeseries_data['metrics']['operating_expenses']['cogs_percent_of_revenue']
-    sga_pct = timeseries_data['metrics']['operating_expenses']['sga_percent_of_revenue']
-    other_pct = timeseries_data['metrics']['operating_expenses']['other_expenses_percent_of_revenue']
-    oi_pct = timeseries_data['metrics']['margins']['operating_margin_percent']
-    periods = timeseries_data['periods']
-
-    # Find latest quarterly data
-    latest_q_idx = None
-    for i in range(len(periods) - 1, -1, -1):
-        if periods[i]['filing_type'] == '10-Q' and all([cogs_pct[i], sga_pct[i], other_pct[i], oi_pct[i]]):
-            latest_q_idx = i
-            break
-
-    # Find FY2024 baseline
-    fy2024_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2024'), None)
-
-    if latest_q_idx is not None and fy2024_idx is not None:
-        latest_period = periods[latest_q_idx]['period']
-
-        # Latest breakdown
-        latest_cogs = cogs_pct[latest_q_idx]
-        latest_sga = sga_pct[latest_q_idx]
-        latest_other = other_pct[latest_q_idx]
-        latest_oi = oi_pct[latest_q_idx]
-
-        # Baseline breakdown
-        baseline_cogs = cogs_pct[fy2024_idx]
-        baseline_sga = sga_pct[fy2024_idx]
-        baseline_oi = oi_pct[fy2024_idx]
-
-        p = summary_frame.paragraphs[0]
-        p.text = f"Revenue Breakdown ({latest_period}):"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.space_after = Pt(8)
-
-        # Each expense component
-        p = summary_frame.add_paragraph()
-        p.text = f"• COGS: {latest_cogs:.2f}% of revenue"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(231, 76, 60)  # Red
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• SG&A: {latest_sga:.2f}% of revenue"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(155, 89, 182)  # Purple
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Other Operating Expenses: {latest_other:.2f}% of revenue"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(243, 156, 18)  # Orange
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Operating Income: {latest_oi:.2f}% of revenue"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(39, 174, 96)  # Green
-        p.font.bold = True
-        p.space_after = Pt(12)
-
-        # Changes vs baseline
-        p = summary_frame.add_paragraph()
-        p.text = "Changes vs FY2024 Baseline:"
-        p.font.size = Pt(14)
-        p.font.bold = True
-        p.space_after = Pt(6)
-
-        sga_change = latest_sga - baseline_sga
-        cogs_change = latest_cogs - baseline_cogs
-        oi_change = latest_oi - baseline_oi
-
-        # SG&A trend
-        p = summary_frame.add_paragraph()
-        sga_emoji = "⚠️" if sga_change > 0 else "✅"
-        p.text = f"{sga_emoji} SG&A: {sga_change:+.2f}pp"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(255, 0, 0) if sga_change > 0 else RGBColor(0, 128, 0)
-        p.level = 1
-
-        # COGS trend
-        p = summary_frame.add_paragraph()
-        cogs_emoji = "⚠️" if cogs_change > 0 else "✅"
-        p.text = f"{cogs_emoji} COGS: {cogs_change:+.2f}pp"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(255, 0, 0) if cogs_change > 0 else RGBColor(0, 128, 0)
-        p.level = 1
-
-        # Operating Income trend
-        p = summary_frame.add_paragraph()
-        oi_emoji = "✅" if oi_change > 0 else "⚠️"
-        p.text = f"{oi_emoji} Operating Income: {oi_change:+.2f}pp"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor(0, 128, 0) if oi_change > 0 else RGBColor(255, 0, 0)
-        p.font.bold = True
-        p.level = 1
-        p.space_after = Pt(12)
-
-        # Key insight
-        p = summary_frame.add_paragraph()
-        if sga_change > 0.5:
-            p.text = "🚨 SG&A growing faster than revenue - primary margin pressure"
-            p.font.color.rgb = RGBColor(255, 0, 0)
-        elif cogs_change > 0.5:
-            p.text = "⚠️ COGS efficiency deteriorating - supply chain or pricing pressure"
-            p.font.color.rgb = RGBColor(255, 140, 0)
-        elif oi_change > 0:
-            p.text = "✅ Operating margin expanding - effective cost management"
-            p.font.color.rgb = RGBColor(0, 128, 0)
-        else:
-            p.text = "Expense structure monitoring recommended"
-            p.font.color.rgb = RGBColor(100, 100, 100)
-        p.font.size = Pt(13)
-        p.font.bold = True
-
-
-def add_baseline_slide(prs, baseline_data):
-    """Add baseline slide."""
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    title = slide.shapes.title
-    title.text = "Baseline: FY2024 Annual Performance"
-
-    vital = baseline_data['vital_signs']
-
-    # Create table
-    left = Inches(2)
-    top = Inches(2)
-    width = Inches(6)
-    height = Inches(3)
-
-    table = slide.shapes.add_table(6, 2, left, top, width, height).table
-
-    # Header
-    table.cell(0, 0).text = "Metric"
-    table.cell(0, 1).text = "Value"
-
-    # Data rows
-    metrics = [
-        ("Net Sales", f"${vital['net_sales_billion']:.2f}B"),
-        ("Operating Income", f"${vital['operating_income_billion']:.2f}B"),
-        ("Operating Margin", f"{vital['operating_margin_percent']:.2f}%"),
-        ("Gross Margin", f"{vital['gross_margin_percent']:.2f}%"),
-        ("Inventory", f"${vital['inventory_billion']:.2f}B"),
-    ]
-
-    for i, (metric, value) in enumerate(metrics, 1):
-        table.cell(i, 0).text = metric
-        table.cell(i, 1).text = value
-
-    # Style table
-    for row in table.rows:
-        row.height = Inches(0.5)
-        for cell in row.cells:
-            cell.text_frame.paragraphs[0].font.size = Pt(14)
-
-    # Risk flags
-    if baseline_data['risk_flags']:
-        left = Inches(1)
-        top = Inches(5.5)
-        width = Inches(8)
-        height = Inches(1.5)
-
-        text_box = slide.shapes.add_textbox(left, top, width, height)
-        tf = text_box.text_frame
-
-        p = tf.add_paragraph()
-        p.text = "Risk Flags:"
-        p.font.size = Pt(14)
-        p.font.bold = True
-
-        for flag in baseline_data['risk_flags']:
-            p = tf.add_paragraph()
-            p.text = f"• {flag}"
-            p.font.size = Pt(12)
-            p.level = 0
-
-
-def add_quarter_slide(prs, quarter_data, baseline_data):
-    """Add quarterly analysis slide."""
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    title = slide.shapes.title
-    title.text = f"{quarter_data['period']} Performance"
-
-    vital = quarter_data['vital_signs']
-    baseline_vital = baseline_data['vital_signs']
-
-    # Left column: Metrics
-    left = Inches(0.5)
-    top = Inches(1.8)
-    width = Inches(4.5)
-    height = Inches(4)
-
-    table = slide.shapes.add_table(6, 3, left, top, width, height).table
-
-    # Headers
-    table.cell(0, 0).text = "Metric"
-    table.cell(0, 1).text = quarter_data['period']
-    table.cell(0, 2).text = "vs Baseline"
-
-    # Data
-    metrics = [
-        ("Net Sales", vital.get('net_sales_billion', 0), baseline_vital.get('net_sales_billion', 0), "B"),
-        ("Operating Margin", vital.get('operating_margin_percent', 0), baseline_vital.get('operating_margin_percent', 0), "%"),
-        ("Gross Margin", vital.get('gross_margin_percent', 0), baseline_vital.get('gross_margin_percent', 0), "%"),
-        ("Operating Income", vital.get('operating_income_billion', 0), baseline_vital.get('operating_income_billion', 0), "B"),
-        ("Inventory", vital.get('inventory_billion', 0), baseline_vital.get('inventory_billion', 0), "B"),
-    ]
-
-    for i, (metric, current, baseline, unit) in enumerate(metrics, 1):
-        table.cell(i, 0).text = metric
-        if unit == "B":
-            table.cell(i, 1).text = f"${current:.2f}B"
-            change = current - baseline
-            table.cell(i, 2).text = f"{change:+.2f}B"
-        else:
-            table.cell(i, 1).text = f"{current:.2f}%"
-            change = current - baseline
-            table.cell(i, 2).text = f"{change:+.2f}%"
-
-            # Color code changes
-            cell = table.cell(i, 2)
-            if change < -0.5:
-                cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 0, 0)
-            elif change > 0.5:
-                cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 128, 0)
-
-    # Style table
-    for row in table.rows:
-        row.height = Inches(0.5)
-        for cell in row.cells:
-            cell.text_frame.paragraphs[0].font.size = Pt(12)
-
-    # Right column: Analysis
-    left = Inches(5.5)
-    top = Inches(1.8)
-    width = Inches(4)
-    height = Inches(4)
-
-    text_box = slide.shapes.add_textbox(left, top, width, height)
-    tf = text_box.text_frame
-    tf.word_wrap = True
-
-    p = tf.add_paragraph()
-    p.text = "Key Observations:"
-    p.font.size = Pt(14)
-    p.font.bold = True
-    p.space_after = Pt(8)
-
-    # Add trend analysis from baseline comparison
-    if 'vs_baseline' in vital and vital['vs_baseline']:
-        vs = vital['vs_baseline']
-
-        if 'operating_margin_trend' in vs:
-            p = tf.add_paragraph()
-            trend = vs['operating_margin_trend']
-            change = vs.get('operating_margin_change', 0)
-            emoji = "✅" if trend == "improving" else "⚠️"
-            p.text = f"{emoji} Operating margin {trend} ({change:+.2f}% vs baseline)"
-            p.font.size = Pt(12)
-            p.level = 0
-
-        if 'gross_margin_change' in vs:
-            change = vs['gross_margin_change']
-            if abs(change) > 0.5:
-                p = tf.add_paragraph()
-                emoji = "✅" if change > 0 else "⚠️"
-                p.text = f"{emoji} Gross margin {change:+.2f}% vs baseline"
-                p.font.size = Pt(12)
-                p.level = 0
-
-    # Add YoY analysis
-    if 'vs_year_ago' in vital and vital['vs_year_ago']:
-        yoy = vital['vs_year_ago']
-
-        if 'operating_margin_yoy_change' in yoy:
-            p = tf.add_paragraph()
-            change = yoy['operating_margin_yoy_change']
-            comparison = yoy.get('comparison_period', 'prior year')
-            emoji = "✅" if change > 0 else "⚠️"
-            p.text = f"{emoji} Operating margin {change:+.2f}% vs {comparison}"
-            p.font.size = Pt(12)
-            p.level = 0
-
-        if 'net_sales_yoy_growth_percent' in yoy:
-            growth = yoy['net_sales_yoy_growth_percent']
-            p = tf.add_paragraph()
-            emoji = "✅" if growth > 0 else "⚠️"
-            p.text = f"{emoji} Sales {growth:+.1f}% YoY"
-            p.font.size = Pt(12)
-            p.level = 0
-
-        if 'inventory_buildup_warning' in yoy:
-            p = tf.add_paragraph()
-            p.text = f"🚨 {yoy['inventory_buildup_warning']}"
-            p.font.size = Pt(12)
-            p.font.color.rgb = RGBColor(255, 0, 0)
-            p.level = 0
-
-    # Risk flags
-    if quarter_data.get('risk_flags'):
-        p = tf.add_paragraph()
-        p.text = "\nRisk Flags:"
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.space_before = Pt(8)
-
-        for flag in quarter_data['risk_flags'][:3]:
-            p = tf.add_paragraph()
-            p.text = f"• {flag}"
-            p.font.size = Pt(11)
-            p.level = 1
-
-
-def add_q3_warning_slide(prs, q3_data, baseline_data):
-    """Special slide for Q3 with warnings."""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank
-
-    # Warning banner
-    left = Inches(0)
-    top = Inches(0.5)
-    width = Inches(10)
-    height = Inches(1)
-
-    banner = slide.shapes.add_shape(1, left, top, width, height)  # Rectangle
-    banner.fill.solid()
-    banner.fill.fore_color.rgb = RGBColor(255, 0, 0)
-    banner.line.color.rgb = RGBColor(255, 0, 0)
-
-    tf = banner.text_frame
-    tf.text = "⚠️ Q3 2025: CRITICAL WEAKNESS DETECTED"
-    p = tf.paragraphs[0]
-    p.font.size = Pt(28)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    p.alignment = PP_ALIGN.CENTER
-
-    # Metrics comparison
-    vital = q3_data['vital_signs']
-    baseline_vital = baseline_data['vital_signs']
-
-    left = Inches(1)
-    top = Inches(2)
-    width = Inches(8)
-    height = Inches(4.5)
-
-    text_box = slide.shapes.add_textbox(left, top, width, height)
-    tf = text_box.text_frame
-    tf.word_wrap = True
-
-    issues = [
-        f"Operating Margin: {vital['operating_margin_percent']:.2f}% ({vital['vs_baseline']['operating_margin_change']:+.2f}% vs baseline)",
-        f"  → Declined 147 basis points - worst quarter of the year",
-        "",
-        f"Inventory: ${vital['inventory_billion']:.2f}B",
-        f"  → Up {((vital['inventory_billion']/baseline_vital['inventory_billion']-1)*100):.1f}% from baseline",
-        f"  → Excess inventory building = potential clearance sales ahead",
-        "",
-        f"Operating Income: ${vital['operating_income_billion']:.2f}B",
-        f"  → Lowest quarterly operating income despite similar sales",
-        "",
-        "Combined Effect:",
-        "  → Interest coverage dropped to 1.5x (from 9.7x at baseline)",
-        "  → Approaching distressed territory (<1.5x is red flag)",
-        "  → Rising debt + falling profitability = liquidity risk",
-    ]
-
-    for line in issues:
-        p = tf.add_paragraph()
-        p.text = line
-        if line.startswith("  →"):
-            p.font.size = Pt(13)
-            p.level = 1
-            p.font.color.rgb = RGBColor(128, 0, 0)
-        elif ":" in line and not line.startswith(" "):
-            p.font.size = Pt(16)
-            p.font.bold = True
-            p.space_after = Pt(4)
-        else:
-            p.font.size = Pt(14)
-
-        if "worst" in line.lower() or "distressed" in line.lower() or "risk" in line.lower():
-            p.font.color.rgb = RGBColor(255, 0, 0)
-
-
-def add_debt_analysis_slide(prs):
-    """Add debt analysis slide."""
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    title = slide.shapes.title
-    title.text = "Debt & Leverage Analysis"
-
-    # Debt metrics table
-    left = Inches(0.5)
-    top = Inches(1.8)
-    width = Inches(9)
-    height = Inches(2.5)
-
-    table = slide.shapes.add_table(5, 5, left, top, width, height).table
-
-    # Headers
-    headers = ["Metric", "FY2024", "Q1 2025", "Q2 2025", "Q3 2025"]
-    for i, header in enumerate(headers):
-        table.cell(0, i).text = header
-
-    # Data
-    debt_data = [
-        ["Total Debt", "$14.30B", "$14.33B", "$15.32B", "$15.37B"],
-        ["Debt-to-Equity", "0.97x", "0.96x", "0.99x", "0.99x"],
-        ["Interest Coverage", "9.7x", "2.6x", "2.2x", "1.5x"],
-        ["Change from Baseline", "—", "+0.2%", "+7.1%", "+7.5%"],
-    ]
-
-    for i, row_data in enumerate(debt_data, 1):
-        for j, value in enumerate(row_data):
-            cell = table.cell(i, j)
-            cell.text = value
-
-            # Highlight deteriorating coverage
-            if i == 2 and j > 1:  # Interest coverage row
-                coverage = float(value.replace('x', ''))
-                if coverage < 2.0:
-                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 0, 0)
-
-    # Style table
-    for row in table.rows:
-        row.height = Inches(0.4)
-        for cell in row.cells:
-            cell.text_frame.paragraphs[0].font.size = Pt(12)
-
-    # Key findings
-    left = Inches(0.5)
-    top = Inches(4.5)
-    width = Inches(9)
-    height = Inches(2.5)
-
-    text_box = slide.shapes.add_textbox(left, top, width, height)
-    tf = text_box.text_frame
-
-    p = tf.add_paragraph()
-    p.text = "Critical Findings:"
-    p.font.size = Pt(16)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(204, 0, 0)
-
-    findings = [
-        "Debt increased 7.5% while operating income declined significantly",
-        "Interest coverage compressed from 9.7x to 1.5x in one year (approaching distressed level)",
-        "Debt likely used to fund inventory buildup and cover working capital shortfalls",
-        "$2.00B debt matures in FY2026 - needs refinancing or paydown with limited cash flow",
-    ]
-
-    for finding in findings:
-        p = tf.add_paragraph()
-        p.text = f"• {finding}"
-        p.font.size = Pt(13)
-        p.level = 0
-
-
-def add_recommendations_slide(prs, data):
-    """Add recommendations slide."""
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    title = slide.shapes.title
-    title.text = "Key Risks & Monitoring Points"
-
-    left = Inches(0.5)
-    top = Inches(1.5)
-    width = Inches(9)
-    height = Inches(5.5)
-
-    text_box = slide.shapes.add_textbox(left, top, width, height)
-    tf = text_box.text_frame
-    tf.word_wrap = True
-
-    sections = [
-        ("Immediate Risks (Q4 2025)", [
-            "Q4 operating margin recovery critical to avoid further deterioration",
-            "High inventory + weak margins → Expected Q4 clearance sales",
-            "If interest coverage falls below 1.5x, triggers debt covenant concerns",
-        ]),
-        ("Watch Points for Next Quarter", [
-            "Operating margin trend (needs to recover to 5%+ range)",
-            "Inventory levels (should decline post-holiday)",
-            "Comparable sales breakdown (store vs. digital performance)",
-            "Cash flow from operations (ability to service $2B FY2026 debt maturity)",
-        ]),
-        ("Strategic Questions", [
-            "Can Target reduce inventory without severe margin impact?",
-            "Is the operating margin decline temporary or structural?",
-            "Will shrink/theft issues persist into FY2026?",
-            "Is current debt level sustainable with lower profitability?",
-        ]),
-    ]
-
-    for section_title, bullets in sections:
-        p = tf.add_paragraph()
-        p.text = section_title
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor(204, 0, 0)
-        p.space_after = Pt(6)
-
-        for bullet in bullets:
-            p = tf.add_paragraph()
-            p.text = f"• {bullet}"
-            p.font.size = Pt(13)
-            p.level = 0
-            p.space_after = Pt(3)
-
-        p = tf.add_paragraph()
-        p.space_after = Pt(10)
 
 
 def add_investment_thesis_slide(prs, thesis):
-    """Add Investment Thesis slide (Phase 4)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
+    """Add Investment Thesis slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
 
     # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.5))
     title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Investment Thesis"
-    title.font.size = Pt(32)
-    title.font.bold = True
-    title.font.color.rgb = RGBColor(204, 0, 0)  # Target red
+    p = title_frame.paragraphs[0]
+    p.text = "Investment Thesis"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
 
-    # Recommendation box (highlighted)
-    rec_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.2)
-    )
+    # Recommendation box
+    rec_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(1.2))
     rec_frame = rec_box.text_frame
     rec = thesis['recommendation']
 
@@ -1506,21 +546,20 @@ def add_investment_thesis_slide(prs, thesis):
     p.space_after = Pt(6)
 
     # Risk factors (left column)
-    risk_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(4.25), Inches(4)
-    )
+    risk_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(4.25), Inches(4))
     risk_frame = risk_box.text_frame
 
     p = risk_frame.paragraphs[0]
-    p.text = "⚠️  Risk Factors"
+    p.text = "Risk Factors"
     p.font.size = Pt(20)
     p.font.bold = True
     p.space_after = Pt(12)
 
-    for risk in thesis['risk_factors']:
+    for risk in thesis['risk_factors'][:3]:
         p = risk_frame.add_paragraph()
-        p.text = f"• {risk['factor']} ({risk['severity']})"
+        p.text = f"{risk['factor']} ({risk['severity']})"
         p.font.size = Pt(14)
+        p.font.bold = True
         p.level = 0
 
         p = risk_frame.add_paragraph()
@@ -1530,21 +569,20 @@ def add_investment_thesis_slide(prs, thesis):
         p.space_after = Pt(6)
 
     # Opportunities (right column)
-    opp_box = slide.shapes.add_textbox(
-        Inches(5.25), Inches(2.5), Inches(4.25), Inches(4)
-    )
+    opp_box = slide.shapes.add_textbox(Inches(5.25), Inches(2.5), Inches(4.25), Inches(4))
     opp_frame = opp_box.text_frame
 
     p = opp_frame.paragraphs[0]
-    p.text = "✨ Opportunities"
+    p.text = "Opportunities"
     p.font.size = Pt(20)
     p.font.bold = True
     p.space_after = Pt(12)
 
-    for opp in thesis['opportunities']:
+    for opp in thesis['opportunities'][:3]:
         p = opp_frame.add_paragraph()
-        p.text = f"• {opp['factor']} ({opp['potential']} potential)"
+        p.text = f"{opp['factor']} ({opp['potential']} potential)"
         p.font.size = Pt(14)
+        p.font.bold = True
         p.level = 0
 
         p = opp_frame.add_paragraph()
@@ -1554,211 +592,9 @@ def add_investment_thesis_slide(prs, thesis):
         p.space_after = Pt(6)
 
 
-def add_margin_bridge_slide(prs, timeseries_data, full_data):
-    """Add Margin Bridge Analysis slide (Phase 4)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Operating Margin Bridge (FY2022 → Q3 2025)"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instruction text with hyperlink
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(1.0)
-    )
-    instruction_frame = instruction_box.text_frame
-    p = instruction_frame.paragraphs[0]
-    p.text = "Interactive waterfall chart showing operating margin evolution:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    # Add clickable hyperlink
-    p = instruction_frame.add_paragraph()
-    p.text = "📂 Click to view: "
-    p.font.size = Pt(14)
-
-    # Get absolute path to the chart file
-    chart_path = Path("output/chart_margin_bridge.html").resolve()
-
-    run = p.add_run()
-    run.text = "Margin Bridge Waterfall Chart"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart_path)
-
-    p.space_after = Pt(12)
-
-    # Summary bullets
-    summary_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.5), Inches(9), Inches(4)
-    )
-    summary_frame = summary_box.text_frame
-
-    margins = timeseries_data['metrics']['margins']['operating_margin_percent']
-    periods = timeseries_data['periods']
-
-    # Get FY2022 and Q3 2025
-    fy2022_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2022'), None)
-    q3_2025_idx = next((i for i, p in enumerate(periods) if p['period'] == 'Q3 2025'), None)
-
-    if fy2022_idx is not None and q3_2025_idx is not None:
-        fy2022_margin = margins[fy2022_idx]
-        q3_2025_margin = margins[q3_2025_idx]
-        total_change = q3_2025_margin - fy2022_margin
-
-        p = summary_frame.paragraphs[0]
-        p.text = f"• FY2022 Baseline: {fy2022_margin:.2f}%"
-        p.font.size = Pt(16)
-        p.space_after = Pt(6)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Q3 2025 Current: {q3_2025_margin:.2f}%"
-        p.font.size = Pt(16)
-        p.space_after = Pt(6)
-
-        p = summary_frame.add_paragraph()
-        p.text = f"• Net Change: {total_change:+.2f} percentage points"
-        p.font.size = Pt(16)
-        p.font.color.rgb = RGBColor(0, 128, 0) if total_change > 0 else RGBColor(255, 0, 0)
-        p.space_after = Pt(12)
-
-    p = summary_frame.add_paragraph()
-    p.text = "Key Drivers:"
-    p.font.size = Pt(14)
-    p.font.bold = True
-    p.space_after = Pt(6)
-
-    # Load risk heatmap for context
-    shrink_trend = full_data['risk_heatmap']['shrink']['trend']
-    markdown_trend = full_data['risk_heatmap']['markdown']['trend']
-
-    p = summary_frame.add_paragraph()
-    p.text = f"• Shrink impact: {shrink_trend} trend"
-    p.font.size = Pt(14)
-    p.level = 1
-
-    p = summary_frame.add_paragraph()
-    p.text = f"• Markdown activity: {markdown_trend} trend"
-    p.font.size = Pt(14)
-    p.level = 1
-
-
-def add_risk_heatmap_slide(prs, full_data):
-    """Add Risk Heatmap slide (Phase 4)."""
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Title
-    title_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(9), Inches(0.5)
-    )
-    title_frame = title_box.text_frame
-    title = title_frame.paragraphs[0]
-    title.text = "Risk Heatmap: Shrink & Markdown Trends"
-    title.font.size = Pt(28)
-    title.font.bold = True
-
-    # Instructions with clickable hyperlinks
-    instruction_box = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.0), Inches(9), Inches(2.0)
-    )
-    instruction_frame = instruction_box.text_frame
-
-    p = instruction_frame.paragraphs[0]
-    p.text = "Interactive visualizations showing risk mention trends:"
-    p.font.size = Pt(14)
-    p.space_after = Pt(6)
-
-    p = instruction_frame.add_paragraph()
-    p.text = "📂 Click to view charts:"
-    p.font.size = Pt(14)
-    p.font.bold = True
-    p.space_after = Pt(6)
-
-    # First hyperlink - Risk Trends
-    p = instruction_frame.add_paragraph()
-    p.text = "   • "
-    p.level = 1
-
-    chart1_path = Path("output/chart_risk_trends.html").resolve()
-    run = p.add_run()
-    run.text = "Risk Mention Trends (stacked area chart)"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart1_path)
-
-    # Second hyperlink - Risk Heatmap Grid
-    p = instruction_frame.add_paragraph()
-    p.text = "   • "
-    p.level = 1
-
-    chart2_path = Path("output/chart_risk_heatmap_grid.html").resolve()
-    run = p.add_run()
-    run.text = "Risk Heatmap Grid (intensity matrix)"
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(0, 0, 255)
-    run.font.underline = True
-    run.hyperlink.address = str(chart2_path)
-
-    p.space_after = Pt(12)
-
-    # Summary stats (table)
-    risk_heatmap = full_data['risk_heatmap']
-
-    rows = 3
-    cols = 4
-    left = Inches(1.5)
-    top = Inches(3.0)
-    width = Inches(7)
-    height = Inches(2.5)
-
-    table = slide.shapes.add_table(rows, cols, left, top, width, height).table
-
-    # Headers
-    table.cell(0, 0).text = "Risk Type"
-    table.cell(0, 1).text = "Total Mentions"
-    table.cell(0, 2).text = "Avg per Period"
-    table.cell(0, 3).text = "Trend"
-
-    # Shrink row
-    table.cell(1, 0).text = "Shrink/Theft"
-    table.cell(1, 1).text = str(risk_heatmap['shrink']['total_mentions'])
-    table.cell(1, 2).text = str(risk_heatmap['shrink']['avg_mentions_per_period'])
-    table.cell(1, 3).text = risk_heatmap['shrink']['trend']
-
-    # Color code shrink trend cell
-    cell = table.cell(1, 3)
-    if risk_heatmap['shrink']['trend'] == 'increasing':
-        for paragraph in cell.text_frame.paragraphs:
-            for run in paragraph.runs:
-                run.font.color.rgb = RGBColor(255, 0, 0)
-                run.font.bold = True
-
-    # Markdown row
-    table.cell(2, 0).text = "Markdown/Promo"
-    table.cell(2, 1).text = str(risk_heatmap['markdown']['total_mentions'])
-    table.cell(2, 2).text = str(risk_heatmap['markdown']['avg_mentions_per_period'])
-    table.cell(2, 3).text = risk_heatmap['markdown']['trend']
-
-    # Format table
-    for row in table.rows:
-        for cell in row.cells:
-            cell.text_frame.paragraphs[0].font.size = Pt(14)
-            cell.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
-
-    # Bold headers
-    for col in range(cols):
-        table.cell(0, col).text_frame.paragraphs[0].font.bold = True
-
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
 
 if __name__ == "__main__":
     create_target_presentation()
