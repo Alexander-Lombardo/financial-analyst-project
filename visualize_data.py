@@ -3609,7 +3609,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                 "<extra></extra>"
             ),
             visible=visible,
-            showlegend=(q_idx == 0)  # Show legend for first trace in group
+            showlegend=True  # legendgroup prevents duplicates
         ))
 
         # Add peer traces for this quarter with historical P/E
@@ -3648,7 +3648,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                     "<extra></extra>"
                 ),
                 visible=visible,
-                showlegend=(q_idx == 0)  # Show legend for first trace in group
+                showlegend=True  # legendgroup prevents duplicates
             ))
 
     # Add reference lines (fixed)
@@ -3702,6 +3702,14 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                         'xanchor': 'center',
                         'y': 0.95,
                         'yanchor': 'top'
+                    },
+                    'showlegend': True,
+                    'legend': {
+                        'orientation': 'v',
+                        'yanchor': 'middle',
+                        'y': 0.5,
+                        'xanchor': 'left',
+                        'x': 1.08
                     }
                 }
             ]
