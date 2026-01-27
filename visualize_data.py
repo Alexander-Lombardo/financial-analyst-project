@@ -455,31 +455,143 @@ def create_debt_health_chart(data):
 
 
 def create_cash_flows_chart(data):
-    """Chart 5: Statement of Cash Flows (Operating, Investing, Financing)"""
-    periods = [p['period'] for p in data['periods']]
-    operating_cf = data['metrics']['cash_flows']['operating_cash_flow_billion']
-    investing_cf = data['metrics']['cash_flows']['investing_cash_flow_billion']
-    financing_cf = data['metrics']['cash_flows']['financing_cash_flow_billion']
+    """
+    Chart 7: Statement of Cash Flows (Operating, Investing, Financing)
+
+    IMPORTANT: 10-Q cash flow values are cumulative YTD, not standalone quarters.
+    This function converts YTD to standalone quarterly values:
+    - Q1 = Q1 YTD (as-is)
+    - Q2 = Q2 YTD - Q1 YTD
+    - Q3 = Q3 YTD - Q2 YTD
+    - Q4 = Annual - Q3 YTD
+
+    Features:
+    - Three cash flow lines: Operating (green), Investing (blue), Financing (orange)
+    - 15 quarters with calculated Q4 from annual reports
+    - Zero reference line for context
+    """
+    cf = data['metrics']['cash_flows']
+
+    # Step 1: Collect YTD data from 10-Q filings, grouped by fiscal year
+    ytd_by_fy = {}  # {fiscal_year: {'Q1': {...}, 'Q2': {...}, 'Q3': {...}}}
+    annual_data = {}  # {fiscal_year: {'ocf': ..., 'icf': ..., 'fcf': ...}}
+
+    for i, period in enumerate(data['periods']):
+        fy = period['fiscal_year']
+        ocf = cf['operating_cash_flow_billion'][i]
+        icf = cf['investing_cash_flow_billion'][i]
+        fcf = cf['financing_cash_flow_billion'][i]
+
+        if period['filing_type'] == '10-Q' and fy >= 2022:
+            if fy not in ytd_by_fy:
+                ytd_by_fy[fy] = {}
+
+            # Determine quarter from period string (e.g., "Q1 2023" -> "Q1")
+            q_num = period['period'].split()[0]  # "Q1", "Q2", or "Q3"
+            ytd_by_fy[fy][q_num] = {'ocf': ocf, 'icf': icf, 'fcf': fcf}
+
+        elif period['filing_type'] == '10-K' and fy >= 2022:
+            annual_data[fy] = {'ocf': ocf, 'icf': icf, 'fcf': fcf}
+
+    # Step 2: Convert YTD to standalone quarterly values and calculate Q4
+    quarterly_data = []
+
+    for fy in sorted(ytd_by_fy.keys()):
+        ytd = ytd_by_fy[fy]
+        annual = annual_data.get(fy)
+
+        # Q1 standalone = Q1 YTD (as-is)
+        if 'Q1' in ytd and ytd['Q1']['ocf'] is not None:
+            quarterly_data.append({
+                'period': f'Q1 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(ytd['Q1']['ocf'], 2),
+                'icf': round(ytd['Q1']['icf'], 2) if ytd['Q1']['icf'] else None,
+                'fcf': round(ytd['Q1']['fcf'], 2) if ytd['Q1']['fcf'] else None
+            })
+
+        # Q2 standalone = Q2 YTD - Q1 YTD
+        if 'Q1' in ytd and 'Q2' in ytd and ytd['Q2']['ocf'] is not None:
+            q2_ocf = ytd['Q2']['ocf'] - ytd['Q1']['ocf']
+            q2_icf = ytd['Q2']['icf'] - ytd['Q1']['icf'] if ytd['Q2']['icf'] and ytd['Q1']['icf'] else None
+            q2_fcf = ytd['Q2']['fcf'] - ytd['Q1']['fcf'] if ytd['Q2']['fcf'] and ytd['Q1']['fcf'] else None
+            quarterly_data.append({
+                'period': f'Q2 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q2_ocf, 2),
+                'icf': round(q2_icf, 2) if q2_icf else None,
+                'fcf': round(q2_fcf, 2) if q2_fcf else None
+            })
+
+        # Q3 standalone = Q3 YTD - Q2 YTD
+        if 'Q2' in ytd and 'Q3' in ytd and ytd['Q3']['ocf'] is not None:
+            q3_ocf = ytd['Q3']['ocf'] - ytd['Q2']['ocf']
+            q3_icf = ytd['Q3']['icf'] - ytd['Q2']['icf'] if ytd['Q3']['icf'] and ytd['Q2']['icf'] else None
+            q3_fcf = ytd['Q3']['fcf'] - ytd['Q2']['fcf'] if ytd['Q3']['fcf'] and ytd['Q2']['fcf'] else None
+            quarterly_data.append({
+                'period': f'Q3 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q3_ocf, 2),
+                'icf': round(q3_icf, 2) if q3_icf else None,
+                'fcf': round(q3_fcf, 2) if q3_fcf else None
+            })
+
+        # Q4 standalone = Annual - Q3 YTD
+        if annual and 'Q3' in ytd and ytd['Q3']['ocf'] is not None:
+            q4_ocf = annual['ocf'] - ytd['Q3']['ocf']
+            q4_icf = annual['icf'] - ytd['Q3']['icf'] if annual['icf'] and ytd['Q3']['icf'] else None
+            q4_fcf = annual['fcf'] - ytd['Q3']['fcf'] if annual['fcf'] and ytd['Q3']['fcf'] else None
+            quarterly_data.append({
+                'period': f'Q4 {fy}',
+                'fiscal_year': fy,
+                'ocf': round(q4_ocf, 2),
+                'icf': round(q4_icf, 2) if q4_icf else None,
+                'fcf': round(q4_fcf, 2) if q4_fcf else None
+            })
+
+    # Step 3: Sort by fiscal year and quarter
+    def sort_key(item):
+        year = item['fiscal_year']
+        period = item['period']
+        if 'Q1' in period:
+            quarter = 1
+        elif 'Q2' in period:
+            quarter = 2
+        elif 'Q3' in period:
+            quarter = 3
+        elif 'Q4' in period:
+            quarter = 4
+        else:
+            quarter = 0
+        return (year, quarter)
+
+    quarterly_data.sort(key=sort_key)
+
+    # Extract arrays for plotting
+    periods = [q['period'] for q in quarterly_data]
+    ocf_values = [q['ocf'] for q in quarterly_data]
+    icf_values = [q['icf'] for q in quarterly_data]
+    fcf_values = [q['fcf'] for q in quarterly_data]
 
     fig = go.Figure()
 
     # Operating Cash Flow (green solid)
     fig.add_trace(
-        go.Scatter(x=periods, y=operating_cf, name="Operating Cash Flow",
+        go.Scatter(x=periods, y=ocf_values, name="Operating Cash Flow",
                    line=dict(color='green', width=3), mode='lines+markers',
                    marker=dict(size=8))
     )
 
     # Investing Cash Flow (blue dashed)
     fig.add_trace(
-        go.Scatter(x=periods, y=investing_cf, name="Investing Cash Flow",
+        go.Scatter(x=periods, y=icf_values, name="Investing Cash Flow",
                    line=dict(color='blue', width=3, dash='dash'),
                    mode='lines+markers', marker=dict(size=8))
     )
 
     # Financing Cash Flow (orange dotted)
     fig.add_trace(
-        go.Scatter(x=periods, y=financing_cf, name="Financing Cash Flow",
+        go.Scatter(x=periods, y=fcf_values, name="Financing Cash Flow",
                    line=dict(color='orange', width=3, dash='dot'),
                    mode='lines+markers', marker=dict(size=8))
     )
@@ -489,7 +601,7 @@ def create_cash_flows_chart(data):
                   line_width=1, opacity=0.5)
 
     fig.update_layout(
-        title="Target: Statement of Cash Flows (FY2020-Q3 2025)",
+        title="Target: Statement of Cash Flows (Q1 2022 - Q3 2025)<br><sub>Standalone quarterly values with calculated Q4</sub>",
         xaxis_title="Period",
         yaxis_title="Cash Flow ($ Billions)",
         hovermode='x unified',
@@ -2902,74 +3014,114 @@ def create_cash_flow_sankey(data):
     - Debt Repayment (deleveraging)
     - Retained Cash (remaining)
 
-    Uses quarterly data with calculated Q4 for granular cash allocation view.
+    IMPORTANT: 10-Q cash flow values are cumulative YTD, not standalone quarters.
+    This function converts YTD to standalone quarterly values:
+    - Q1 = Q1 YTD (as-is)
+    - Q2 = Q2 YTD - Q1 YTD
+    - Q3 = Q3 YTD - Q2 YTD
+    - Q4 = Annual - Q3 YTD
     """
     cf = data['metrics']['cash_flows']
 
-    # Step 1: Collect quarterly data from 10-Q filings
-    quarterly_data = []
+    # Step 1: Collect YTD data from 10-Q filings, grouped by fiscal year
+    ytd_by_fy = {}  # {fiscal_year: {'Q1': {...}, 'Q2': {...}, 'Q3': {...}}}
+    annual_data = {}  # {fiscal_year: {'ocf': ..., 'capex': ..., ...}}
+
     for i, period in enumerate(data['periods']):
+        fy = period['fiscal_year']
+        ocf = cf['operating_cash_flow_billion'][i]
+        capex = cf['capital_expenditures_billion'][i]
+        dividends = cf['dividends_paid_billion'][i]
+        buybacks = cf['stock_repurchases_billion'][i]
+        debt_repay = cf['debt_repayments_billion'][i]
+
         if period['filing_type'] == '10-Q':
-            ocf = cf['operating_cash_flow_billion'][i]
-            capex = cf['capital_expenditures_billion'][i]
-            dividends = cf['dividends_paid_billion'][i]
-            buybacks = cf['stock_repurchases_billion'][i]
-            debt_repay = cf['debt_repayments_billion'][i]
+            if fy not in ytd_by_fy:
+                ytd_by_fy[fy] = {}
 
-            if ocf is not None and capex is not None:
-                quarterly_data.append({
-                    'period': period['period'],
-                    'fiscal_year': period['fiscal_year'],
-                    'fiscal_quarter': period['fiscal_quarter'],
-                    'ocf': ocf,
-                    'capex': capex or 0,
-                    'dividends': dividends or 0,
-                    'buybacks': buybacks or 0,
-                    'debt_repay': debt_repay or 0
-                })
+            # Determine quarter from period string (e.g., "Q1 2023" -> "Q1")
+            q_num = period['period'].split()[0]  # "Q1", "Q2", or "Q3"
+            ytd_by_fy[fy][q_num] = {
+                'ocf': ocf,
+                'capex': capex or 0,
+                'dividends': dividends or 0,
+                'buybacks': buybacks or 0,
+                'debt_repay': debt_repay or 0
+            }
 
-    # Step 2: Calculate Q4 data from 10-K annual reports
-    for i, period in enumerate(data['periods']):
-        if period['filing_type'] == '10-K':
-            fy = period['fiscal_year']
-            annual_ocf = cf['operating_cash_flow_billion'][i]
-            annual_capex = cf['capital_expenditures_billion'][i]
-            annual_div = cf['dividends_paid_billion'][i]
-            annual_buyback = cf['stock_repurchases_billion'][i]
-            annual_debt = cf['debt_repayments_billion'][i]
+        elif period['filing_type'] == '10-K':
+            annual_data[fy] = {
+                'ocf': ocf,
+                'capex': capex or 0,
+                'dividends': dividends or 0,
+                'buybacks': buybacks or 0,
+                'debt_repay': debt_repay or 0
+            }
 
-            if annual_ocf is None or annual_capex is None:
-                continue
+    # Step 2: Convert YTD to standalone quarterly values and calculate Q4
+    quarterly_data = []
 
-            # Find Q1, Q2, Q3 for this fiscal year
-            q1 = q2 = q3 = None
-            for q in quarterly_data:
-                if q['fiscal_year'] == fy:
-                    if q['fiscal_quarter'] == 1:
-                        q1 = q
-                    elif q['fiscal_quarter'] == 2:
-                        q2 = q
-                    elif q['fiscal_quarter'] == 3:
-                        q3 = q
+    for fy in sorted(ytd_by_fy.keys()):
+        ytd = ytd_by_fy[fy]
+        annual = annual_data.get(fy)
 
-            # Calculate Q4 = Annual - (Q1 + Q2 + Q3)
-            if q1 and q2 and q3:
-                q4_ocf = annual_ocf - (q1['ocf'] + q2['ocf'] + q3['ocf'])
-                q4_capex = annual_capex - (q1['capex'] + q2['capex'] + q3['capex'])
-                q4_div = (annual_div or 0) - (q1['dividends'] + q2['dividends'] + q3['dividends'])
-                q4_buyback = (annual_buyback or 0) - (q1['buybacks'] + q2['buybacks'] + q3['buybacks'])
-                q4_debt = (annual_debt or 0) - (q1['debt_repay'] + q2['debt_repay'] + q3['debt_repay'])
+        # Helper to safely subtract values
+        def safe_sub(a, b):
+            if a is None or b is None:
+                return 0
+            return a - b
 
-                quarterly_data.append({
-                    'period': f'Q4 {fy}',
-                    'fiscal_year': fy,
-                    'fiscal_quarter': 4,
-                    'ocf': round(q4_ocf, 3),
-                    'capex': round(max(0, q4_capex), 3),  # CapEx should be positive
-                    'dividends': round(max(0, q4_div), 3),
-                    'buybacks': round(max(0, q4_buyback), 3),
-                    'debt_repay': round(max(0, q4_debt), 3)
-                })
+        # Q1 standalone = Q1 YTD (as-is)
+        if 'Q1' in ytd and ytd['Q1']['ocf'] is not None:
+            quarterly_data.append({
+                'period': f'Q1 {fy}',
+                'fiscal_year': fy,
+                'fiscal_quarter': 1,
+                'ocf': round(ytd['Q1']['ocf'], 3),
+                'capex': round(ytd['Q1']['capex'], 3),
+                'dividends': round(ytd['Q1']['dividends'], 3),
+                'buybacks': round(ytd['Q1']['buybacks'], 3),
+                'debt_repay': round(ytd['Q1']['debt_repay'], 3)
+            })
+
+        # Q2 standalone = Q2 YTD - Q1 YTD
+        if 'Q1' in ytd and 'Q2' in ytd and ytd['Q2']['ocf'] is not None:
+            quarterly_data.append({
+                'period': f'Q2 {fy}',
+                'fiscal_year': fy,
+                'fiscal_quarter': 2,
+                'ocf': round(safe_sub(ytd['Q2']['ocf'], ytd['Q1']['ocf']), 3),
+                'capex': round(max(0, safe_sub(ytd['Q2']['capex'], ytd['Q1']['capex'])), 3),
+                'dividends': round(max(0, safe_sub(ytd['Q2']['dividends'], ytd['Q1']['dividends'])), 3),
+                'buybacks': round(max(0, safe_sub(ytd['Q2']['buybacks'], ytd['Q1']['buybacks'])), 3),
+                'debt_repay': round(max(0, safe_sub(ytd['Q2']['debt_repay'], ytd['Q1']['debt_repay'])), 3)
+            })
+
+        # Q3 standalone = Q3 YTD - Q2 YTD
+        if 'Q2' in ytd and 'Q3' in ytd and ytd['Q3']['ocf'] is not None:
+            quarterly_data.append({
+                'period': f'Q3 {fy}',
+                'fiscal_year': fy,
+                'fiscal_quarter': 3,
+                'ocf': round(safe_sub(ytd['Q3']['ocf'], ytd['Q2']['ocf']), 3),
+                'capex': round(max(0, safe_sub(ytd['Q3']['capex'], ytd['Q2']['capex'])), 3),
+                'dividends': round(max(0, safe_sub(ytd['Q3']['dividends'], ytd['Q2']['dividends'])), 3),
+                'buybacks': round(max(0, safe_sub(ytd['Q3']['buybacks'], ytd['Q2']['buybacks'])), 3),
+                'debt_repay': round(max(0, safe_sub(ytd['Q3']['debt_repay'], ytd['Q2']['debt_repay'])), 3)
+            })
+
+        # Q4 standalone = Annual - Q3 YTD
+        if annual and 'Q3' in ytd and ytd['Q3']['ocf'] is not None and annual['ocf'] is not None:
+            quarterly_data.append({
+                'period': f'Q4 {fy}',
+                'fiscal_year': fy,
+                'fiscal_quarter': 4,
+                'ocf': round(safe_sub(annual['ocf'], ytd['Q3']['ocf']), 3),
+                'capex': round(max(0, safe_sub(annual['capex'], ytd['Q3']['capex'])), 3),
+                'dividends': round(max(0, safe_sub(annual['dividends'], ytd['Q3']['dividends'])), 3),
+                'buybacks': round(max(0, safe_sub(annual['buybacks'], ytd['Q3']['buybacks'])), 3),
+                'debt_repay': round(max(0, safe_sub(annual['debt_repay'], ytd['Q3']['debt_repay'])), 3)
+            })
 
     # Step 3: Sort by fiscal year and quarter
     def sort_key(item):
