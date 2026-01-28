@@ -9,20 +9,34 @@ FY2015 (10-K)
 Vital Signs:
   net_sales_billion: 71.279
   cost_of_sales_billion: 50.039
+  operating_income_billion: 5.17
+  inventory_billion: 8.282
   interest_expense_billion: 1.049
+  long_term_debt_billion: 12.634
+  short_term_debt_billion: 0.08
   operating_cash_flow_billion: 6.52
   investing_cash_flow_billion: 0.508
   net_income_billion: 1.971
   sga_expense_billion: 14.465
   depreciation_amortization_billion: 1.996
+  current_assets_billion: 13.624
+  current_liabilities_billion: 11.736
+  cash_and_equivalents_billion: 2.21
+  current_payables_billion: 7.759
+  stockholders_equity_billion: 16.558
+  total_assets_billion: 41.172
   capital_expenditures_billion: 1.886
   dividends_paid_billion: 1.006
   stock_repurchases_billion: 1.461
   debt_repayments_billion: 3.463
   debt_issuance_billion: 0.0
   gross_margin_percent: 29.8
+  operating_margin_percent: 7.25
   net_profit_margin_percent: 2.77
   sga_percent_of_revenue: 20.29
+  other_operating_expenses_billion: 1.605
+  ebitda_billion: 7.166
+  ebitda_margin_percent: 10.05
   fiscal_year: 2015
   fiscal_quarter: None
 
@@ -33,20 +47,34 @@ FY2016 (10-K)
 Vital Signs:
   net_sales_billion: 72.618
   cost_of_sales_billion: 51.278
+  operating_income_billion: 4.535
+  inventory_billion: 8.601
   interest_expense_billion: 0.882
+  long_term_debt_billion: 11.945
+  short_term_debt_billion: 0.0
   operating_cash_flow_billion: 4.465
   investing_cash_flow_billion: 0.508
   net_income_billion: 3.363
   sga_expense_billion: 14.676
   depreciation_amortization_billion: 2.129
+  current_assets_billion: 14.13
+  current_liabilities_billion: 12.622
+  cash_and_equivalents_billion: 4.046
+  current_payables_billion: 7.418
+  stockholders_equity_billion: 16.231
+  total_assets_billion: 40.262
   capital_expenditures_billion: 1.786
   dividends_paid_billion: 1.205
   stock_repurchases_billion: 0.026
   debt_repayments_billion: 2.079
   debt_issuance_billion: 1.993
   gross_margin_percent: 29.39
+  operating_margin_percent: 6.25
   net_profit_margin_percent: 4.63
   sga_percent_of_revenue: 20.21
+  other_operating_expenses_billion: 2.129
+  ebitda_billion: 6.664
+  ebitda_margin_percent: 9.18
   fiscal_year: 2016
   fiscal_quarter: None
 
@@ -57,20 +85,33 @@ FY2017 (10-K)
 Vital Signs:
   net_sales_billion: 73.785
   cost_of_sales_billion: 52.241
+  operating_income_billion: 5.53
+  inventory_billion: 8.309
   interest_expense_billion: 0.607
+  long_term_debt_billion: 11.031
   operating_cash_flow_billion: 5.958
   investing_cash_flow_billion: 0.508
   net_income_billion: 3.363
   sga_expense_billion: 14.665
   depreciation_amortization_billion: 2.213
+  current_assets_billion: 11.99
+  current_liabilities_billion: 12.707
+  cash_and_equivalents_billion: 2.512
+  current_payables_billion: 7.252
+  stockholders_equity_billion: 13.997
+  total_assets_billion: 37.431
   capital_expenditures_billion: 1.438
   dividends_paid_billion: 1.362
   stock_repurchases_billion: 3.483
   debt_repayments_billion: 0.085
   debt_issuance_billion: 0.0
   gross_margin_percent: 29.2
+  operating_margin_percent: 7.49
   net_profit_margin_percent: 4.56
   sga_percent_of_revenue: 19.88
+  other_operating_expenses_billion: 1.349
+  ebitda_billion: 7.743
+  ebitda_margin_percent: 10.49
   fiscal_year: 2017
   fiscal_quarter: None
 
@@ -82,11 +123,20 @@ Vital Signs:
   net_sales_billion: 70.271
   cost_of_sales_billion: 49.145
   operating_income_billion: 4.864
+  inventory_billion: 8.597
   interest_expense_billion: 0.991
+  long_term_debt_billion: 11.117
+  short_term_debt_billion: 0.0
   operating_cash_flow_billion: 5.444
   net_income_billion: 2.734
   sga_expense_billion: 14.217
   depreciation_amortization_billion: 2.305
+  current_assets_billion: 12.54
+  current_liabilities_billion: 13.052
+  cash_and_equivalents_billion: 2.643
+  current_payables_billion: 8.677
+  stockholders_equity_billion: 12.965
+  total_assets_billion: 40.303
   capital_expenditures_billion: 1.547
   dividends_paid_billion: 1.348
   stock_repurchases_billion: 3.706
@@ -112,7 +162,7 @@ Vital Signs:
   operating_income_billion: 4.658
   inventory_billion: 8.992
   interest_expense_billion: 0.477
-  long_term_debt_billion: 2.205
+  long_term_debt_billion: 11.338
   operating_cash_flow_billion: 7.117
   investing_cash_flow_billion: 2.944
   financing_cash_flow_billion: 3.152
@@ -150,7 +200,7 @@ Vital Signs:
   operating_income_billion: 6.539
   inventory_billion: 10.653
   interest_expense_billion: 0.977
-  long_term_debt_billion: 3.607
+  long_term_debt_billion: 11.536
   operating_cash_flow_billion: 10.525
   investing_cash_flow_billion: 2.591
   financing_cash_flow_billion: 2.0
@@ -189,7 +239,7 @@ Vital Signs:
   operating_income_billion: 8.946
   inventory_billion: 13.902
   interest_expense_billion: 0.421
-  long_term_debt_billion: 4.544
+  long_term_debt_billion: 13.549
   operating_cash_flow_billion: 8.625
   investing_cash_flow_billion: 3.154
   financing_cash_flow_billion: 8.071
@@ -228,7 +278,7 @@ Vital Signs:
   operating_income_billion: 3.848
   inventory_billion: 13.499
   interest_expense_billion: 0.478
-  long_term_debt_billion: 4.582
+  long_term_debt_billion: 16.009
   operating_cash_flow_billion: 4.018
   investing_cash_flow_billion: 5.504
   financing_cash_flow_billion: 2.196
@@ -267,6 +317,7 @@ Vital Signs:
   operating_income_billion: 1.346
   inventory_billion: 15.083
   interest_expense_billion: 0.112
+  long_term_debt_billion: 13.379
   operating_cash_flow_billion: 1.394
   investing_cash_flow_billion: 0.948
   financing_cash_flow_billion: 2.457
@@ -311,6 +362,7 @@ Vital Signs:
   operating_income_billion: 0.321
   inventory_billion: 15.32
   interest_expense_billion: 0.112
+  long_term_debt_billion: 13.453
   operating_cash_flow_billion: 3.422
   investing_cash_flow_billion: 2.518
   financing_cash_flow_billion: 2.229
@@ -358,6 +410,7 @@ Vital Signs:
   operating_income_billion: 1.022
   inventory_billion: 17.117
   interest_expense_billion: 0.125
+  long_term_debt_billion: 14.237
   operating_cash_flow_billion: 0.552
   investing_cash_flow_billion: 4.303
   financing_cash_flow_billion: 1.206
@@ -405,7 +458,7 @@ Vital Signs:
   operating_income_billion: 5.707
   inventory_billion: 11.886
   interest_expense_billion: 0.502
-  long_term_debt_billion: 4.668
+  long_term_debt_billion: 14.922
   operating_cash_flow_billion: 8.621
   investing_cash_flow_billion: 4.76
   financing_cash_flow_billion: 2.285
@@ -444,6 +497,7 @@ Vital Signs:
   operating_income_billion: 1.328
   inventory_billion: 12.616
   interest_expense_billion: 0.147
+  long_term_debt_billion: 16.01
   operating_cash_flow_billion: 1.265
   investing_cash_flow_billion: 1.602
   financing_cash_flow_billion: 0.571
@@ -488,6 +542,7 @@ Vital Signs:
   operating_income_billion: 1.197
   inventory_billion: 12.684
   interest_expense_billion: 0.141
+  long_term_debt_billion: 14.926
   operating_cash_flow_billion: 3.398
   investing_cash_flow_billion: 2.821
   financing_cash_flow_billion: 1.189
@@ -534,6 +589,7 @@ Vital Signs:
   operating_income_billion: 1.317
   inventory_billion: 14.731
   interest_expense_billion: 0.107
+  long_term_debt_billion: 14.883
   operating_cash_flow_billion: 5.332
   investing_cash_flow_billion: 3.91
   financing_cash_flow_billion: 1.741
@@ -580,7 +636,8 @@ Vital Signs:
   cost_of_sales_billion: 76.502
   operating_income_billion: 5.566
   inventory_billion: 12.74
-  long_term_debt_billion: 1.0
+  interest_expense_billion: 0.411
+  long_term_debt_billion: 14.304
   operating_cash_flow_billion: 7.367
   investing_cash_flow_billion: 2.86
   financing_cash_flow_billion: 3.55
@@ -619,6 +676,7 @@ Vital Signs:
   operating_income_billion: 1.296
   inventory_billion: 11.73
   interest_expense_billion: 0.106
+  long_term_debt_billion: 13.487
   operating_cash_flow_billion: 1.101
   investing_cash_flow_billion: 0.671
   financing_cash_flow_billion: 0.631
@@ -661,6 +719,8 @@ Vital Signs:
   cost_of_sales_billion: 17.799
   operating_income_billion: 1.635
   inventory_billion: 12.604
+  interest_expense_billion: 0.11
+  long_term_debt_billion: 13.654
   operating_cash_flow_billion: 3.339
   investing_cash_flow_billion: 1.305
   financing_cash_flow_billion: 2.342
@@ -705,6 +765,8 @@ Vital Signs:
   cost_of_sales_billion: 18.375
   operating_income_billion: 1.168
   inventory_billion: 15.165
+  interest_expense_billion: 0.105
+  long_term_debt_billion: 14.346
   operating_cash_flow_billion: 4.078
   investing_cash_flow_billion: 1.942
   financing_cash_flow_billion: 2.508
@@ -751,6 +813,8 @@ Vital Signs:
   cost_of_sales_billion: 17.128
   operating_income_billion: 1.472
   inventory_billion: 13.048
+  interest_expense_billion: 0.116
+  long_term_debt_billion: 14.334
   operating_cash_flow_billion: 0.275
   investing_cash_flow_billion: 0.787
   financing_cash_flow_billion: 1.363
@@ -797,6 +861,8 @@ Vital Signs:
   cost_of_sales_billion: 17.903
   operating_income_billion: 1.317
   inventory_billion: 12.881
+  interest_expense_billion: 0.116
+  long_term_debt_billion: 15.32
   operating_cash_flow_billion: 2.358
   investing_cash_flow_billion: 1.853
   financing_cash_flow_billion: 0.926
@@ -843,6 +909,8 @@ Vital Signs:
   cost_of_sales_billion: 18.137
   operating_income_billion: 0.948
   inventory_billion: 14.896
+  interest_expense_billion: 0.115
+  long_term_debt_billion: 15.366
   operating_cash_flow_billion: 3.485
   investing_cash_flow_billion: 2.79
   financing_cash_flow_billion: 1.635

@@ -336,9 +336,12 @@ class TargetFinancialAnalyzer:
             'us-gaap:CostOfGoodsSold': 'cost_of_sales',
             'us-gaap:CostOfRevenue': 'cost_of_sales',
             'us-gaap:OperatingIncomeLoss': 'operating_income',
+            'us-gaap:IncomeLossFromContinuingOperationsBeforeInterestExpenseInterestIncomeIncomeTaxesExtraordinaryItemsNoncontrollingInterestsNet': 'operating_income',  # Legacy fallback (EBIT)
             'us-gaap:InventoryNet': 'inventory',
             'us-gaap:InterestExpense': 'interest_expense',
+            'us-gaap:InterestExpenseNonoperating': 'interest_expense',  # Alternative tag used Q2 2024+
             'us-gaap:LongTermDebt': 'long_term_debt',
+            'us-gaap:LongTermDebtAndCapitalLeaseObligations': 'long_term_debt',  # Consolidated total (includes leases)
             'us-gaap:ShortTermBorrowings': 'short_term_debt',
             'us-gaap:DebtCurrent': 'short_term_debt',
             # Phase 3: Cash Flow Statement metrics
@@ -452,9 +455,35 @@ class TargetFinancialAnalyzer:
             tags = soup.find_all('ix:nonFraction', attrs={'name': gaap_tag})
 
         if tags:
-            # Iterate through all tags to find first valid numeric value
-            # (SEC filings often have multiple tags: segments, prior year, N/A values)
+            # Separate tags by context type (consolidated vs dimensional)
+            # For balance sheet items like debt, we need to prefer consolidated contexts
+            # (contexts WITHOUT segment/dimension elements) over dimensional breakdowns
+            consolidated_tags = []
+            dimensional_tags = []
+
             for tag in tags:
+                context_ref = tag.get('contextref') or tag.get('contextRef')
+                if context_ref:
+                    # Try to find the context definition
+                    context = soup.find('context', id=context_ref)
+                    if context:
+                        segment = context.find('segment')
+                        if segment:
+                            dimensional_tags.append(tag)
+                        else:
+                            consolidated_tags.append(tag)
+                    else:
+                        # Can't find context, add to consolidated (will be filtered by value)
+                        consolidated_tags.append(tag)
+                else:
+                    consolidated_tags.append(tag)
+
+            # Prefer consolidated tags, fall back to dimensional
+            tags_to_check = consolidated_tags if consolidated_tags else dimensional_tags
+
+            # Iterate through tags to find first valid numeric value
+            # (SEC filings often have multiple tags: segments, prior year, N/A values)
+            for tag in tags_to_check:
                 text = tag.get_text().strip().replace(',', '').replace('$', '')
 
                 # Skip non-numeric values (em dash, "N/A", etc.)
@@ -490,20 +519,30 @@ class TargetFinancialAnalyzer:
 
         # METHOD 2: Legacy raw XML format (FY2015-FY2018)
         # Example: <us-gaap:SalesRevenueNet contextRef="FD2015Q4YTD" decimals="-6">73785000000</us-gaap:SalesRevenueNet>
+        # Also handles: <us-gaap:LongTermDebt contextRef="FI2015Q4" decimals="-6">11859000000</us-gaap:LongTermDebt>
         # BeautifulSoup doesn't preserve XML namespaces, so we use regex on raw content
 
         if raw_content:
             import re
 
             # Build regex pattern to match the GAAP tag with contextRef
-            # Look for annual period context (Q4YTD or FY)
-            # Pattern: <us-gaap:TagName contextRef="...Q4YTD..." decimals="..." ...>VALUE</us-gaap:TagName>
-            pattern = rf'<{re.escape(gaap_tag)}\s+[^>]*contextRef="[^"]*(?:Q4YTD|FY)[^"]*"[^>]*decimals="([^"]*)"[^>]*>([0-9]+)</\s*{re.escape(gaap_tag)}\s*>'
+            # Look for annual period context:
+            # - Q4YTD: e.g., "FD2015Q4YTD" (income statement cumulative)
+            # - FY: e.g., "FY2015" or similar
+            # - FI\d{4}Q4: e.g., "FI2015Q4" (balance sheet year-end snapshot)
+            # Pattern captures: (contextRef, decimals, value)
+            pattern = rf'<{re.escape(gaap_tag)}\s+[^>]*contextRef="([^"]*(?:Q4YTD|FY|FI\d{{4}}Q4)[^"]*)"[^>]*decimals="([^"]*)"[^>]*>([0-9]+)</\s*{re.escape(gaap_tag)}\s*>'
 
             matches = re.findall(pattern, raw_content)
             if matches:
+                # Filter to prefer base context (no _Axis_ suffix) for consolidated totals
+                # Dimensional breakdowns have context IDs like "FI2015Q4_us-gaap_DebtInstrumentRedemptionPeriodAxis_..."
+                consolidated_matches = [m for m in matches if '_Axis_' not in m[0] and '_axis_' not in m[0].lower()]
+                if consolidated_matches:
+                    matches = consolidated_matches
+
                 # Take the first match (usually the most recent period)
-                decimals_str, value_str = matches[0]
+                context_ref, decimals_str, value_str = matches[0]
                 try:
                     value = float(value_str)
                     decimals = int(decimals_str)
