@@ -7,7 +7,7 @@ This document is designed for AI assistants (like Claude) to understand the Targ
 **Purpose**: Automated financial analysis tool that extracts metrics from SEC 10-K and 10-Q XBRL filings for Target Corporation.
 
 **Key Features**:
-- Automated SEC EDGAR filing downloads (5 years of 10-K, 12 quarters of 10-Q)
+- Automated SEC EDGAR filing downloads (10 years of 10-K, 12 quarters of 10-Q)
 - XBRL/iXBRL parsing for financial data extraction
 - Year-over-year trend analysis
 - Inventory efficiency tracking
@@ -72,7 +72,9 @@ financial-analyst-project/
 |----------|-----------|
 | Revenue | `RevenueFromContractWithCustomerExcludingAssessedTax`, `Revenues`, `SalesRevenueNet` |
 | Cost | `CostOfGoodsAndServicesSold`, `SellingGeneralAndAdministrativeExpense` |
-| Income | `OperatingIncomeLoss`, `NetIncomeLoss`, `NetIncomeLossAvailableToCommonStockholdersBasic` |
+| Income | `OperatingIncomeLoss`, `IncomeLossFromContinuingOperationsBeforeInterestExpenseInterestIncomeIncomeTaxesExtraordinaryItemsNoncontrollingInterestsNet` (legacy EBIT), `NetIncomeLoss` |
+| Interest | `InterestExpense`, `InterestExpenseNonoperating` |
+| Debt | `LongTermDebt`, `LongTermDebtAndCapitalLeaseObligations` (consolidated), `ShortTermBorrowings` |
 | Cash Flow | `NetCashProvidedByUsedInOperatingActivities`, `PaymentsToAcquirePropertyPlantAndEquipment` |
 | Balance Sheet | `AssetsCurrent`, `LiabilitiesCurrent`, `StockholdersEquity`, `Assets` |
 | D&A | `DepreciationDepletionAndAmortization`, `Depreciation` |
@@ -82,7 +84,7 @@ financial-analyst-project/
 **Main class**: `SECDataFetcher`
 
 **Key Methods**:
-- `download_filings()` - Downloads 5 10-Ks + 12 10-Qs from SEC EDGAR
+- `download_filings()` - Downloads 10 10-Ks + 12 10-Qs from SEC EDGAR
 - `_extract_period_from_file()` - Reads XBRL title tag, returns "FY2024", "Q1 2025", etc.
 - `_extract_period_from_submission()` - Fallback for older filings using full-submission.txt
 
@@ -105,7 +107,7 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 ```
 1. python financial_analyzer.py
    ↓
-2. SECDataFetcher downloads 5 10-Ks + 12 10-Qs → data/Target 10Q/sec-edgar-filings/
+2. SECDataFetcher downloads 10 10-Ks + 12 10-Qs → data/Target 10Q/sec-edgar-filings/
    ↓
 3. TargetFinancialAnalyzer.run_analysis() processes each filing chronologically
    ↓
@@ -173,6 +175,8 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 | Older filings (FY2015-2018) NULL | Legacy raw XML without `<ix:nonfraction>` | Dual-format `_extract_xbrl_value()` handles this automatically |
 | Quarter comparison fails | Period format mismatch | Check `sec_data_fetcher.py` returns "Q1 2025" format |
 | Missing debt metrics | Normal for 10-Q | Only 10-K has full debt info |
+| Debt shows partial value (e.g., $1B vs $14B) | Dimensional context extracted instead of consolidated | Use `LongTermDebtAndCapitalLeaseObligations` tag; filter for contexts without `_Axis_` |
+| Legacy operating income NULL | FY2015-2017 use different GAAP tag | Add `IncomeLossFromContinuingOperations...` as fallback for EBIT |
 
 ## Development History
 
@@ -254,7 +258,7 @@ All 24 interactive Plotly charts created by `visualize_data.py`:
 | 3 | Margin Analysis | chart_margin_analysis.html | 3-line | Gross/Operating/Net margins |
 | 4 | Operating Margin Waterfall | chart_operating_margin_waterfall.html | Waterfall | Quarterly margin changes |
 | 5 | Inventory Efficiency | chart_inventory_efficiency.html | Dual-axis | Turnover + DSI |
-| 6 | Debt Health | chart_debt_health.html | Dual-axis | Coverage ratio + debt |
+| 6 | Debt Health | chart_debt_health.html | Dual-axis | Coverage ratio + debt (10-year: FY2015-FY2024) |
 | 7 | Cash Flows | chart_cash_flows.html | 3-line | OCF/ICF/FCF |
 | 8 | Margin Bridge | chart_margin_bridge.html | Waterfall | Margin evolution Q1 2022→Q3 2025 |
 | 9 | Risk Trends | chart_risk_trends.html | Stacked area | Risk mentions over time |
@@ -286,6 +290,7 @@ All 24 interactive Plotly charts created by `visualize_data.py`:
 - Handle `scale` attribute: `scale="6"` = multiply by 10^6
 - Company-specific tags exist (Target uses `RevenueFromContractWithCustomerExcludingAssessedTax`)
 - Legacy filings (FY2015-2018) use raw XML format without `<ix:nonfraction>` wrapper
+- **Consolidated vs Dimensional contexts**: Prefer contexts WITHOUT segment/dimension elements for totals; dimensional contexts (with `_Axis_` in ID) contain breakdowns, not consolidated values
 
 ### Data Quality
 - Quarterly debt data is sparse (10-K has full info)
