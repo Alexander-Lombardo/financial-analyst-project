@@ -437,10 +437,24 @@ def create_inventory_efficiency_chart(data):
 
 
 def create_debt_health_chart(data):
-    """Chart 4: Interest Coverage Ratio & Total Debt"""
-    periods = [p['period'] for p in data['periods']]
-    coverage = data['metrics']['debt']['interest_coverage_ratio']
-    total_debt = data['metrics']['debt']['total_debt_billion']
+    """Chart 6: Interest Coverage Ratio & Total Debt (Annual)
+
+    Filters to annual 10-K data with complete debt information.
+    Total debt is only reliably reported in 10-K filings.
+    Shows 10-year trend: FY2015-FY2024.
+    """
+    # Filter to annual 10-K filings with complete data (both coverage and debt present)
+    annual_indices = []
+    for i, p in enumerate(data['periods']):
+        if p['filing_type'] == '10-K':
+            coverage = data['metrics']['debt']['interest_coverage_ratio'][i]
+            debt = data['metrics']['debt']['total_debt_billion'][i]
+            if coverage is not None and debt is not None:
+                annual_indices.append(i)
+
+    periods = [data['periods'][i]['period'] for i in annual_indices]
+    coverage = [data['metrics']['debt']['interest_coverage_ratio'][i] for i in annual_indices]
+    total_debt = [data['metrics']['debt']['total_debt_billion'][i] for i in annual_indices]
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -460,12 +474,12 @@ def create_debt_health_chart(data):
     fig.add_hline(y=2.0, line_dash="dash", line_color="red",
                   annotation_text="Warning Threshold (2.0x)", secondary_y=False)
 
-    fig.update_xaxes(title_text="Period")
-    fig.update_yaxes(title_text="Coverage Ratio (x)", secondary_y=False)
-    fig.update_yaxes(title_text="$ Billions", secondary_y=True)
+    fig.update_xaxes(title_text="Fiscal Year")
+    fig.update_yaxes(title_text="Interest Coverage Ratio (x)", secondary_y=False)
+    fig.update_yaxes(title_text="Total Debt ($ Billions)", secondary_y=True)
 
     fig.update_layout(
-        title="Target: Debt Health Monitoring",
+        title="Target: Debt Health (Annual)",
         hovermode='x unified',
         height=500
     )
