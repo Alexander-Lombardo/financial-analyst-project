@@ -314,6 +314,44 @@ All 24 interactive Plotly charts created by `visualize_data.py`:
 - All charts display 15 quarters (Q1 2022 - Q3 2025) with calculated Q4
 - PowerPoint has static PNG images; click "📊 Click for interactive version" for full HTML
 
+## Data Verification
+
+To verify extracted metrics against official Target quarterly reports:
+
+### Quick Verification Steps
+
+1. **Load time-series data**:
+   ```bash
+   cat output/target_timeseries.json | python3 -m json.tool
+   ```
+
+2. **Compare key metrics** against official 10-Q/10-K:
+   - Revenue: `net_sales_billion` (in billions)
+   - Operating Income: `operating_income_billion`
+   - Net Income: `net_income_billion`
+   - Gross Margin: `gross_margin_percent`
+   - Operating Margin: `operating_margin_percent`
+
+3. **Verify balance sheet items**:
+   - Inventory: `inventory_billion`
+   - Current Assets: `current_assets_billion`
+   - Total Debt: `total_debt_billion`
+
+### Common Verification Discrepancies
+
+| Metric | Potential Issue | Resolution |
+|--------|-----------------|------------|
+| Revenue off by ~$0.1B | Rounding in XBRL scale attribute | Check `scale="6"` vs `scale="9"` |
+| Q4 values seem wrong | Q4 is calculated (Annual - Q1-Q3) | Verify Q1-Q3 values are correct first |
+| Cash flow negative | YTD-to-standalone conversion | Check cumulative math |
+| Debt mismatch | Dimensional vs consolidated context | Verify consolidated context used |
+
+### Source Documents
+
+Official filings available at:
+- SEC EDGAR: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000027419
+- Target Investor Relations: https://investors.target.com/quarterly-results
+
 ## Key Learnings
 
 ### XBRL Parsing
