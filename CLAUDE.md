@@ -31,12 +31,14 @@ financial-analyst-project/
 ├── visualize_data.py           # Plotly visualizations (24 charts)
 ├── sec_data_fetcher.py         # SEC EDGAR downloader
 ├── market_data_fetcher.py      # Yahoo Finance market data
+├── peer_ccc_analyzer.py        # Peer company CCC extraction
 ├── thesis_generator.py         # Investment thesis auto-generation
 ├── create_presentation.py      # PowerPoint generation
 ├── requirements.txt            # Python dependencies
 ├── .env                        # SEC credentials (git-ignored)
 ├── data/
 │   ├── Target 10Q/sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
+│   ├── peer_filings/                  # Peer company SEC filings (git-ignored)
 │   └── peer_comparison_data.json      # Peer CCC data
 ├── output/
 │   ├── target_analysis.json           # Detailed format
@@ -101,6 +103,28 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 - `get_valuation_metrics()` - P/E, P/S, EV/EBITDA, dividend yield
 - `get_historical_pe_for_quarters()` - Calculate Target historical P/E from SEC data
 - Caching: 1 hour for prices, 24 hours for history
+
+### 5. `peer_ccc_analyzer.py`
+
+**Main class**: `PeerCCCAnalyzer` (Peer company Cash Conversion Cycle extraction)
+
+**Purpose**: Downloads and analyzes peer company 10-K filings to extract CCC components (DSI, DSO, DPO) for competitive benchmarking against Target.
+
+**Supported Peers**: Walmart (WMT), Amazon (AMZN), Costco (COST), Kroger (KR)
+
+**Key Methods**:
+- `analyze_peer()` - Download and extract multi-year CCC data for a peer
+- `_extract_ccc_from_filing()` - Extract CCC components from single 10-K
+- `_extract_xbrl_value()` - Reuses Target's dual-format XBRL extraction
+- `_extract_inventory_from_table()` - Fallback for companies without XBRL inventory tags
+- `_calculate_dsi()`, `_calculate_dso()`, `_calculate_dpo()` - CCC component formulas
+
+**GAAP Tag Priority**:
+- Revenue: Check `RevenueFromContractWithCustomerExcludingAssessedTax` first (ASC 606)
+- COGS: Check `CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization` first (Kroger-specific)
+- Inventory: Fallback chain includes `FIFOInventoryAmount`, `InventoryLIFO`
+
+**Output**: `data/peer_comparison_data.json` with multi-year CCC data per company
 
 ## Data Flow
 
@@ -177,6 +201,8 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 | Missing debt metrics | Normal for 10-Q | Only 10-K has full debt info |
 | Debt shows partial value (e.g., $1B vs $14B) | Dimensional context extracted instead of consolidated | Use `LongTermDebtAndCapitalLeaseObligations` tag; filter for contexts without `_Axis_` |
 | Legacy operating income NULL | FY2015-2017 use different GAAP tag | Add `IncomeLossFromContinuingOperations...` as fallback for EBIT |
+| Peer inventory NULL | Company uses non-standard XBRL tag | `_extract_inventory_from_table()` fallback parses Balance Sheet HTML |
+| Peer CCC abnormal (>200 days) | Wrong GAAP tag extracted (segment vs consolidated) | Check tag priority order; ASC 606 revenue tag first |
 
 ## Development History
 
@@ -193,6 +219,7 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 | Pillar 3 | ✅ | DuPont analysis, CCC peer comparison, 2 charts |
 | Pillar 4 | ✅ | Cash flow dynamics (FCF, Sankey), 2 charts |
 | Pillar 5 | ✅ | Valuation metrics (P/E bands, peer scatter), 2 charts |
+| Peer CCC | ✅ | Automated peer company CCC extraction (WMT, AMZN, COST, KR) |
 
 ## Testing & Verification
 
@@ -217,6 +244,10 @@ python3 test_pillar2_liquidity_solvency.py # 25 tests
 python3 test_pillar3_operational_efficiency.py # 10 tests
 python3 test_pillar4_cash_flow_dynamics.py # 18 tests
 python3 test_pillar5_valuation_sentiment.py # 16 tests
+python3 test_kroger_extraction.py         # Peer CCC extraction test
+
+# Run peer CCC analyzer
+python3 peer_ccc_analyzer.py              # Extract CCC for all peers
 ```
 
 ## Environment Setup
