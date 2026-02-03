@@ -146,7 +146,8 @@ python visualize_data.py
 python thesis_generator.py
 
 # Create PowerPoint presentation (Phase 4)
-python create_presentation.py
+python create_presentation.py              # Full 38-slide version
+python create_presentation.py --executive  # Condensed 34-slide executive version
 ```
 
 The analyzer will automatically:
@@ -170,9 +171,10 @@ The thesis generator (Phase 4) will produce:
 - Exported to `output/investment_thesis.json`
 
 The presentation generator (Phase 4) will create:
-- Professional PowerPoint with 11 slides including Phase 4 enhancements
-- Investment thesis, margin bridge, and risk heatmap slides
-- Links to all 10 interactive charts
+- **Full version**: 38-slide PowerPoint with all 24 charts across 5 pillars
+- **Executive version** (`--executive` flag): 34-slide condensed deck with 6 key charts and 18 in appendix
+- Investment thesis, pillar summaries, and strategic conclusion slides
+- Charts embedded as PNG images with links to interactive HTML versions
 
 ### SEC Credentials Setup
 
@@ -263,12 +265,23 @@ financial-analyst-project/
 - No external dependencies - open directly in browser
 - Professional presentation quality
 
-**6. PowerPoint Presentation** (Phase 4)
-- `Target_Financial_Analysis.pptx` - Enhanced 11-slide deck
+**6. PowerPoint Presentations** (Phase 4)
+
+*Full Version* (`Target_Financial_Analysis.pptx` - 38 slides):
+- Complete 5-pillar analysis with all 24 charts
+- Pillar summaries with "So What?" takeaways
 - Investment Thesis slide with color-coded recommendation
-- Margin Bridge Analysis slide with FY2022 → Q3 2025 summary
-- Risk Heatmap slide with shrink/markdown statistics
-- Links to all 9 interactive charts
+- Strategic conclusion with key questions to monitor
+
+*Executive Version* (`Target_Executive_Presentation.pptx` - 34 slides):
+- Condensed format combining related pillars:
+  - "Earning Power" section (Pillars 1+2 combined) - 2 key charts
+  - "Liquidity & Capital" section (Pillars 3+4 combined) - 2 key charts
+  - "Valuation & Risk" section (Pillar 5) - 2 key charts
+- 15 main body slides for executive presentations
+- 19 appendix slides with all 18 supporting charts
+- Focus on Clearance Sale and Refinancing risk narratives
+- Run with `--executive` flag
 
 ## Understanding the Analysis
 
@@ -420,13 +433,26 @@ Outputs to `output/`:
 - `target_presentation_data.json` - Structured presentation data
 - `Target_Financial_Analysis.md` - Markdown format
 
-### PowerPoint Generation (Alternative)
+### PowerPoint Generation
 
 ```bash
+# Full 38-slide version (all 24 charts, 5 pillars)
 python create_presentation.py
+
+# Executive 34-slide version (6 key charts + 18 in appendix)
+python create_presentation.py --executive
 ```
 
-Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
+**Full Version** - `output/Target_Financial_Analysis.pptx`:
+- 38 slides with all 24 charts organized by 5 pillars
+- Detailed analysis for deep-dive presentations
+
+**Executive Version** - `output/Target_Executive_Presentation.pptx`:
+- 34 slides (15 main + 19 appendix)
+- Combined "Earning Power" section (revenue + margins)
+- Combined "Liquidity" section (debt + efficiency)
+- Key charts in main body, supporting charts in appendix
+- Ideal for board/investor presentations
 
 ## Roadmap
 
