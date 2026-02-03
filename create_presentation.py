@@ -23,6 +23,151 @@ from thesis_generator import ThesisGenerator
 # CHART CONFIGURATION - All 24 charts organized by pillar
 # =============================================================================
 
+# =============================================================================
+# PILLAR SUMMARIES - "So What?" content for each pillar
+# =============================================================================
+
+# =============================================================================
+# EXECUTIVE PRESENTATION CONFIG - Condensed ~25 slide version
+# =============================================================================
+
+EXECUTIVE_CONFIG = {
+    "earning_power": {
+        "title": "Earning Power",
+        "subtitle": "Revenue Growth vs Margin Compression",
+        "question": "Can Target grow revenue while protecting margins?",
+        "key_charts": [
+            ("Revenue vs Inventory Growth", "chart_revenue_vs_inventory.html",
+             "Compares revenue growth to inventory buildup. Inventory growing faster than sales signals potential markdown risk."),
+            ("Margin Analysis", "chart_margin_analysis.html",
+             "Three margin lines tracking profitability over time. Compression between lines reveals where profits leak."),
+        ],
+        "summary": {
+            "title": "The Earning Power Challenge",
+            "key_insight": "Revenue +2% but Operating Margin -1.47%",
+            "evidence": [
+                "Inventory up 17% while sales growth slowed",
+                "Clearance risk from excess inventory buildup",
+                "SG&A expenses rising faster than revenue",
+            ],
+            "implication": "Q4 margin recovery is critical; watch for promotional activity"
+        }
+    },
+    "liquidity": {
+        "title": "Liquidity & Capital",
+        "subtitle": "Debt Health vs Operational Efficiency",
+        "question": "Can Target service debt while managing working capital?",
+        "key_charts": [
+            ("Debt Health (Interest Coverage)", "chart_debt_health.html",
+             "Interest coverage ratio tracking. Above 3x is comfortable; below 2x requires monitoring."),
+            ("Inventory Efficiency", "chart_inventory_efficiency.html",
+             "Tracks turnover ratio and days on hand. Faster turns = less capital tied up in inventory."),
+        ],
+        "summary": {
+            "title": "The Liquidity Squeeze",
+            "key_insight": "Interest coverage collapsed 9.7x → 1.5x",
+            "evidence": [
+                "Debt increased 7.5% to $15.37B",
+                "Below 1.5x coverage triggers covenant concerns",
+                "$2B debt matures FY2026 amid rate uncertainty",
+            ],
+            "implication": "Refinancing risk; watch debt maturities and free cash flow"
+        }
+    },
+    "valuation_risk": {
+        "title": "Valuation & Risk",
+        "subtitle": "Is the Discount Justified?",
+        "question": "Is TGT cheap for a reason?",
+        "key_charts": [
+            ("Valuation vs Growth", "chart_valuation_scatter.html",
+             "P/E ratio vs revenue growth for Target and peers. Lower-right quadrant = undervalued opportunities."),
+            ("Risk Heatmap", "chart_risk_heatmap_grid.html",
+             "Intensity grid showing risk types by period. Dark cells = high concern in that area."),
+        ]
+    }
+}
+
+# Charts for executive appendix (all charts not in main body)
+APPENDIX_CHARTS = [
+    # Remaining Pillar 1 charts
+    ("Revenue & Net Income (10-Year)", "chart_revenue_netincome_annual.html"),
+    ("Revenue Growth YoY", "chart_revenue_growth_yoy.html"),
+    ("Revenue & Net Income (Quarterly)", "chart_revenue_netincome_longterm.html"),
+    # Remaining Pillar 2 charts
+    ("Margin Bridge Waterfall", "chart_margin_bridge.html"),
+    ("Operating Expense Breakdown", "chart_expense_breakdown.html"),
+    ("EBITDA Bridge", "chart_ebitda_bridge.html"),
+    ("Operating Margin Waterfall", "chart_operating_margin_waterfall.html"),
+    ("Earnings Quality", "chart_earnings_quality.html"),
+    # Remaining Pillar 3 charts
+    ("Current Ratio Gauge", "chart_current_ratio_gauge.html"),
+    ("Capital Structure", "chart_capital_structure_donut.html"),
+    ("Debt-to-EBITDA Trend", "chart_debt_to_ebitda_trend.html"),
+    ("Statement of Cash Flows", "chart_cash_flows.html"),
+    # Remaining Pillar 4 charts
+    ("DuPont Analysis", "chart_dupont_analysis.html"),
+    ("Cash Conversion Cycle", "chart_cash_conversion_cycle.html"),
+    ("OCF vs CapEx", "chart_ocf_vs_capex.html"),
+    # Remaining Pillar 5 charts
+    ("Historical P/E Band", "chart_pe_band.html"),
+    ("Cash Flow Sankey", "chart_cash_flow_sankey.html"),
+    ("Risk Trends", "chart_risk_trends.html"),
+]
+
+PILLAR_SUMMARIES = {
+    "pillar_1": {
+        "title": "Growth Summary: The Revenue Story",
+        "key_insight": "Revenue growth has stalled at ~2% YoY",
+        "evidence": [
+            "Revenue grew only 1.6% in Q3 2025 vs prior year",
+            "Inventory up 17% while sales growth slowed",
+            "Clearance risk from excess inventory buildup",
+        ],
+        "implication": "Slowing growth limits pricing power; watch for markdown pressure in Q4"
+    },
+    "pillar_2": {
+        "title": "Margin Compression Alert",
+        "key_insight": "Operating margin dropped 1.47% (5.22% → 3.75%)",
+        "evidence": [
+            "Inventory up 17% while margins declined",
+            "Clearance risk from excess inventory",
+            "Shrink/theft mentioned in all quarterly filings",
+        ],
+        "implication": "Q4 margin recovery is critical; watch for promotional activity"
+    },
+    "pillar_3": {
+        "title": "Interest Coverage Crisis",
+        "key_insight": "Coverage collapsed from 9.7x to 1.5x",
+        "evidence": [
+            "Debt increased 7.5% to $15.37B",
+            "Below 1.5x triggers covenant concerns",
+            "$2B debt matures FY2026",
+        ],
+        "implication": "Refinancing risk; watch debt maturities and interest rates"
+    },
+    "pillar_4": {
+        "title": "Efficiency Under Pressure",
+        "key_insight": "Inventory days expanded while turnover slowed",
+        "evidence": [
+            "Days Sales of Inventory increased to 65+ days",
+            "Cash conversion cycle extended",
+            "Asset turnover showing signs of decline",
+        ],
+        "implication": "Working capital tied up in inventory; impacts free cash flow"
+    },
+    "pillar_5": {
+        "title": "Valuation: Cheap for a Reason?",
+        "key_insight": "Trading at discount to peers despite dividend yield",
+        "evidence": [
+            "P/E below peer average (if P/E available)",
+            "Dividend yield attractive but payout ratio elevated",
+            "Risk premium reflects execution uncertainty",
+        ],
+        "implication": "Value trap risk if margin recovery doesn't materialize"
+    },
+}
+
+
 CHART_CONFIG = {
     # Pillar 1: Growth & Revenue (4 charts)
     "pillar_1": {
@@ -191,7 +336,24 @@ CHART_CONFIG = {
 # =============================================================================
 
 def create_target_presentation():
-    """Create comprehensive PowerPoint presentation organized by 5 pillars."""
+    """Create comprehensive PowerPoint presentation organized by 5 pillars.
+
+    Streamlined presentation flow (~38 slides):
+    1. Title
+    2. Executive Summary (enhanced with key flags)
+    3. Market Context (NEW - TGT vs S&P 500)
+    4. Investment Thesis
+    5-9. Pillar 1: Growth & Revenue (section + 4 charts)
+    10. Pillar 1 Summary (NEW - "So What?")
+    11-17. Pillar 2: Profitability & Margins (section + 6 charts)
+    18. Pillar 2 Summary (NEW - margin compression story)
+    19-24. Pillar 3: Liquidity & Solvency (section + 5 charts)
+    25. Pillar 3 Summary (NEW - interest coverage crisis)
+    26-30. Pillar 4: Operational Efficiency (section + 4 charts)
+    31. Pillar 4 Summary (NEW - efficiency insights)
+    32-37. Pillar 5: Valuation & Risk (section + 5 charts)
+    38. Conclusion (NEW - strategic questions)
+    """
 
     # Generate investment thesis
     print("   Generating investment thesis...")
@@ -216,39 +378,44 @@ def create_target_presentation():
     prs.slide_width = Inches(10)
     prs.slide_height = Inches(7.5)
 
-    # === INTRODUCTION (3 slides) ===
+    # === INTRODUCTION (4 slides) ===
     print("   Creating introduction slides...")
     add_title_slide(prs)
     add_executive_summary(prs, data)
+    add_market_context_slide(prs)  # NEW: Market context after exec summary
     add_investment_thesis_slide(prs, thesis)
 
-    # === PILLAR 1: Growth & Revenue (5 slides) ===
+    # === PILLAR 1: Growth & Revenue (5 slides + summary) ===
     print("   Creating Pillar 1: Growth & Revenue...")
     pillar = CHART_CONFIG["pillar_1"]
     add_pillar_section_slide(prs, 1, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, "pillar_1")  # NEW: "So What?" summary
 
-    # === PILLAR 2: Profitability & Margins (7 slides) ===
+    # === PILLAR 2: Profitability & Margins (7 slides + summary) ===
     print("   Creating Pillar 2: Profitability & Margins...")
     pillar = CHART_CONFIG["pillar_2"]
     add_pillar_section_slide(prs, 2, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, "pillar_2")  # NEW: Margin compression alert
 
-    # === PILLAR 3: Liquidity & Solvency (6 slides) ===
+    # === PILLAR 3: Liquidity & Solvency (6 slides + summary) ===
     print("   Creating Pillar 3: Liquidity & Solvency...")
     pillar = CHART_CONFIG["pillar_3"]
     add_pillar_section_slide(prs, 3, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, "pillar_3")  # NEW: Interest coverage crisis
 
-    # === PILLAR 4: Operational Efficiency (5 slides) ===
+    # === PILLAR 4: Operational Efficiency (5 slides + summary) ===
     print("   Creating Pillar 4: Operational Efficiency...")
     pillar = CHART_CONFIG["pillar_4"]
     add_pillar_section_slide(prs, 4, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, "pillar_4")  # NEW: Efficiency under pressure
 
     # === PILLAR 5: Valuation & Risk (6 slides) ===
     print("   Creating Pillar 5: Valuation & Risk...")
@@ -256,6 +423,11 @@ def create_target_presentation():
     add_pillar_section_slide(prs, 5, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    # Note: No summary for Pillar 5 - goes directly to conclusion
+
+    # === CONCLUSION (1 slide) ===
+    print("   Creating conclusion slide...")
+    add_conclusion_slide(prs, data, thesis)  # NEW: Strategic conclusion
 
     # Save presentation
     output_path = 'output/Target_Financial_Analysis.pptx'
@@ -263,13 +435,20 @@ def create_target_presentation():
 
     # Summary output
     total_charts = sum(len(p["charts"]) for p in CHART_CONFIG.values())
-    total_slides = 3 + 5 + len(CHART_CONFIG)  # intro + section dividers + charts
+    # Calculate new total: 4 intro + (section + charts + summary) * 4 pillars + (section + charts) for pillar 5 + conclusion
+    intro_slides = 4  # Title, Exec Summary, Market Context, Investment Thesis
+    pillar_slides = sum(1 + len(CHART_CONFIG[f"pillar_{i}"]["charts"]) + 1 for i in range(1, 5))  # sections + charts + summaries for pillars 1-4
+    pillar5_slides = 1 + len(CHART_CONFIG["pillar_5"]["charts"])  # section + charts (no summary)
+    conclusion_slides = 1
+    total_slides = intro_slides + pillar_slides + pillar5_slides + conclusion_slides
 
     print(f"\n   Presentation created: {output_path}")
-    print(f"   {3 + 5 * 2 + total_charts} slides total:")
-    print("     - 3 introduction slides (Title, Executive Summary, Investment Thesis)")
+    print(f"   {total_slides} slides total:")
+    print("     - 4 introduction slides (Title, Executive Summary, Market Context, Investment Thesis)")
     print("     - 5 pillar section dividers")
     print(f"     - {total_charts} chart slides across 5 pillars")
+    print("     - 4 pillar summary slides ('So What?' takeaways)")
+    print("     - 1 strategic conclusion slide")
     print("     - Charts embedded as PNG images (run visualize_data.py first)")
 
     return output_path
@@ -605,8 +784,739 @@ def add_investment_thesis_slide(prs, thesis):
 
 
 # =============================================================================
+# NEW STREAMLINED PRESENTATION SLIDES
+# =============================================================================
+
+def add_market_context_slide(prs):
+    """Add Market Context slide showing TGT vs S&P 500 performance.
+
+    This slide appears after Executive Summary to provide market context.
+    """
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.2), Inches(9), Inches(0.5))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = "Market Context: TGT vs S&P 500"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
+
+    # Check for chart image
+    image_path = Path("output/chart_market_context.png")
+
+    if image_path.exists():
+        # Embed chart image
+        slide.shapes.add_picture(
+            str(image_path),
+            left=Inches(0.5),
+            top=Inches(0.8),
+            width=Inches(9),
+            height=Inches(4.5)
+        )
+
+        # Description
+        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.5))
+        desc_frame = desc_box.text_frame
+        desc_frame.word_wrap = True
+
+        p = desc_frame.paragraphs[0]
+        p.text = "Key Takeaway: Relative stock performance provides context for financial analysis."
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(60, 60, 60)
+
+        p = desc_frame.add_paragraph()
+        p.text = "• Compare TGT total return vs S&P 500 (SPY) and Retail ETF (XRT)"
+        p.font.size = Pt(11)
+        p.font.color.rgb = RGBColor(100, 100, 100)
+
+        p = desc_frame.add_paragraph()
+        p.text = "• Rolling beta shows stock's sensitivity to market movements"
+        p.font.size = Pt(11)
+        p.font.color.rgb = RGBColor(100, 100, 100)
+
+        # Link to interactive version
+        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.8), Inches(9), Inches(0.4))
+        link_frame = link_box.text_frame
+        p = link_frame.paragraphs[0]
+        run = p.add_run()
+        run.text = "📊 Click for interactive version"
+        run.font.size = Pt(11)
+        run.font.color.rgb = RGBColor(0, 102, 204)
+        run.font.underline = True
+        chart_path = Path("output/chart_market_context.html").resolve()
+        run.hyperlink.address = str(chart_path)
+    else:
+        # Fallback if chart not available
+        placeholder_box = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(8), Inches(3))
+        placeholder_frame = placeholder_box.text_frame
+        placeholder_frame.word_wrap = True
+
+        p = placeholder_frame.paragraphs[0]
+        p.text = "[Market Context Chart]"
+        p.font.size = Pt(20)
+        p.font.color.rgb = RGBColor(150, 150, 150)
+        p.font.italic = True
+        p.alignment = PP_ALIGN.CENTER
+
+        p = placeholder_frame.add_paragraph()
+        p.text = "Run visualize_data.py to generate market context chart"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(150, 150, 150)
+        p.alignment = PP_ALIGN.CENTER
+
+
+def add_pillar_summary_slide(prs, pillar_key: str):
+    """Add 'So What?' summary slide after each pillar's charts.
+
+    Args:
+        prs: Presentation object
+        pillar_key: Key for PILLAR_SUMMARIES dict (e.g., 'pillar_1')
+    """
+    summary = PILLAR_SUMMARIES.get(pillar_key, {})
+    if not summary:
+        return
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # "So What?" badge
+    badge_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(2), Inches(0.4))
+    badge_frame = badge_box.text_frame
+    p = badge_frame.paragraphs[0]
+    p.text = "SO WHAT?"
+    p.font.size = Pt(14)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+
+    # Badge background (via shape)
+    badge_shape = slide.shapes.add_shape(1, Inches(0.4), Inches(0.25), Inches(1.5), Inches(0.45))
+    badge_shape.fill.solid()
+    badge_shape.fill.fore_color.rgb = RGBColor(204, 0, 0)  # Target red
+    badge_shape.line.color.rgb = RGBColor(204, 0, 0)
+    # Move badge to back
+    badge_shape.element.getparent().insert(0, badge_shape.element)
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.9), Inches(9), Inches(0.6))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = summary.get('title', 'Summary')
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+    # Key Insight box
+    insight_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(1.7), Inches(9), Inches(1.0))
+    insight_shape.fill.solid()
+    insight_shape.fill.fore_color.rgb = RGBColor(255, 240, 240)  # Light red background
+    insight_shape.line.color.rgb = RGBColor(204, 0, 0)  # Red border
+
+    insight_box = slide.shapes.add_textbox(Inches(0.7), Inches(1.85), Inches(8.6), Inches(0.7))
+    insight_frame = insight_box.text_frame
+    insight_frame.word_wrap = True
+
+    p = insight_frame.paragraphs[0]
+    p.text = "KEY INSIGHT"
+    p.font.size = Pt(10)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
+
+    p = insight_frame.add_paragraph()
+    p.text = summary.get('key_insight', '')
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+    # Evidence section
+    evidence_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.0), Inches(9), Inches(2.5))
+    evidence_frame = evidence_box.text_frame
+    evidence_frame.word_wrap = True
+
+    p = evidence_frame.paragraphs[0]
+    p.text = "Evidence:"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+    p.space_after = Pt(8)
+
+    for item in summary.get('evidence', []):
+        p = evidence_frame.add_paragraph()
+        p.text = f"• {item}"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(80, 80, 80)
+        p.space_after = Pt(4)
+
+    # Implication section
+    impl_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(5.5), Inches(9), Inches(1.2))
+    impl_shape.fill.solid()
+    impl_shape.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue background
+    impl_shape.line.color.rgb = RGBColor(0, 102, 204)  # Blue border
+
+    impl_box = slide.shapes.add_textbox(Inches(0.7), Inches(5.65), Inches(8.6), Inches(0.9))
+    impl_frame = impl_box.text_frame
+    impl_frame.word_wrap = True
+
+    p = impl_frame.paragraphs[0]
+    p.text = "IMPLICATION"
+    p.font.size = Pt(10)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(0, 102, 204)
+
+    p = impl_frame.add_paragraph()
+    p.text = summary.get('implication', '')
+    p.font.size = Pt(14)
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+
+def add_conclusion_slide(prs, data, thesis):
+    """Add strategic conclusion slide with key takeaways.
+
+    Args:
+        prs: Presentation object
+        data: Financial data dict
+        thesis: Investment thesis dict
+    """
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.6))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = "Strategic Conclusion"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
+
+    # Recommendation summary
+    rec = thesis.get('recommendation', {})
+    rating = rec.get('rating', 'Hold')
+
+    rating_color = RGBColor(0, 128, 0) if rating == 'Buy' else \
+                   RGBColor(255, 140, 0) if rating == 'Hold' else \
+                   RGBColor(255, 0, 0)
+
+    rec_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.1), Inches(9), Inches(0.5))
+    rec_frame = rec_box.text_frame
+    p = rec_frame.paragraphs[0]
+    p.text = f"Recommendation: {rating}"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = rating_color
+
+    # Key questions section
+    questions_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.8), Inches(9), Inches(4.5))
+    questions_frame = questions_box.text_frame
+    questions_frame.word_wrap = True
+
+    p = questions_frame.paragraphs[0]
+    p.text = "Key Strategic Questions to Monitor:"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+    p.space_after = Pt(12)
+
+    strategic_questions = [
+        ("Margin Recovery", "Can Target restore operating margins to 5%+ in FY2025?"),
+        ("Interest Coverage", "Will interest coverage stabilize above 2.0x warning threshold?"),
+        ("Inventory Management", "Can inventory levels normalize without significant markdowns?"),
+        ("Debt Maturities", "How will Target refinance $2B debt maturing in FY2026?"),
+        ("Competitive Position", "Can Target differentiate vs Walmart/Amazon in a slowing consumer environment?"),
+    ]
+
+    for topic, question in strategic_questions:
+        p = questions_frame.add_paragraph()
+        p.text = f"• {topic}: "
+        p.font.size = Pt(14)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(204, 0, 0)
+
+        run = p.add_run()
+        run.text = question
+        run.font.size = Pt(14)
+        run.font.bold = False
+        run.font.color.rgb = RGBColor(60, 60, 60)
+
+        p.space_after = Pt(8)
+
+    # Bottom summary box
+    summary_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(6.2), Inches(9), Inches(0.9))
+    summary_shape.fill.solid()
+    summary_shape.fill.fore_color.rgb = RGBColor(245, 245, 245)
+    summary_shape.line.color.rgb = RGBColor(200, 200, 200)
+
+    summary_box = slide.shapes.add_textbox(Inches(0.7), Inches(6.35), Inches(8.6), Inches(0.6))
+    summary_frame = summary_box.text_frame
+    summary_frame.word_wrap = True
+
+    p = summary_frame.paragraphs[0]
+    p.text = "Bottom Line: "
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+    run = p.add_run()
+    run.text = rec.get('rationale', 'Monitor key metrics for changes in investment thesis.')
+    run.font.size = Pt(12)
+    run.font.bold = False
+    run.font.color.rgb = RGBColor(80, 80, 80)
+
+
+# =============================================================================
+# EXECUTIVE PRESENTATION SLIDES (Condensed Version)
+# =============================================================================
+
+def add_combined_section_slide(prs, section_key: str):
+    """Add combined pillar section divider (e.g., 'Earning Power').
+
+    Args:
+        prs: Presentation object
+        section_key: Key in EXECUTIVE_CONFIG ('earning_power', 'liquidity', 'valuation_risk')
+    """
+    config = EXECUTIVE_CONFIG.get(section_key, {})
+    if not config:
+        return
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Colored banner at top
+    banner = slide.shapes.add_shape(1, Inches(0), Inches(2.5), Inches(10), Inches(2))
+    banner.fill.solid()
+    banner.fill.fore_color.rgb = RGBColor(204, 0, 0)  # Target red
+    banner.line.color.rgb = RGBColor(204, 0, 0)
+
+    # Section title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.7), Inches(9), Inches(0.8))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = config.get('title', '')
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Subtitle
+    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.5), Inches(9), Inches(0.6))
+    subtitle_frame = subtitle_box.text_frame
+    p = subtitle_frame.paragraphs[0]
+    p.text = config.get('subtitle', '')
+    p.font.size = Pt(24)
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Guiding question below banner
+    q_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.0), Inches(9), Inches(0.5))
+    q_frame = q_box.text_frame
+    p = q_frame.paragraphs[0]
+    p.text = f'"{config.get("question", "")}"'
+    p.font.size = Pt(24)
+    p.font.italic = True
+    p.font.color.rgb = RGBColor(100, 100, 100)
+    p.alignment = PP_ALIGN.CENTER
+
+
+def add_combined_summary_slide(prs, section_key: str):
+    """Add combined 'So What?' summary for merged pillars.
+
+    Args:
+        prs: Presentation object
+        section_key: Key in EXECUTIVE_CONFIG ('earning_power', 'liquidity')
+    """
+    config = EXECUTIVE_CONFIG.get(section_key, {})
+    summary = config.get('summary', {})
+    if not summary:
+        return
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # "So What?" badge
+    badge_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(2), Inches(0.4))
+    badge_frame = badge_box.text_frame
+    p = badge_frame.paragraphs[0]
+    p.text = "SO WHAT?"
+    p.font.size = Pt(14)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+
+    # Badge background (via shape)
+    badge_shape = slide.shapes.add_shape(1, Inches(0.4), Inches(0.25), Inches(1.5), Inches(0.45))
+    badge_shape.fill.solid()
+    badge_shape.fill.fore_color.rgb = RGBColor(204, 0, 0)  # Target red
+    badge_shape.line.color.rgb = RGBColor(204, 0, 0)
+    # Move badge to back
+    badge_shape.element.getparent().insert(0, badge_shape.element)
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.9), Inches(9), Inches(0.6))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = summary.get('title', 'Summary')
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+    # Key Insight box
+    insight_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(1.7), Inches(9), Inches(1.0))
+    insight_shape.fill.solid()
+    insight_shape.fill.fore_color.rgb = RGBColor(255, 240, 240)  # Light red background
+    insight_shape.line.color.rgb = RGBColor(204, 0, 0)  # Red border
+
+    insight_box = slide.shapes.add_textbox(Inches(0.7), Inches(1.85), Inches(8.6), Inches(0.7))
+    insight_frame = insight_box.text_frame
+    insight_frame.word_wrap = True
+
+    p = insight_frame.paragraphs[0]
+    p.text = "KEY INSIGHT"
+    p.font.size = Pt(10)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
+
+    p = insight_frame.add_paragraph()
+    p.text = summary.get('key_insight', '')
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+    # Evidence section
+    evidence_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.0), Inches(9), Inches(2.5))
+    evidence_frame = evidence_box.text_frame
+    evidence_frame.word_wrap = True
+
+    p = evidence_frame.paragraphs[0]
+    p.text = "Evidence:"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+    p.space_after = Pt(8)
+
+    for item in summary.get('evidence', []):
+        p = evidence_frame.add_paragraph()
+        p.text = f"• {item}"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(80, 80, 80)
+        p.space_after = Pt(4)
+
+    # Implication section
+    impl_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(5.5), Inches(9), Inches(1.2))
+    impl_shape.fill.solid()
+    impl_shape.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue background
+    impl_shape.line.color.rgb = RGBColor(0, 102, 204)  # Blue border
+
+    impl_box = slide.shapes.add_textbox(Inches(0.7), Inches(5.65), Inches(8.6), Inches(0.9))
+    impl_frame = impl_box.text_frame
+    impl_frame.word_wrap = True
+
+    p = impl_frame.paragraphs[0]
+    p.text = "IMPLICATION"
+    p.font.size = Pt(10)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(0, 102, 204)
+
+    p = impl_frame.add_paragraph()
+    p.text = summary.get('implication', '')
+    p.font.size = Pt(14)
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+
+def add_appendix_divider_slide(prs):
+    """Add 'Appendix: Supporting Data' section divider."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Gray banner (neutral color to differentiate from main content)
+    banner = slide.shapes.add_shape(1, Inches(0), Inches(2.5), Inches(10), Inches(2))
+    banner.fill.solid()
+    banner.fill.fore_color.rgb = RGBColor(80, 80, 80)  # Dark gray
+    banner.line.color.rgb = RGBColor(80, 80, 80)
+
+    # Appendix label
+    label_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.7), Inches(9), Inches(0.6))
+    label_frame = label_box.text_frame
+    p = label_frame.paragraphs[0]
+    p.text = "APPENDIX"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.3), Inches(9), Inches(0.8))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = "Supporting Data"
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(255, 255, 255)
+    p.alignment = PP_ALIGN.CENTER
+
+    # Subtitle below banner
+    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.0), Inches(9), Inches(0.5))
+    subtitle_frame = subtitle_box.text_frame
+    p = subtitle_frame.paragraphs[0]
+    p.text = f"{len(APPENDIX_CHARTS)} additional charts for detailed analysis"
+    p.font.size = Pt(20)
+    p.font.color.rgb = RGBColor(100, 100, 100)
+    p.alignment = PP_ALIGN.CENTER
+
+
+def add_appendix_chart_slide(prs, title, chart_file):
+    """Add a simplified chart slide for appendix (minimal description).
+
+    Args:
+        prs: Presentation object
+        title: Chart title
+        chart_file: HTML chart filename
+    """
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title (top)
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.2), Inches(9), Inches(0.5))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = title
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(80, 80, 80)  # Gray for appendix (vs red for main)
+
+    # Check for PNG image
+    image_file = chart_file.replace('.html', '.png')
+    image_path = Path(f"output/{image_file}")
+
+    if image_path.exists():
+        # Embed chart image (center of slide, larger without description)
+        slide.shapes.add_picture(
+            str(image_path),
+            left=Inches(0.5),
+            top=Inches(0.8),
+            width=Inches(9),
+            height=Inches(5.5)
+        )
+
+        # Add hyperlink to interactive HTML version
+        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.5), Inches(9), Inches(0.4))
+        link_frame = link_box.text_frame
+        p = link_frame.paragraphs[0]
+        run = p.add_run()
+        run.text = "Click for interactive version"
+        run.font.size = Pt(11)
+        run.font.color.rgb = RGBColor(0, 102, 204)  # Blue link color
+        run.font.underline = True
+        chart_path = Path(f"output/{chart_file}").resolve()
+        run.hyperlink.address = str(chart_path)
+    else:
+        # Placeholder if image not found
+        placeholder_box = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(2))
+        placeholder_frame = placeholder_box.text_frame
+
+        p = placeholder_frame.paragraphs[0]
+        p.text = f"[Chart image not found: {image_file}]"
+        p.font.size = Pt(16)
+        p.font.color.rgb = RGBColor(150, 150, 150)
+        p.font.italic = True
+        p.alignment = PP_ALIGN.CENTER
+
+        p = placeholder_frame.add_paragraph()
+        p.text = "Run visualize_data.py to generate chart images"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(150, 150, 150)
+        p.alignment = PP_ALIGN.CENTER
+
+
+def add_executive_conclusion_slide(prs, data, thesis):
+    """Add strategic conclusion slide for executive presentation.
+
+    Focuses on key strategic questions: Clearance Sale + Refinancing risks.
+
+    Args:
+        prs: Presentation object
+        data: Financial data dict
+        thesis: Investment thesis dict
+    """
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.6))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = "Strategic Conclusion"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
+
+    # Recommendation summary
+    rec = thesis.get('recommendation', {})
+    rating = rec.get('rating', 'Hold')
+
+    rating_color = RGBColor(0, 128, 0) if rating == 'Buy' else \
+                   RGBColor(255, 140, 0) if rating == 'Hold' else \
+                   RGBColor(255, 0, 0)
+
+    rec_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(0.5))
+    rec_frame = rec_box.text_frame
+    p = rec_frame.paragraphs[0]
+    p.text = f"Recommendation: {rating}"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = rating_color
+
+    # Key strategic questions - focused on Clearance Sale + Refinancing
+    questions_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.7), Inches(9), Inches(3.8))
+    questions_frame = questions_box.text_frame
+    questions_frame.word_wrap = True
+
+    p = questions_frame.paragraphs[0]
+    p.text = "Key Strategic Questions:"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(51, 51, 51)
+    p.space_after = Pt(12)
+
+    strategic_questions = [
+        ("Clearance Sale Risk", "Can Target execute a controlled inventory drawdown, or will excess inventory force deep discounting that crushes margins further?"),
+        ("Refinancing Risk", "With $2B debt maturing FY2026 and interest coverage at 1.5x, how will Target refinance in a higher rate environment?"),
+        ("Margin Recovery", "Can Target restore operating margins to 5%+ without sacrificing market share?"),
+    ]
+
+    for topic, question in strategic_questions:
+        p = questions_frame.add_paragraph()
+        p.text = f"{topic}"
+        p.font.size = Pt(14)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(204, 0, 0)
+
+        p = questions_frame.add_paragraph()
+        p.text = question
+        p.font.size = Pt(13)
+        p.font.color.rgb = RGBColor(60, 60, 60)
+        p.space_after = Pt(12)
+
+    # Bottom summary box
+    summary_shape = slide.shapes.add_shape(1, Inches(0.5), Inches(5.8), Inches(9), Inches(1.3))
+    summary_shape.fill.solid()
+    summary_shape.fill.fore_color.rgb = RGBColor(255, 240, 240)  # Light red
+    summary_shape.line.color.rgb = RGBColor(204, 0, 0)
+
+    summary_box = slide.shapes.add_textbox(Inches(0.7), Inches(5.95), Inches(8.6), Inches(1.0))
+    summary_frame = summary_box.text_frame
+    summary_frame.word_wrap = True
+
+    p = summary_frame.paragraphs[0]
+    p.text = "Bottom Line"
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)
+
+    p = summary_frame.add_paragraph()
+    p.text = rec.get('rationale', 'Target faces near-term headwinds from inventory and debt pressures. Monitor Q4 margin recovery and FY2026 refinancing plans.')
+    p.font.size = Pt(12)
+    p.font.color.rgb = RGBColor(51, 51, 51)
+
+
+def create_executive_presentation():
+    """Create condensed executive presentation with appendix (~34 slides).
+
+    Presentation flow:
+    1. Title
+    2. Executive Summary (key flags)
+    3. Investment Thesis
+    4-7. Earning Power (section + 2 charts + summary)
+    8-11. Liquidity (section + 2 charts + summary)
+    12-14. Valuation & Risk (section + 2 charts)
+    15. Strategic Conclusion
+    16. Appendix Divider
+    17-34. Appendix Charts (18 charts)
+
+    Total: ~34 slides (vs 38 for full version)
+    Main body: ~15 slides (vs 33 for full version)
+    """
+
+    # Generate investment thesis
+    print("   Generating investment thesis...")
+    thesis_gen = ThesisGenerator()
+    thesis_gen.export_thesis()
+
+    # Load analysis data
+    with open('output/target_analysis.json', 'r') as f:
+        full_data = json.load(f)
+        data = full_data['filings']
+
+    # Load investment thesis
+    with open('output/investment_thesis.json', 'r') as f:
+        thesis = json.load(f)
+
+    # Create presentation
+    prs = Presentation()
+    prs.slide_width = Inches(10)
+    prs.slide_height = Inches(7.5)
+
+    # === INTRODUCTION (3 slides) ===
+    print("   Creating introduction slides...")
+    add_title_slide(prs)
+    add_executive_summary(prs, data)
+    add_investment_thesis_slide(prs, thesis)
+
+    # === EARNING POWER SECTION (4 slides: section + 2 charts + summary) ===
+    print("   Creating Earning Power section...")
+    add_combined_section_slide(prs, "earning_power")
+    for title, chart_file, description in EXECUTIVE_CONFIG["earning_power"]["key_charts"]:
+        add_chart_slide(prs, title, chart_file, description)
+    add_combined_summary_slide(prs, "earning_power")
+
+    # === LIQUIDITY SECTION (4 slides: section + 2 charts + summary) ===
+    print("   Creating Liquidity section...")
+    add_combined_section_slide(prs, "liquidity")
+    for title, chart_file, description in EXECUTIVE_CONFIG["liquidity"]["key_charts"]:
+        add_chart_slide(prs, title, chart_file, description)
+    add_combined_summary_slide(prs, "liquidity")
+
+    # === VALUATION & RISK SECTION (3 slides: section + 2 charts) ===
+    print("   Creating Valuation & Risk section...")
+    add_combined_section_slide(prs, "valuation_risk")
+    for title, chart_file, description in EXECUTIVE_CONFIG["valuation_risk"]["key_charts"]:
+        add_chart_slide(prs, title, chart_file, description)
+
+    # === CONCLUSION (1 slide) ===
+    print("   Creating conclusion slide...")
+    add_executive_conclusion_slide(prs, data, thesis)
+
+    # === APPENDIX (1 divider + 18 charts = 19 slides) ===
+    print("   Creating appendix slides...")
+    add_appendix_divider_slide(prs)
+    for title, chart_file in APPENDIX_CHARTS:
+        add_appendix_chart_slide(prs, title, chart_file)
+
+    # Save presentation
+    output_path = 'output/Target_Executive_Presentation.pptx'
+    prs.save(output_path)
+
+    # Summary output
+    main_slides = 3 + 4 + 4 + 3 + 1  # intro + earning + liquidity + valuation + conclusion
+    appendix_slides = 1 + len(APPENDIX_CHARTS)  # divider + charts
+    total_slides = main_slides + appendix_slides
+
+    print(f"\n   Executive presentation created: {output_path}")
+    print(f"   {total_slides} slides total:")
+    print(f"     - {main_slides} main body slides (executive summary)")
+    print("       • 3 introduction slides (Title, Executive Summary, Investment Thesis)")
+    print("       • 4 Earning Power slides (Pillars 1+2 combined)")
+    print("       • 4 Liquidity slides (Pillars 3+4 combined)")
+    print("       • 3 Valuation & Risk slides (Pillar 5)")
+    print("       • 1 strategic conclusion")
+    print(f"     - {appendix_slides} appendix slides ({len(APPENDIX_CHARTS)} supporting charts)")
+    print("     - Charts embedded as PNG images (run visualize_data.py first)")
+
+    return output_path
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
 if __name__ == "__main__":
-    create_target_presentation()
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == '--executive':
+        create_executive_presentation()
+    else:
+        create_target_presentation()
+        print("\n   Tip: Run with --executive flag for condensed executive version")
