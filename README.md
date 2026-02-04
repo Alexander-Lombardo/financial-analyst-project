@@ -166,7 +166,8 @@ The visualization script will generate:
 - Open any `.html` file in your browser to view
 
 The thesis generator (Phase 4) will produce:
-- Auto-generated investment thesis with Buy/Hold/Sell recommendation
+- Auto-generated investment thesis with nuanced Buy/Hold/Sell recommendation
+- Distress-based Sell logic (requires actual crisis signals, not just trend concerns)
 - Risk factor analysis and opportunity identification
 - Exported to `output/investment_thesis.json`
 
@@ -252,10 +253,19 @@ financial-analyst-project/
 - Auto-generated insights for reports
 
 **4. `investment_thesis.json`** (Phase 4)
-- Auto-generated Buy/Hold/Sell recommendation
+- Auto-generated Buy/Hold/Sell recommendation using distress-based logic
 - Risk factor analysis (severity, trend, evidence)
 - Opportunity identification (digital growth, margin recovery)
 - Current state analysis with 3-year comparisons
+
+**Recommendation Logic:**
+| Rating | Trigger Conditions |
+|--------|-------------------|
+| **Sell** | Distress signals: interest coverage <3x, negative operating margin, or critical risks (2+ signals, or coverage <2x alone) |
+| **Buy** | Improving margins + high opportunities > high risks + no high-severity risks |
+| **Hold** | Everything else (most common) - trend concerns without distress |
+
+This two-tier system distinguishes between concerning trends (Hold) and actual financial distress (Sell), preventing false alarms on companies under pressure but not in crisis.
 
 **5. Interactive Charts** (Phases 3 & 4)
 - 9 HTML files with embedded Plotly visualizations
@@ -482,7 +492,7 @@ python create_presentation.py --executive
 
 ### ✅ Phase 4: Professional Reports (Complete)
 - ✅ Margin bridge analysis (waterfall chart FY2022 → Q3 2025)
-- ✅ Investment thesis generation (auto-generated Buy/Hold/Sell recommendation)
+- ✅ Investment thesis generation (distress-based recommendation logic)
 - ✅ Executive insights extraction (inflection points, top trends, warnings)
 - ✅ Risk heatmap visualizations (2 interactive charts)
 - ✅ Enhanced PowerPoint with Phase 4 slides

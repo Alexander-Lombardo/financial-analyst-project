@@ -126,6 +126,42 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 
 **Output**: `data/peer_comparison_data.json` with multi-year CCC data per company
 
+### 6. `thesis_generator.py`
+
+**Main class**: `ThesisGenerator` (Investment thesis auto-generation)
+
+**Purpose**: Analyzes financial data to generate Buy/Hold/Sell recommendations using distress-based logic.
+
+**Key Methods**:
+- `analyze_current_state()` - Extract latest metrics and 3-year comparisons
+- `identify_risk_factors()` - Detect margin compression, coverage decline, inventory issues
+- `identify_opportunities()` - Find digital growth, margin recovery potential
+- `generate_recommendation()` - **Two-tier recommendation logic** (see below)
+- `generate_thesis()` - Orchestrate complete thesis generation
+
+**Recommendation Logic** (`generate_recommendation`):
+
+The method uses a two-tier system that distinguishes between concerning trends and actual distress:
+
+| Rating | Trigger Conditions |
+|--------|-------------------|
+| **Sell** | Requires distress signals: interest coverage <3x, negative operating margin, or critical risks. Triggers on 2+ signals, or coverage <2x alone. |
+| **Buy** | Improving margins + high opportunities outweigh high risks + no high-severity risks |
+| **Hold** | Everything else (most common) - trend concerns without actual distress |
+
+**Key Design Decisions**:
+- **Sell is rare**: Only triggers on actual financial distress, not trend concerns
+- **Hold is default**: Companies under pressure but not in crisis get Hold
+- **Distress signals checked first**: Interest coverage <3x, negative margins, critical risks
+- **Context-aware rationale**: Hold rationale varies based on specific conditions
+
+**Example**:
+- Target with 8.2x coverage + declining margins + High risks → **Hold** (not Sell)
+- Company with 1.8x coverage → **Sell** (coverage <2x alone triggers)
+- Company with 2.5x coverage + negative margins + critical risk → **Sell** (2+ signals)
+
+**Output**: `output/investment_thesis.json`
+
 ## Data Flow
 
 ```
