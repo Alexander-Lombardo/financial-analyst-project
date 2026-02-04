@@ -13,7 +13,7 @@ This document is designed for AI assistants (like Claude) to understand the Targ
 - Inventory efficiency tracking
 - Debt health monitoring
 - Risk heatmap generation
-- 24 interactive Plotly charts
+- 25 interactive Plotly charts
 
 **Tech Stack**:
 - Python 3.x
@@ -92,7 +92,7 @@ financial-analyst-project/
 
 ### 3. `visualize_data.py`
 
-Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
+Creates 25 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 
 ### 4. `market_data_fetcher.py`
 
@@ -263,7 +263,7 @@ The method uses a two-tier system that distinguishes between concerning trends a
 # Run analyzer
 python3 financial_analyzer.py
 
-# Generate visualizations (24 charts)
+# Generate visualizations (25 charts)
 python3 visualize_data.py
 
 # Generate investment thesis
@@ -316,7 +316,7 @@ Target files 10-Q for Q1-Q3 only. Q4 is calculated from 10-K annual reports:
 
 ## Chart Catalog
 
-All 24 interactive Plotly charts created by `visualize_data.py`:
+All 25 interactive Plotly charts created by `visualize_data.py`:
 
 | # | Chart Name | File | Type | Purpose |
 |---|------------|------|------|---------|
@@ -344,6 +344,7 @@ All 24 interactive Plotly charts created by `visualize_data.py`:
 | 22 | Cash Flow Sankey | chart_cash_flow_sankey.html | Sankey + dropdown | Cash allocation |
 | 23 | Valuation Scatter | chart_valuation_scatter.html | Scatter + dropdown | P/E vs Growth |
 | 24 | P/E Band | chart_pe_band.html | Area | Historical valuation zones |
+| 25 | Market Context | chart_market_context.html | Dual-panel | TGT vs S&P 500/XRT + rolling beta |
 
 **Notes**:
 - Charts with "dropdown" have quarter/period selectors

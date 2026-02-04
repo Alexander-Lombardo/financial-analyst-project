@@ -98,7 +98,7 @@ Comprehensive trend analysis with multiple comparison methods:
 }
 ```
 
-**7 Interactive Charts:**
+**8 Interactive Charts:**
 1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
 2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth % line, **15 quarters with Q4**)
 3. **Margin Analysis** (3-line chart: Gross, Operating, Net Profit margins, **15 quarters Q1 2022-Q3 2025**)
@@ -106,6 +106,7 @@ Comprehensive trend analysis with multiple comparison methods:
 5. Inventory Efficiency (turnover + DSI)
 6. Debt Health (coverage ratio + total debt)
 7. Statement of Cash Flows (3 lines: operating, investing, financing)
+8. **Market Context** (TGT vs S&P 500/XRT total return + rolling beta)
 
 ## Installation
 
@@ -161,7 +162,8 @@ The analyzer will automatically:
    - `output/executive_insights.json` (key insights for reports - Phase 4)
 
 The visualization script will generate:
-- 10 interactive HTML charts in the `output/` directory (7 from Phase 3 + 3 from Phase 4)
+- 25 interactive HTML charts in the `output/` directory
+- Market context chart (TGT vs S&P 500 performance)
 - Charts include hover tooltips, zoom, and pan features
 - Open any `.html` file in your browser to view
 
@@ -174,8 +176,10 @@ The thesis generator (Phase 4) will produce:
 The presentation generator (Phase 4) will create:
 - **Full version**: 38-slide PowerPoint with all 24 charts across 5 pillars
 - **Executive version** (`--executive` flag): 34-slide condensed deck with 6 key charts and 18 in appendix
+- Market Context slide (TGT vs S&P 500) after Executive Summary
 - Investment thesis, pillar summaries, and strategic conclusion slides
 - Charts embedded as PNG images with links to interactive HTML versions
+- Info icon (ⓘ) tooltips with chart descriptions on hover
 
 ### SEC Credentials Setup
 
@@ -267,10 +271,12 @@ financial-analyst-project/
 
 This two-tier system distinguishes between concerning trends (Hold) and actual financial distress (Sell), preventing false alarms on companies under pressure but not in crisis.
 
-**5. Interactive Charts** (Phases 3 & 4)
-- 9 HTML files with embedded Plotly visualizations
+**5. Interactive Charts** (25 total)
+- 25 HTML files with embedded Plotly visualizations
+- Market Context: TGT vs S&P 500/XRT total return with rolling beta
 - Phase 3: Revenue vs Inventory, Revenue Growth YoY, Operating Margin, Inventory Efficiency, Debt Health, Cash Flows
 - Phase 4: Margin Bridge (waterfall), Risk Trends, Risk Heatmap Grid
+- Pillar charts: DuPont Analysis, CCC Peer Comparison, Valuation Scatter, P/E Bands, and more
 - Fully interactive: hover tooltips, zoom, pan
 - No external dependencies - open directly in browser
 - Professional presentation quality
