@@ -103,6 +103,20 @@ class ThesisGenerator:
                                f"({'below' if coverage < 2.0 else 'near'} 2.0x warning threshold)"
                 })
 
+        # Also check for rapid decline in coverage
+        interest_coverage = [f.get('debt_metrics', {}).get('interest_coverage_ratio')
+                            for f in self.detailed['filings']]
+        if len(interest_coverage) >= 2:
+            prev_coverage = interest_coverage[-2] if interest_coverage[-2] else None
+            curr_coverage = interest_coverage[-1]
+            if prev_coverage and curr_coverage and (prev_coverage - curr_coverage) / prev_coverage > 0.2:
+                risks.append({
+                    'factor': 'Interest Coverage Decline',
+                    'severity': 'Medium',
+                    'trend': 'Deteriorating',
+                    'evidence': f"Coverage dropped {((prev_coverage - curr_coverage) / prev_coverage * 100):.0f}% QoQ ({prev_coverage:.1f}x → {curr_coverage:.1f}x)"
+                })
+
         # Risk 3: Inventory buildup
         inv_yoy = self.timeseries['metrics']['inventory']['inventory_yoy_growth_percent']
         rev_yoy = self.timeseries['metrics']['revenue']['yoy_growth_percent']
@@ -120,7 +134,21 @@ class ThesisGenerator:
                     })
                 break
 
-        return risks[:3]  # Top 3 risks
+        # Risk: Margin compression
+        margins = self.timeseries['metrics']['margins']['operating_margin_percent']
+        periods = self.timeseries['periods']
+        fy2020_idx = next((i for i, p in enumerate(periods) if p['period'] == 'FY2020'), None)
+        fy2020_margin = margins[fy2020_idx] if fy2020_idx is not None else None
+        current_margin = [m for m in margins if m is not None][-1]
+        if fy2020_margin and current_margin < fy2020_margin - 2:
+            risks.append({
+                'factor': 'Margin Compression',
+                'severity': 'High',
+                'trend': 'Declining',
+                'evidence': f"Operating margin {current_margin:.1f}% vs {fy2020_margin:.1f}% baseline (-{fy2020_margin - current_margin:.1f}pp)"
+            })
+
+        return risks[:4]  # Top 4 risks
 
     def identify_opportunities(self) -> List[Dict]:
         """Identify growth opportunities from data."""
@@ -131,10 +159,23 @@ class ThesisGenerator:
         latest_digital = [d for d in digital_sales if d is not None][-1]
 
         if latest_digital > 2.0:
+            # Check if digital growth is decelerating
+            if len(digital_sales) >= 2:
+                prev_digital = digital_sales[-2] if digital_sales[-2] else None
+                if prev_digital and latest_digital < prev_digital:
+                    evidence = f"Digital comp sales {latest_digital}% (slowing from {prev_digital}%)"
+                    potential = 'Medium'  # Downgrade from High
+                else:
+                    evidence = f"Digital comp sales up {latest_digital}% in latest quarter"
+                    potential = 'High'
+            else:
+                evidence = f"Digital comp sales up {latest_digital}% in latest quarter"
+                potential = 'High'
+
             opportunities.append({
                 'factor': 'Digital Sales Growth',
-                'potential': 'High',
-                'evidence': f"Digital comp sales up {latest_digital}% in latest quarter"
+                'potential': potential,
+                'evidence': evidence
             })
 
         # Opportunity 2: Margin recovery potential
@@ -168,32 +209,62 @@ class ThesisGenerator:
 
     def generate_recommendation(self, current_state: Dict, risks: List[Dict],
                                opportunities: List[Dict]) -> Dict:
-        """Generate investment recommendation."""
-        # Simple scoring algorithm
-        risk_score = sum(1 if r['severity'] == 'Critical' else
-                        0.7 if r['severity'] == 'High' else 0.3
-                        for r in risks)
+        """Generate investment recommendation with nuanced logic."""
 
-        opp_score = sum(1 if o['potential'] == 'High' else 0.5
-                       for o in opportunities)
+        # Get key metrics for distress detection
+        interest_coverage = None
+        for filing in reversed(self.detailed['filings']):
+            if filing.get('debt_metrics', {}).get('interest_coverage_ratio'):
+                interest_coverage = filing['debt_metrics']['interest_coverage_ratio']
+                break
 
-        # Margin trend weight
-        margin_weight = 1 if current_state['margin_trend'] == 'improving' else -1
+        operating_margin = current_state['latest_operating_margin']
+        has_critical_risk = any(r['severity'] == 'Critical' for r in risks)
 
-        total_score = opp_score + margin_weight - risk_score
+        # SELL: Only on actual distress signals
+        distress_signals = []
+        if interest_coverage and interest_coverage < 3.0:
+            distress_signals.append(f"Interest coverage at {interest_coverage:.1f}x (below 3x threshold)")
+        if operating_margin < 0:
+            distress_signals.append(f"Negative operating margin ({operating_margin:.1f}%)")
+        if has_critical_risk:
+            distress_signals.append("Critical risk factors present")
 
-        if total_score > 1:
-            rating = "Buy"
-            rationale = "Opportunities outweigh risks with improving margins"
-        elif total_score < -1:
-            rating = "Sell"
-            rationale = "Critical risks and declining margins outweigh opportunities"
+        if len(distress_signals) >= 2 or (interest_coverage and interest_coverage < 2.0):
+            return {
+                'rating': 'Sell',
+                'rationale': f"Distress signals: {'; '.join(distress_signals)}",
+                'confidence': 'High' if len(distress_signals) >= 2 else 'Medium',
+                'catalysts': [o['factor'] for o in opportunities],
+                'headwinds': [r['factor'] for r in risks]
+            }
+
+        # BUY: Improving margins + more opportunities than risks + no high-severity risks
+        high_risks = sum(1 for r in risks if r['severity'] in ('Critical', 'High'))
+        high_opps = sum(1 for o in opportunities if o['potential'] == 'High')
+
+        if (current_state['margin_trend'] == 'improving' and
+            high_opps > high_risks and
+            high_risks == 0):
+            return {
+                'rating': 'Buy',
+                'rationale': "Improving margins with opportunities outweighing risks",
+                'confidence': 'Medium',
+                'catalysts': [o['factor'] for o in opportunities],
+                'headwinds': [r['factor'] for r in risks]
+            }
+
+        # HOLD: Everything else (the most common case)
+        # Generate nuanced rationale based on specific conditions
+        if current_state['margin_trend'] == 'declining' and high_risks > 0:
+            rationale = "Margin pressure and elevated risks warrant caution; watch for stabilization"
+        elif len(opportunities) == 0:
+            rationale = "Limited near-term catalysts; maintaining position pending clarity"
         else:
-            rating = "Hold"
-            rationale = "Balanced risk/opportunity profile with execution uncertainty"
+            rationale = "Balanced risk/reward with execution uncertainty"
 
         return {
-            'rating': rating,
+            'rating': 'Hold',
             'rationale': rationale,
             'confidence': 'Medium',
             'catalysts': [o['factor'] for o in opportunities],

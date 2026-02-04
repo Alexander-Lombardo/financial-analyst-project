@@ -16,24 +16,38 @@
       "severity": "High",
       "trend": "Increasing",
       "evidence": "22 mentions across 8 periods, avg 2.8/period"
+    },
+    {
+      "factor": "Interest Coverage Decline",
+      "severity": "Medium",
+      "trend": "Deteriorating",
+      "evidence": "Coverage dropped 27% QoQ (11.3x \u2192 8.2x)"
+    },
+    {
+      "factor": "Margin Compression",
+      "severity": "High",
+      "trend": "Declining",
+      "evidence": "Operating margin 3.8% vs 7.1% baseline (-3.3pp)"
     }
   ],
   "opportunities": [
     {
       "factor": "Digital Sales Growth",
-      "potential": "High",
-      "evidence": "Digital comp sales up 2.4% in latest quarter"
+      "potential": "Medium",
+      "evidence": "Digital comp sales 2.4% (slowing from 4.3%)"
     }
   ],
   "recommendation": {
     "rating": "Hold",
-    "rationale": "Balanced risk/opportunity profile with execution uncertainty",
+    "rationale": "Margin pressure and elevated risks warrant caution; watch for stabilization",
     "confidence": "Medium",
     "catalysts": [
       "Digital Sales Growth"
     ],
     "headwinds": [
-      "Shrink/Theft"
+      "Shrink/Theft",
+      "Interest Coverage Decline",
+      "Margin Compression"
     ]
   }
 }
