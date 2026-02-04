@@ -18,6 +18,8 @@ from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 from thesis_generator import ThesisGenerator
 
+# Script directory for absolute path resolution
+SCRIPT_DIR = Path(__file__).parent.resolve()
 
 # =============================================================================
 # CHART CONFIGURATION - All 24 charts organized by pillar
@@ -330,6 +332,93 @@ CHART_CONFIG = {
     },
 }
 
+# =============================================================================
+# CHART INSIGHTS - Data-driven insights for each chart
+# =============================================================================
+
+CHART_INSIGHTS = {
+    # Pillar 1: Growth & Revenue
+    "chart_revenue_netincome_annual.html":
+        "Revenue grew 50% ($70B→$105B) over 10 years, but net income peaked in FY2021 at $7.1B then dropped 44% to $4.0B—profits not keeping pace with top-line growth.",
+
+    "chart_revenue_growth_yoy.html":
+        "Growth has decelerated sharply: from 20%+ during COVID to just 1.6% in Q3 2025. Target is now a low-single-digit grower.",
+
+    "chart_revenue_vs_inventory.html":
+        "Inventory growth outpaced revenue in FY2022-23, creating markdown risk. Recent quarters show better alignment as inventory normalizes.",
+
+    "chart_revenue_netincome_longterm.html":
+        "Q4 holiday peaks are visible, but FY2022-23 saw net income collapse despite stable revenue—margin compression is the story.",
+
+    # Pillar 2: Profitability & Margins
+    "chart_margin_analysis.html":
+        "Operating margin compressed from 7.1% (FY2020) to 3.75% (Q3 2025)—a 3.3pp drop. Gross margin held steady, so the leak is in SG&A and shrink.",
+
+    "chart_margin_bridge.html":
+        "From FY2022 baseline, margins deteriorated in 5 of 8 periods. The FY2023 trough (-2.4pp) shows the inventory markdown pain.",
+
+    "chart_expense_breakdown.html":
+        "SG&A as % of revenue crept up from 19% to 21% since FY2020. This 2pp increase directly explains half the margin compression.",
+
+    "chart_ebitda_bridge.html":
+        "D&A adds ~$2.8B to operating income, but EBITDA margin still declined from 9.5% to 6.5% over three years.",
+
+    "chart_operating_margin_waterfall.html":
+        "Q3 margins consistently underperform Q4 due to holiday leverage. FY2023 Q2-Q3 saw the steepest drops (-1.5pp each).",
+
+    "chart_earnings_quality.html":
+        "Operating cash flow exceeds net income in most periods—earnings quality is solid. Working capital swings cause quarterly noise.",
+
+    # Pillar 3: Liquidity & Solvency
+    "chart_current_ratio_gauge.html":
+        "Current ratio at 0.92x is below 1.0—current liabilities exceed current assets. Typical for retail but warrants monitoring.",
+
+    "chart_capital_structure_donut.html":
+        "Debt represents ~65% of capital structure. Leverage increased as buybacks reduced equity base.",
+
+    "chart_debt_to_ebitda_trend.html":
+        "Debt/EBITDA rose from 1.5x (FY2020) to 3.8x (FY2024) as EBITDA declined while debt stayed flat. Approaching the 4x caution zone.",
+
+    "chart_debt_health.html":
+        "Interest coverage dropped from 11.3x to 8.2x QoQ—a 27% decline. Still comfortable above 3x but trending wrong direction.",
+
+    "chart_cash_flows.html":
+        "Operating CF remains positive ($1-2B/quarter) but investing CF shows steady CapEx spend. Financing CF negative due to dividends.",
+
+    # Pillar 4: Operational Efficiency
+    "chart_dupont_analysis.html":
+        "ROE driven primarily by leverage (3.2x), not margins (3.8%) or turnover (1.8x). Declining margins are dragging returns down.",
+
+    "chart_inventory_efficiency.html":
+        "Inventory turns improved from 5.8x to 6.2x as Target worked through excess stock. Days on hand dropped from 63 to 59 days.",
+
+    "chart_cash_conversion_cycle.html":
+        "Cash cycle at ~5 days is efficient for retail. Negative payables cycle offsets inventory days—suppliers help fund operations.",
+
+    "chart_ocf_vs_capex.html":
+        "Free cash flow (OCF - CapEx) remains positive at ~$3B annually, supporting dividends. CapEx steady at $4-5B for store/digital investments.",
+
+    # Pillar 5: Valuation & Risk
+    "chart_valuation_scatter.html":
+        "Target trades at 14x P/E with 1.6% revenue growth—below peers like Walmart (23x, 5% growth) and Costco (45x, 8% growth).",
+
+    "chart_pe_band.html":
+        "Current P/E of 14x is below the 5-year average of 18x—historically undervalued, but margin concerns may justify discount.",
+
+    "chart_cash_flow_sankey.html":
+        "~40% of operating CF goes to CapEx, 25% to dividends, 20% to buybacks. Balanced capital allocation despite margin pressure.",
+
+    "chart_risk_trends.html":
+        "Shrink/theft mentions increased from 1/period (2020) to 3-4/period (2024-25). Management repeatedly flags this as a margin headwind.",
+
+    "chart_risk_heatmap_grid.html":
+        "FY2023-Q3 2025 shows elevated risk across all categories. Shrink, markdown, and margin pressure are concurrent concerns.",
+
+    # Market Context
+    "chart_market_context.html":
+        "TGT underperformed S&P 500 by 102pp over 3 years. Beta dropped to 0.28 (less volatile than market)—defensive but lagging in bull markets.",
+}
+
 
 # =============================================================================
 # MAIN PRESENTATION FUNCTION
@@ -390,7 +479,8 @@ def create_target_presentation():
     pillar = CHART_CONFIG["pillar_1"]
     add_pillar_section_slide(prs, 1, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
-        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+        insight = CHART_INSIGHTS.get(chart["file"], None)
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"], insight)
     add_pillar_summary_slide(prs, "pillar_1")  # NEW: "So What?" summary
 
     # === PILLAR 2: Profitability & Margins (7 slides + summary) ===
@@ -398,7 +488,8 @@ def create_target_presentation():
     pillar = CHART_CONFIG["pillar_2"]
     add_pillar_section_slide(prs, 2, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
-        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+        insight = CHART_INSIGHTS.get(chart["file"], None)
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"], insight)
     add_pillar_summary_slide(prs, "pillar_2")  # NEW: Margin compression alert
 
     # === PILLAR 3: Liquidity & Solvency (6 slides + summary) ===
@@ -406,7 +497,8 @@ def create_target_presentation():
     pillar = CHART_CONFIG["pillar_3"]
     add_pillar_section_slide(prs, 3, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
-        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+        insight = CHART_INSIGHTS.get(chart["file"], None)
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"], insight)
     add_pillar_summary_slide(prs, "pillar_3")  # NEW: Interest coverage crisis
 
     # === PILLAR 4: Operational Efficiency (5 slides + summary) ===
@@ -414,7 +506,8 @@ def create_target_presentation():
     pillar = CHART_CONFIG["pillar_4"]
     add_pillar_section_slide(prs, 4, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
-        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+        insight = CHART_INSIGHTS.get(chart["file"], None)
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"], insight)
     add_pillar_summary_slide(prs, "pillar_4")  # NEW: Efficiency under pressure
 
     # === PILLAR 5: Valuation & Risk (6 slides) ===
@@ -422,7 +515,8 @@ def create_target_presentation():
     pillar = CHART_CONFIG["pillar_5"]
     add_pillar_section_slide(prs, 5, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
-        add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+        insight = CHART_INSIGHTS.get(chart["file"], None)
+        add_chart_slide(prs, chart["title"], chart["file"], chart["description"], insight)
     # Note: No summary for Pillar 5 - goes directly to conclusion
 
     # === CONCLUSION (1 slide) ===
@@ -503,11 +597,18 @@ def add_pillar_section_slide(prs, pillar_num, title, question):
 # GENERIC CHART SLIDE
 # =============================================================================
 
-def add_chart_slide(prs, title, chart_file, description):
+def add_chart_slide(prs, title, chart_file, description, insight=None):
     """Add a chart slide with embedded PNG image.
 
     Embeds the static PNG version of the chart directly in the slide.
     Falls back to hyperlink if PNG not found.
+
+    Args:
+        prs: Presentation object
+        title: Chart title
+        chart_file: HTML chart filename
+        description: Chart explanation (shown in info icon tooltip)
+        insight: Data-driven insight text (shown at bottom of slide)
     """
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
 
@@ -520,9 +621,24 @@ def add_chart_slide(prs, title, chart_file, description):
     p.font.bold = True
     p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
 
+    # Info icon with tooltip (top right)
+    info_icon = slide.shapes.add_textbox(Inches(9.0), Inches(0.25), Inches(0.4), Inches(0.4))
+    info_frame = info_icon.text_frame
+    p = info_frame.paragraphs[0]
+    run = p.add_run()
+    run.text = "ⓘ"
+    run.font.size = Pt(18)
+    run.font.color.rgb = RGBColor(100, 100, 100)
+    # Add hyperlink with ScreenTip containing the explanation
+    # Truncate to 250 chars for ScreenTip limit
+    tooltip_text = description[:247] + "..." if len(description) > 250 else description
+    chart_path = Path(f"output/{chart_file}").resolve()
+    run.hyperlink.address = chart_path.as_uri()  # file:// URI format
+    run.hyperlink.screen_tip = tooltip_text
+
     # Check for PNG image
     image_file = chart_file.replace('.html', '.png')
-    image_path = Path(f"output/{image_file}")
+    image_path = SCRIPT_DIR / "output" / image_file
 
     if image_path.exists():
         # Embed chart image (center of slide)
@@ -534,15 +650,17 @@ def add_chart_slide(prs, title, chart_file, description):
             height=Inches(4.5)
         )
 
-        # Description (bottom)
-        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.0))
-        desc_frame = desc_box.text_frame
-        desc_frame.word_wrap = True
+        # Insight text (bottom) - replaces description
+        insight_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.0))
+        insight_frame = insight_box.text_frame
+        insight_frame.word_wrap = True
 
-        p = desc_frame.paragraphs[0]
-        p.text = description
+        p = insight_frame.paragraphs[0]
+        display_text = insight if insight else description
+        p.text = display_text
         p.font.size = Pt(12)
-        p.font.color.rgb = RGBColor(100, 100, 100)
+        p.font.color.rgb = RGBColor(50, 50, 50)  # Darker for insights
+        p.font.bold = True  # Make insights stand out
 
         # Add hyperlink to interactive HTML version
         link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.6), Inches(9), Inches(0.4))
@@ -554,7 +672,7 @@ def add_chart_slide(prs, title, chart_file, description):
         run.font.color.rgb = RGBColor(0, 102, 204)  # Blue link color
         run.font.underline = True
         chart_path = Path(f"output/{chart_file}").resolve()
-        run.hyperlink.address = str(chart_path)
+        run.hyperlink.address = chart_path.as_uri()
     else:
         # Fallback: show description and hyperlink if image not found
         desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(1.5))
@@ -803,8 +921,21 @@ def add_market_context_slide(prs):
     p.font.bold = True
     p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
 
+    # Add info icon with tooltip (top right)
+    description = "Compares TGT total return vs S&P 500 (SPY) and Retail ETF (XRT). Rolling beta shows stock's sensitivity to market movements."
+    info_icon = slide.shapes.add_textbox(Inches(9.0), Inches(0.25), Inches(0.4), Inches(0.4))
+    info_frame = info_icon.text_frame
+    p = info_frame.paragraphs[0]
+    run = p.add_run()
+    run.text = "ⓘ"
+    run.font.size = Pt(18)
+    run.font.color.rgb = RGBColor(100, 100, 100)
+    chart_path = Path("output/chart_market_context.html").resolve()
+    run.hyperlink.address = chart_path.as_uri()  # file:// URI format
+    run.hyperlink.screen_tip = description
+
     # Check for chart image
-    image_path = Path("output/chart_market_context.png")
+    image_path = SCRIPT_DIR / "output" / "chart_market_context.png"
 
     if image_path.exists():
         # Embed chart image
@@ -816,29 +947,20 @@ def add_market_context_slide(prs):
             height=Inches(4.5)
         )
 
-        # Description
-        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.5))
+        # Insight text (bottom) - data-driven insight instead of generic bullets
+        insight = CHART_INSIGHTS.get("chart_market_context.html", "")
+        desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.0))
         desc_frame = desc_box.text_frame
         desc_frame.word_wrap = True
 
         p = desc_frame.paragraphs[0]
-        p.text = "Key Takeaway: Relative stock performance provides context for financial analysis."
+        p.text = insight
         p.font.size = Pt(12)
         p.font.bold = True
-        p.font.color.rgb = RGBColor(60, 60, 60)
-
-        p = desc_frame.add_paragraph()
-        p.text = "• Compare TGT total return vs S&P 500 (SPY) and Retail ETF (XRT)"
-        p.font.size = Pt(11)
-        p.font.color.rgb = RGBColor(100, 100, 100)
-
-        p = desc_frame.add_paragraph()
-        p.text = "• Rolling beta shows stock's sensitivity to market movements"
-        p.font.size = Pt(11)
-        p.font.color.rgb = RGBColor(100, 100, 100)
+        p.font.color.rgb = RGBColor(50, 50, 50)
 
         # Link to interactive version
-        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.8), Inches(9), Inches(0.4))
+        link_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.6), Inches(9), Inches(0.4))
         link_frame = link_box.text_frame
         p = link_frame.paragraphs[0]
         run = p.add_run()
@@ -847,7 +969,7 @@ def add_market_context_slide(prs):
         run.font.color.rgb = RGBColor(0, 102, 204)
         run.font.underline = True
         chart_path = Path("output/chart_market_context.html").resolve()
-        run.hyperlink.address = str(chart_path)
+        run.hyperlink.address = chart_path.as_uri()
     else:
         # Fallback if chart not available
         placeholder_box = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(8), Inches(3))
@@ -1280,7 +1402,7 @@ def add_appendix_chart_slide(prs, title, chart_file):
 
     # Check for PNG image
     image_file = chart_file.replace('.html', '.png')
-    image_path = Path(f"output/{image_file}")
+    image_path = SCRIPT_DIR / "output" / image_file
 
     if image_path.exists():
         # Embed chart image (center of slide, larger without description)
