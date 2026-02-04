@@ -468,6 +468,141 @@ class MarketDataFetcher:
 
         return results
 
+    def get_relative_performance(self, ticker: str = 'TGT',
+                                   benchmarks: List[str] = None,
+                                   period: str = '3y') -> pd.DataFrame:
+        """
+        Get total return comparison: ticker vs benchmarks (e.g., S&P 500, Retail ETF).
+
+        Args:
+            ticker: Stock ticker symbol. Defaults to TGT.
+            benchmarks: List of benchmark tickers. Defaults to ['SPY', 'XRT'].
+            period: Time period for history. Options: 1y, 2y, 3y, 5y.
+
+        Returns:
+            DataFrame with columns: Date, ticker, and each benchmark
+            Values are cumulative returns indexed to 100 at start.
+        """
+        if benchmarks is None:
+            benchmarks = ['SPY', 'XRT']
+
+        cache_key = f'relative_perf_{ticker}_{"-".join(benchmarks)}_{period}'
+
+        if self._is_cache_valid(cache_key, self.HISTORY_CACHE_TTL_HOURS):
+            cached_data = self._cache[cache_key]['data']
+            return pd.DataFrame(cached_data)
+
+        try:
+            all_tickers = [ticker] + benchmarks
+            result_data = {'Date': None}
+
+            # Get price history for all tickers
+            for t in all_tickers:
+                stock = yf.Ticker(t)
+                history = stock.history(period=period)
+
+                if history.empty:
+                    continue
+
+                # Calculate cumulative returns indexed to 100
+                prices = history['Close']
+                returns = (prices / prices.iloc[0]) * 100
+
+                if result_data['Date'] is None:
+                    result_data['Date'] = returns.index.tolist()
+
+                result_data[t] = returns.values.tolist()
+
+            # Create DataFrame
+            df = pd.DataFrame(result_data)
+
+            # Cache results
+            self._cache[cache_key] = {
+                'timestamp': datetime.now().isoformat(),
+                'data': df.to_dict(orient='list')
+            }
+            self._save_cache()
+
+            return df
+
+        except Exception as e:
+            print(f"Warning: Failed to get relative performance: {e}")
+            if cache_key in self._cache:
+                return pd.DataFrame(self._cache[cache_key].get('data', {}))
+            return pd.DataFrame()
+
+    def get_rolling_beta(self, ticker: str = 'TGT',
+                         benchmark: str = 'SPY',
+                         window: int = 60,
+                         period: str = '3y') -> pd.DataFrame:
+        """
+        Calculate rolling beta vs benchmark (e.g., S&P 500).
+
+        Beta measures the stock's sensitivity to market movements.
+        Beta > 1 = more volatile than market
+        Beta < 1 = less volatile than market
+        Beta < 0 = moves opposite to market
+
+        Args:
+            ticker: Stock ticker symbol. Defaults to TGT.
+            benchmark: Benchmark ticker. Defaults to SPY (S&P 500).
+            window: Rolling window in trading days. Defaults to 60 (~3 months).
+            period: Time period for history.
+
+        Returns:
+            DataFrame with columns: Date, Beta
+        """
+        cache_key = f'rolling_beta_{ticker}_{benchmark}_{window}_{period}'
+
+        if self._is_cache_valid(cache_key, self.HISTORY_CACHE_TTL_HOURS):
+            cached_data = self._cache[cache_key]['data']
+            return pd.DataFrame(cached_data)
+
+        try:
+            # Get price history for both tickers
+            stock = yf.Ticker(ticker)
+            bench = yf.Ticker(benchmark)
+
+            stock_history = stock.history(period=period)
+            bench_history = bench.history(period=period)
+
+            if stock_history.empty or bench_history.empty:
+                return pd.DataFrame()
+
+            # Calculate daily returns
+            stock_returns = stock_history['Close'].pct_change().dropna()
+            bench_returns = bench_history['Close'].pct_change().dropna()
+
+            # Align the two series
+            aligned = pd.concat([stock_returns, bench_returns], axis=1, join='inner')
+            aligned.columns = ['stock', 'bench']
+
+            # Calculate rolling beta: Cov(stock, bench) / Var(bench)
+            rolling_cov = aligned['stock'].rolling(window=window).cov(aligned['bench'])
+            rolling_var = aligned['bench'].rolling(window=window).var()
+            rolling_beta = rolling_cov / rolling_var
+
+            # Create result DataFrame
+            df = pd.DataFrame({
+                'Date': rolling_beta.index.tolist(),
+                'Beta': rolling_beta.values.tolist()
+            })
+
+            # Cache results
+            self._cache[cache_key] = {
+                'timestamp': datetime.now().isoformat(),
+                'data': df.to_dict(orient='list')
+            }
+            self._save_cache()
+
+            return df
+
+        except Exception as e:
+            print(f"Warning: Failed to calculate rolling beta: {e}")
+            if cache_key in self._cache:
+                return pd.DataFrame(self._cache[cache_key].get('data', {}))
+            return pd.DataFrame()
+
     def get_historical_pe_for_ticker(self, ticker: str, quarter_end_dates: List[str]) -> Dict[str, float]:
         """
         Get approximate historical P/E for any ticker at specified dates.

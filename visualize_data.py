@@ -4359,6 +4359,149 @@ def _create_cash_conversion_cycle_trend_DEPRECATED(data):
     pass  # Placeholder for deprecated function - not used
 
 
+def create_market_context_chart():
+    """Chart: Market Context - TGT vs S&P 500 Total Return with Rolling Beta.
+
+    Creates a two-panel chart:
+    - Top: 3-year cumulative total return comparison (TGT vs SPY vs XRT)
+    - Bottom: 60-day rolling beta vs S&P 500
+
+    This chart provides market context for the financial analysis,
+    showing how Target has performed relative to the broader market.
+    """
+    from market_data_fetcher import MarketDataFetcher
+
+    try:
+        fetcher = MarketDataFetcher()
+
+        # Get relative performance data
+        perf_df = fetcher.get_relative_performance('TGT', ['SPY', 'XRT'], '3y')
+        if perf_df.empty:
+            print("⚠️ Warning: Could not fetch relative performance data")
+            return None
+
+        # Get rolling beta data
+        beta_df = fetcher.get_rolling_beta('TGT', 'SPY', 60, '3y')
+
+        # Create subplot with 2 rows
+        fig = make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.1,
+            row_heights=[0.65, 0.35],
+            subplot_titles=(
+                'TGT vs S&P 500 vs Retail ETF: 3-Year Total Return',
+                'TGT Rolling 60-Day Beta vs S&P 500'
+            )
+        )
+
+        # Top panel: Relative performance
+        colors = {'TGT': '#CC0000', 'SPY': '#1f77b4', 'XRT': '#2ca02c'}
+        names = {'TGT': 'Target (TGT)', 'SPY': 'S&P 500 (SPY)', 'XRT': 'Retail ETF (XRT)'}
+
+        for ticker in ['TGT', 'SPY', 'XRT']:
+            if ticker in perf_df.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=perf_df['Date'],
+                        y=perf_df[ticker],
+                        name=names.get(ticker, ticker),
+                        line=dict(color=colors.get(ticker, 'gray'), width=2),
+                        mode='lines'
+                    ),
+                    row=1, col=1
+                )
+
+        # Add 100% reference line (starting point)
+        fig.add_hline(y=100, line_dash="dash", line_color="gray",
+                      line_width=1, opacity=0.5, row=1, col=1)
+
+        # Calculate and annotate performance delta
+        if 'TGT' in perf_df.columns and 'SPY' in perf_df.columns:
+            latest_tgt = perf_df['TGT'].dropna().iloc[-1] if len(perf_df['TGT'].dropna()) > 0 else None
+            latest_spy = perf_df['SPY'].dropna().iloc[-1] if len(perf_df['SPY'].dropna()) > 0 else None
+
+            if latest_tgt and latest_spy:
+                delta = latest_tgt - latest_spy
+                delta_text = f"TGT vs SPY: {delta:+.1f}pp"
+                delta_color = '#CC0000' if delta < 0 else '#27AE60'
+
+                fig.add_annotation(
+                    x=perf_df['Date'].iloc[-1],
+                    y=latest_tgt,
+                    text=delta_text,
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowcolor=delta_color,
+                    font=dict(size=12, color=delta_color),
+                    row=1, col=1
+                )
+
+        # Bottom panel: Rolling beta
+        if not beta_df.empty and 'Beta' in beta_df.columns:
+            # Remove NaN values
+            beta_clean = beta_df.dropna(subset=['Beta'])
+
+            fig.add_trace(
+                go.Scatter(
+                    x=beta_clean['Date'],
+                    y=beta_clean['Beta'],
+                    name='Rolling Beta (60-day)',
+                    line=dict(color='#9B59B6', width=2),
+                    mode='lines',
+                    showlegend=True
+                ),
+                row=2, col=1
+            )
+
+            # Add beta = 1 reference line
+            fig.add_hline(y=1.0, line_dash="dash", line_color="gray",
+                          line_width=1, annotation_text="β = 1.0 (Market)",
+                          annotation_position="right", row=2, col=1)
+
+            # Annotate current beta
+            if len(beta_clean) > 0:
+                current_beta = beta_clean['Beta'].iloc[-1]
+                beta_interpretation = "More volatile" if current_beta > 1 else "Less volatile"
+
+                fig.add_annotation(
+                    x=beta_clean['Date'].iloc[-1],
+                    y=current_beta,
+                    text=f"Current β: {current_beta:.2f} ({beta_interpretation})",
+                    showarrow=True,
+                    arrowhead=2,
+                    font=dict(size=11),
+                    row=2, col=1
+                )
+
+        # Update layout
+        fig.update_layout(
+            height=700,
+            hovermode='x unified',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            margin=dict(t=100)
+        )
+
+        fig.update_yaxes(title_text="Indexed Return (Start = 100)", row=1, col=1)
+        fig.update_yaxes(title_text="Beta", row=2, col=1)
+        fig.update_xaxes(title_text="Date", row=2, col=1)
+
+        export_chart(fig, "output/chart_market_context.html", height=700)
+        print("✅ Chart created: output/chart_market_context.html")
+        return fig
+
+    except Exception as e:
+        print(f"⚠️ Warning: Could not create market context chart: {e}")
+        return None
+
+
 def main():
     """Generate all Plotly visualizations."""
     print("📊 Generating Plotly visualizations from time-series data...")
@@ -4416,6 +4559,12 @@ def main():
         create_pe_band_area_chart(data)  # Chart 24
     except Exception as e:
         print(f"⚠️ Warning: Pillar 5 charts skipped (requires internet): {e}")
+
+    # Market Context chart (for streamlined presentation)
+    try:
+        create_market_context_chart()  # Chart 25 - TGT vs S&P 500
+    except Exception as e:
+        print(f"⚠️ Warning: Market context chart skipped (requires internet): {e}")
 
     print("\n✅ All 24 visualizations created in output/ directory")
     print("   Open the .html files in your browser to view interactive charts:")
