@@ -621,7 +621,7 @@ def add_chart_slide(prs, title, chart_file, description, insight=None):
     p.font.bold = True
     p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
 
-    # Info icon with tooltip (top right)
+    # Info icon (top right) - clickable to open chart, hover for description
     info_icon = slide.shapes.add_textbox(Inches(9.0), Inches(0.25), Inches(0.4), Inches(0.4))
     info_frame = info_icon.text_frame
     p = info_frame.paragraphs[0]
@@ -629,12 +629,15 @@ def add_chart_slide(prs, title, chart_file, description, insight=None):
     run.text = "ⓘ"
     run.font.size = Pt(18)
     run.font.color.rgb = RGBColor(100, 100, 100)
-    # Add hyperlink with ScreenTip containing the explanation
-    # Truncate to 250 chars for ScreenTip limit
-    tooltip_text = description[:247] + "..." if len(description) > 250 else description
     chart_path = Path(f"output/{chart_file}").resolve()
-    run.hyperlink.address = chart_path.as_uri()  # file:// URI format
-    run.hyperlink.screen_tip = tooltip_text
+    info_icon.click_action.hyperlink.address = chart_path.as_uri()
+    # Hover tooltip (works in slideshow mode) - set via XML since python-pptx lacks screen_tip
+    run.hyperlink.address = chart_path.as_uri()
+    tooltip_text = description[:250] if len(description) > 250 else description
+    nsmap = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+    hlinkClick = run._r.find('.//a:hlinkClick', nsmap)
+    if hlinkClick is not None:
+        hlinkClick.set('tooltip', tooltip_text)
 
     # Check for PNG image
     image_file = chart_file.replace('.html', '.png')
@@ -672,7 +675,7 @@ def add_chart_slide(prs, title, chart_file, description, insight=None):
         run.font.color.rgb = RGBColor(0, 102, 204)  # Blue link color
         run.font.underline = True
         chart_path = Path(f"output/{chart_file}").resolve()
-        run.hyperlink.address = chart_path.as_uri()
+        link_box.click_action.hyperlink.address = chart_path.as_uri()
     else:
         # Fallback: show description and hyperlink if image not found
         desc_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(1.5))
@@ -921,7 +924,7 @@ def add_market_context_slide(prs):
     p.font.bold = True
     p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
 
-    # Add info icon with tooltip (top right)
+    # Info icon (top right)
     description = "Compares TGT total return vs S&P 500 (SPY) and Retail ETF (XRT). Rolling beta shows stock's sensitivity to market movements."
     info_icon = slide.shapes.add_textbox(Inches(9.0), Inches(0.25), Inches(0.4), Inches(0.4))
     info_frame = info_icon.text_frame
@@ -931,8 +934,13 @@ def add_market_context_slide(prs):
     run.font.size = Pt(18)
     run.font.color.rgb = RGBColor(100, 100, 100)
     chart_path = Path("output/chart_market_context.html").resolve()
-    run.hyperlink.address = chart_path.as_uri()  # file:// URI format
-    run.hyperlink.screen_tip = description
+    info_icon.click_action.hyperlink.address = chart_path.as_uri()
+    # Hover tooltip (works in slideshow mode) - set via XML since python-pptx lacks screen_tip
+    run.hyperlink.address = chart_path.as_uri()
+    nsmap = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+    hlinkClick = run._r.find('.//a:hlinkClick', nsmap)
+    if hlinkClick is not None:
+        hlinkClick.set('tooltip', description)
 
     # Check for chart image
     image_path = SCRIPT_DIR / "output" / "chart_market_context.png"
@@ -969,7 +977,7 @@ def add_market_context_slide(prs):
         run.font.color.rgb = RGBColor(0, 102, 204)
         run.font.underline = True
         chart_path = Path("output/chart_market_context.html").resolve()
-        run.hyperlink.address = chart_path.as_uri()
+        link_box.click_action.hyperlink.address = chart_path.as_uri()
     else:
         # Fallback if chart not available
         placeholder_box = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(8), Inches(3))
