@@ -174,12 +174,13 @@ The thesis generator (Phase 4) will produce:
 - Exported to `output/investment_thesis.json`
 
 The presentation generator (Phase 4) will create:
-- **Full version**: 38-slide PowerPoint with all 24 charts across 5 pillars
+- **Full version**: 38-slide PowerPoint with all 25 charts across 5 pillars
 - **Executive version** (`--executive` flag): 34-slide condensed deck with 6 key charts and 18 in appendix
 - Market Context slide (TGT vs S&P 500) after Executive Summary
 - Investment thesis, pillar summaries, and strategic conclusion slides
 - Charts embedded as PNG images with links to interactive HTML versions
-- Info icon (ⓘ) tooltips with chart descriptions on hover
+- PNG exports automatically strip dropdown menus and labels for clean static images
+- Info icon (ⓘ) tooltips with chart descriptions on hover (via XML tooltip attributes)
 
 ### SEC Credentials Setup
 
@@ -284,7 +285,7 @@ This two-tier system distinguishes between concerning trends (Hold) and actual f
 **6. PowerPoint Presentations** (Phase 4)
 
 *Full Version* (`Target_Financial_Analysis.pptx` - 38 slides):
-- Complete 5-pillar analysis with all 24 charts
+- Complete 5-pillar analysis with all 25 charts
 - Pillar summaries with "So What?" takeaways
 - Investment Thesis slide with color-coded recommendation
 - Strategic conclusion with key questions to monitor
@@ -452,7 +453,7 @@ Outputs to `output/`:
 ### PowerPoint Generation
 
 ```bash
-# Full 38-slide version (all 24 charts, 5 pillars)
+# Full 38-slide version (all 25 charts, 5 pillars)
 python create_presentation.py
 
 # Executive 34-slide version (6 key charts + 18 in appendix)
@@ -460,7 +461,7 @@ python create_presentation.py --executive
 ```
 
 **Full Version** - `output/Target_Financial_Analysis.pptx`:
-- 38 slides with all 24 charts organized by 5 pillars
+- 38 slides with all 25 charts organized by 5 pillars
 - Detailed analysis for deep-dive presentations
 
 **Executive Version** - `output/Target_Executive_Presentation.pptx`:
@@ -502,7 +503,7 @@ python create_presentation.py --executive
 - ✅ Executive insights extraction (inflection points, top trends, warnings)
 - ✅ Risk heatmap visualizations (2 interactive charts)
 - ✅ Enhanced PowerPoint with Phase 4 slides
-- ✅ 9 total Plotly charts (6 from Phase 3 + 3 from Phase 4)
+- ✅ 25 total interactive Plotly charts across all phases and pillars
 
 ### Future Considerations
 - Balance sheet ratio calculations (Current Ratio, Quick Ratio)

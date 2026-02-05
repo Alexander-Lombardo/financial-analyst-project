@@ -28,7 +28,7 @@ This document is designed for AI assistants (like Claude) to understand the Targ
 ```
 financial-analyst-project/
 ├── financial_analyzer.py       # Main analyzer (core logic)
-├── visualize_data.py           # Plotly visualizations (24 charts)
+├── visualize_data.py           # Plotly visualizations (25 charts)
 ├── sec_data_fetcher.py         # SEC EDGAR downloader
 ├── market_data_fetcher.py      # Yahoo Finance market data
 ├── peer_ccc_analyzer.py        # Peer company CCC extraction
@@ -44,7 +44,7 @@ financial-analyst-project/
 │   ├── target_analysis.json           # Detailed format
 │   ├── target_timeseries.json         # Time-series format
 │   ├── target_summary.txt             # Human-readable summary
-│   ├── chart_*.html                   # 24 interactive Plotly charts
+│   ├── chart_*.html                   # 25 interactive Plotly charts
 │   └── Target_Financial_Analysis.pptx # PowerPoint presentation
 └── test_*.py                          # Test suites
 ```
@@ -175,7 +175,7 @@ The method uses a two-tier system that distinguishes between concerning trends a
    ↓
 5. Export: target_analysis.json, target_timeseries.json, target_summary.txt
    ↓
-6. python visualize_data.py → 24 interactive HTML charts
+6. python visualize_data.py → 25 interactive HTML charts
 ```
 
 ## JSON Output Structure
@@ -348,8 +348,10 @@ All 25 interactive Plotly charts created by `visualize_data.py`:
 
 **Notes**:
 - Charts with "dropdown" have quarter/period selectors
+- PNG exports strip dropdown menus (`updatemenus=None`) and "Select" annotation labels, then restore them — HTML retains full interactivity
 - All charts display 15 quarters (Q1 2022 - Q3 2025) with calculated Q4
 - PowerPoint has static PNG images; click "📊 Click for interactive version" for full HTML
+- Info icon (ⓘ) uses shape-level `click_action` for hyperlinks and XML `tooltip` attribute for hover descriptions
 
 ## Data Verification
 
