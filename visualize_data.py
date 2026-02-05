@@ -20,10 +20,22 @@ def export_chart(fig, html_path: str, width: int = 1200, height: int = 600):
     # Export interactive HTML
     fig.write_html(html_path)
 
-    # Export static PNG for PowerPoint embedding
+    # Export static PNG — strip dropdowns and their labels
     png_path = html_path.replace('.html', '.png')
     try:
+        saved_updatemenus = fig.layout.updatemenus
+        saved_annotations = fig.layout.annotations
+
+        fig.update_layout(updatemenus=None)
+        if saved_annotations:
+            fig.update_layout(annotations=[
+                a for a in saved_annotations
+                if not (hasattr(a, 'text') and 'Select' in str(a.text))
+            ])
+
         fig.write_image(png_path, width=width, height=height, scale=2)
+
+        fig.update_layout(updatemenus=saved_updatemenus, annotations=saved_annotations)
     except Exception as e:
         print(f"   ⚠️ PNG export failed for {png_path}: {e}")
         print("   Install kaleido: pip install kaleido")
@@ -2861,9 +2873,21 @@ def create_cash_conversion_cycle_chart(data):
     output_path = 'output/chart_cash_conversion_cycle.html'
     config = {'displayModeBar': True, 'responsive': True}
     fig.write_html(output_path, config=config)
-    # Export PNG for PowerPoint
+    # Export PNG — strip dropdowns and their labels
     try:
+        saved_updatemenus = fig.layout.updatemenus
+        saved_annotations = fig.layout.annotations
+
+        fig.update_layout(updatemenus=None)
+        if saved_annotations:
+            fig.update_layout(annotations=[
+                a for a in saved_annotations
+                if not (hasattr(a, 'text') and 'Select' in str(a.text))
+            ])
+
         fig.write_image(output_path.replace('.html', '.png'), width=1200, height=600, scale=2)
+
+        fig.update_layout(updatemenus=saved_updatemenus, annotations=saved_annotations)
     except Exception as e:
         print(f"   ⚠️ PNG export failed: {e}")
 
