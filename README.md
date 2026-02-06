@@ -4,7 +4,7 @@ Automated SEC filing analysis tool that extracts financial metrics from 10-K and
 
 ## Overview
 
-This analyzer implements a **three-phase approach** to financial analysis:
+This analyzer implements a **multi-phase approach** to financial analysis with **5 analytical pillars**:
 
 ### Phase 1: The Baseline (10-K Analysis)
 Extracts "Vital Signs" from the annual 10-K report:
@@ -98,14 +98,11 @@ Comprehensive trend analysis with multiple comparison methods:
 }
 ```
 
-**7 Interactive Charts:**
-1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
-2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth % line, **15 quarters with Q4**)
-3. **Margin Analysis** (3-line chart: Gross, Operating, Net Profit margins, **15 quarters Q1 2022-Q3 2025**)
-4. Operating Margin Waterfall (quarterly trend)
-5. Inventory Efficiency (turnover + DSI)
-6. Debt Health (coverage ratio + total debt)
-7. Statement of Cash Flows (3 lines: operating, investing, financing)
+**24 Interactive Charts** (see [Output Files](#output-files) for complete list):
+- Phase 3: 7 core financial charts (revenue, margins, inventory, debt, cash flows)
+- Phase 4: 4 professional report charts (margin bridge, risk heatmap, earnings quality)
+- Long-term: 4 extended analysis charts (10-year trends, expense breakdown, EBITDA)
+- Pillar 2-5: 9 specialized analysis charts (liquidity, DuPont, CCC, valuation)
 
 ## Installation
 
@@ -127,9 +124,10 @@ cp .env.example .env
 - `lxml` - XML processing
 - `sec-edgar-downloader` - Automated SEC filing downloads
 - `python-dotenv` - Environment variable management
-- `plotly` - Interactive visualizations (Phase 3)
-- `pandas` (optional) - Future data analysis
-- `numpy` (optional) - Future calculations
+- `plotly` - Interactive visualizations (Phase 3+)
+- `yfinance` - Market data and valuations (Pillar 5)
+- `pandas` - Data analysis and manipulation
+- `numpy` - Numerical calculations
 
 ## Usage
 
@@ -139,7 +137,7 @@ cp .env.example .env
 # Run the analyzer (automatically downloads SEC filings)
 python financial_analyzer.py
 
-# Generate interactive visualizations
+# Generate interactive visualizations (24 charts)
 python visualize_data.py
 
 # Generate investment thesis (Phase 4)
@@ -147,6 +145,9 @@ python thesis_generator.py
 
 # Create PowerPoint presentation (Phase 4)
 python create_presentation.py
+
+# Run peer company analysis (Pillar 3)
+python peer_ccc_analyzer.py
 ```
 
 The analyzer will automatically:
@@ -160,8 +161,9 @@ The analyzer will automatically:
    - `output/executive_insights.json` (key insights for reports - Phase 4)
 
 The visualization script will generate:
-- 10 interactive HTML charts in the `output/` directory (7 from Phase 3 + 3 from Phase 4)
-- Charts include hover tooltips, zoom, and pan features
+- 24 interactive HTML charts in the `output/` directory
+- Charts organized by Phase (1-4) and Pillar (2-5)
+- Charts include hover tooltips, zoom, pan, and period selectors
 - Open any `.html` file in your browser to view
 
 The thesis generator (Phase 4) will produce:
@@ -172,7 +174,7 @@ The thesis generator (Phase 4) will produce:
 The presentation generator (Phase 4) will create:
 - Professional PowerPoint with 11 slides including Phase 4 enhancements
 - Investment thesis, margin bridge, and risk heatmap slides
-- Links to all 10 interactive charts
+- Links to all 24 interactive charts
 
 ### SEC Credentials Setup
 
@@ -200,30 +202,37 @@ After the first run, SEC filings are organized automatically:
 ```
 financial-analyst-project/
 ├── data/
-│   └── Target 10Q/
-│       └── sec-edgar-filings/          # Auto-downloaded (git-ignored)
-│           └── TGT/
-│               ├── 10-K/
-│               │   ├── 0000027419-25-000018/
-│               │   │   └── primary-document.html
-│               │   └── ... (5 years)
-│               └── 10-Q/
-│                   ├── 0000027419-25-000101/
-│                   │   └── primary-document.html
-│                   └── ... (12 quarters)
+│   ├── Target 10Q/
+│   │   └── sec-edgar-filings/          # Auto-downloaded (git-ignored)
+│   │       └── TGT/
+│   │           ├── 10-K/
+│   │           │   ├── 0000027419-25-000018/
+│   │           │   │   └── primary-document.html
+│   │           │   └── ... (10 years)
+│   │           └── 10-Q/
+│   │               ├── 0000027419-25-000101/
+│   │               │   └── primary-document.html
+│   │               └── ... (12 quarters)
+│   ├── peer_filings/                   # Peer company SEC filings (git-ignored)
+│   │   └── {TICKER}/10-K/...
+│   ├── peer_comparison_data.json       # Peer CCC data
+│   └── market_data_cache.json          # Yahoo Finance cache
 ├── output/
 │   ├── target_analysis.json            # Detailed format
-│   ├── target_timeseries.json          # Time-series format (Phase 3)
+│   ├── target_timeseries.json          # Time-series format
 │   ├── target_summary.txt              # Human-readable report
-│   ├── chart_revenue_vs_inventory.html # Interactive charts (Phase 3)
-│   ├── chart_revenue_growth_yoy.html   # Revenue Growth YoY (Phase 3)
-│   ├── chart_operating_margin_waterfall.html
-│   ├── chart_inventory_efficiency.html
-│   ├── chart_debt_health.html
-│   └── chart_cash_flows.html
+│   ├── executive_insights.json         # Key insights (Phase 4)
+│   ├── investment_thesis.json          # Auto-generated thesis (Phase 4)
+│   └── chart_*.html                    # 24 interactive Plotly charts
+├── .sec_cache/                         # CIK resolver cache (24hr TTL)
 ├── financial_analyzer.py               # Main analyzer
-├── visualize_data.py                   # Plotly visualizations (Phase 3)
+├── visualize_data.py                   # Plotly visualizations (24 charts)
 ├── sec_data_fetcher.py                 # SEC EDGAR downloader
+├── cik_resolver.py                     # Ticker to CIK resolution
+├── peer_ccc_analyzer.py                # Peer company CCC analysis
+├── market_data_fetcher.py              # Yahoo Finance integration
+├── thesis_generator.py                 # Investment thesis generator
+├── create_presentation.py              # PowerPoint generation
 └── .env                                # Your credentials (git-ignored)
 ```
 
@@ -255,13 +264,47 @@ financial-analyst-project/
 - Opportunity identification (digital growth, margin recovery)
 - Current state analysis with 3-year comparisons
 
-**5. Interactive Charts** (Phases 3 & 4)
-- 9 HTML files with embedded Plotly visualizations
-- Phase 3: Revenue vs Inventory, Revenue Growth YoY, Operating Margin, Inventory Efficiency, Debt Health, Cash Flows
-- Phase 4: Margin Bridge (waterfall), Risk Trends, Risk Heatmap Grid
-- Fully interactive: hover tooltips, zoom, pan
-- No external dependencies - open directly in browser
-- Professional presentation quality
+**5. Interactive Charts** (24 Total)
+
+*Phase 3 Charts (7):*
+1. Revenue vs Inventory Growth - Dual-axis line identifying inventory buildup
+2. Revenue Growth YoY - Bars + YoY growth % line
+3. Margin Analysis - 3-line (Gross/Operating/Net margins)
+4. Operating Margin Waterfall - Quarterly margin changes
+5. Inventory Efficiency - Turnover + DSI dual-axis
+6. Debt Health - Coverage ratio + debt (10-year: FY2015-FY2024)
+7. Cash Flows - OCF/ICF/FCF 3-line chart
+
+*Phase 4 Charts (4):*
+8. Margin Bridge - Waterfall Q1 2022 → Q3 2025
+9. Risk Trends - Stacked area of risk mentions
+10. Risk Heatmap - Risk intensity by period
+11. Earnings Quality - Net Income vs OCF comparison
+
+*Long-term Charts (4):*
+12. Revenue/NI Long-term - Quarterly with calculated Q4
+13. Revenue/NI Annual - 10-year FY2015-FY2024
+14. Expense Breakdown - 100% stacked bar (COGS/SG&A/Other/OI)
+15. EBITDA Bridge - Waterfall with period dropdown
+
+*Pillar 2: Liquidity & Solvency (3):*
+16. Current Ratio Gauge - Liquidity health indicator
+17. Capital Structure Donut - Debt vs Equity breakdown
+18. Debt-to-EBITDA Trend - Leverage trend line
+
+*Pillar 3: Operational Efficiency (2):*
+19. DuPont Analysis - ROE decomposition (grouped bar)
+20. Cash Conversion Cycle - CCC peer comparison (TGT vs WMT/AMZN/COST/KR)
+
+*Pillar 4: Cash Flow Dynamics (2):*
+21. OCF vs CapEx - FCF visualization
+22. Cash Flow Sankey - Cash allocation flow diagram
+
+*Pillar 5: Valuation & Sentiment (2):*
+23. Valuation Scatter - P/E vs Growth peer comparison
+24. P/E Band - Historical valuation zones
+
+All charts are fully interactive with hover tooltips, zoom, pan, and period selectors where applicable. Open any `.html` file directly in browser.
 
 **6. PowerPoint Presentation** (Phase 4)
 - `Target_Financial_Analysis.pptx` - Enhanced 11-slide deck
@@ -406,6 +449,75 @@ This approach:
 
 ## Additional Tools
 
+### CIK Resolver
+
+Resolve company ticker symbols to SEC CIK numbers for any public company:
+
+```python
+from cik_resolver import CIKResolver
+
+resolver = CIKResolver()
+
+# Look up a company by ticker
+cik, name = resolver.resolve_ticker("AAPL")
+print(f"{name}: {cik}")  # Apple Inc.: 0000320193
+
+# Get filing history
+filings = resolver.get_filings("TGT", filing_types=["10-K", "10-Q"])
+for filing in filings[:5]:
+    print(f"{filing['form']} - {filing['filingDate']}")
+```
+
+**Features:**
+- Uses SEC's public API for ticker/CIK mapping
+- 24-hour cache to avoid redundant API calls
+- Rate limiting (10 requests/second) to comply with SEC fair access policy
+- Supports all publicly traded companies
+
+### Peer Company Analysis
+
+Analyze competitor companies for benchmarking:
+
+```bash
+# Extract Cash Conversion Cycle metrics for all peers
+python peer_ccc_analyzer.py
+```
+
+**Supported Peers:**
+| Company | Ticker | Notes |
+|---------|--------|-------|
+| Walmart | WMT | World's largest retailer, direct Target competitor |
+| Amazon | AMZN | E-commerce leader, inventory-light marketplace model |
+| Costco | COST | Warehouse club, membership-based, high inventory turnover |
+| Kroger | KR | Grocery-focused retailer, perishable inventory |
+
+**Output:** `data/peer_comparison_data.json` with multi-year CCC data (DSI, DSO, DPO) per company.
+
+### Market Data Fetcher
+
+Fetch real-time stock prices and valuation metrics from Yahoo Finance:
+
+```python
+from market_data_fetcher import MarketDataFetcher
+
+fetcher = MarketDataFetcher()
+
+# Get current prices for Target and peers
+prices = fetcher.get_current_prices()
+print(prices)  # {'TGT': 145.23, 'WMT': 167.89, ...}
+
+# Get valuation metrics
+metrics = fetcher.get_valuation_metrics()
+print(metrics['TGT'])  # {'pe_ratio': 15.2, 'ps_ratio': 0.5, ...}
+```
+
+**Features:**
+- Current stock prices with 1-hour cache
+- Historical price data with 24-hour cache
+- Valuation metrics: P/E, P/S, EV/EBITDA, Dividend Yield
+- Graceful fallback to cached data if API fails
+- Used by Pillar 5 (Valuation & Market Sentiment) charts
+
 ### Presentation Generation
 
 Generate presentation materials from analysis results:
@@ -460,10 +572,31 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - ✅ Executive insights extraction (inflection points, top trends, warnings)
 - ✅ Risk heatmap visualizations (2 interactive charts)
 - ✅ Enhanced PowerPoint with Phase 4 slides
-- ✅ 9 total Plotly charts (6 from Phase 3 + 3 from Phase 4)
+
+### ✅ Pillar 2: Liquidity & Solvency (Complete)
+- ✅ Current Ratio, Quick Ratio, Working Capital
+- ✅ Debt-to-Equity, Debt-to-Assets, Debt-to-EBITDA ratios
+- ✅ 3 interactive charts (gauge, donut, trend line)
+
+### ✅ Pillar 3: Operational Efficiency (Complete)
+- ✅ DuPont Analysis (ROE decomposition)
+- ✅ Cash Conversion Cycle with peer comparison
+- ✅ Peer company benchmarking (WMT, AMZN, COST, KR)
+- ✅ 2 interactive charts (DuPont grouped bar, CCC peer comparison)
+
+### ✅ Pillar 4: Cash Flow Dynamics (Complete)
+- ✅ Free Cash Flow (FCF) analysis
+- ✅ Operating Cash Flow margin tracking
+- ✅ Capital expenditure analysis
+- ✅ 2 interactive charts (OCF vs CapEx, Cash Flow Sankey)
+
+### ✅ Pillar 5: Valuation & Market Sentiment (Complete)
+- ✅ P/E ratio historical analysis
+- ✅ Peer valuation comparison
+- ✅ Yahoo Finance market data integration
+- ✅ 2 interactive charts (Valuation Scatter, P/E Band)
 
 ### Future Considerations
-- Balance sheet ratio calculations (Current Ratio, Quick Ratio)
 - Segment-level analysis (if disclosed)
 - Real-time dashboard (Plotly Dash)
 - Excel export with embedded charts
