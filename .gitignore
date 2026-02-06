@@ -53,6 +53,7 @@ Thumbs.db
 data/Target 10Q/*.zip
 output/*.pdf
 *.log
+*_cache.json
 
 # SEC EDGAR Downloaded Filings - DO NOT COMMIT
 # These are large files that can be re-downloaded automatically
