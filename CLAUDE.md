@@ -37,6 +37,7 @@ financial-analyst-project/
 ├── cik_resolver.py             # Company CIK lookup and filing retrieval
 ├── app.py                      # SEC Filing Browser Flask app
 ├── filing_parser.py            # Financial statement parser
+├── dupont_validation.py        # DuPont analysis validation tool
 ├── requirements.txt            # Python dependencies
 ├── .env                        # SEC credentials (git-ignored)
 ├── templates/                  # Flask HTML templates
@@ -55,7 +56,9 @@ financial-analyst-project/
 │   ├── target_timeseries.json         # Time-series format
 │   ├── target_summary.txt             # Human-readable summary
 │   ├── chart_*.html                   # 24 interactive Plotly charts
-│   └── Target_Financial_Analysis.pptx # PowerPoint presentation
+│   ├── Target_Financial_Analysis.pptx # PowerPoint presentation
+│   ├── dupont_validation.md           # DuPont analysis validation document
+│   └── dupont_validation.html         # DuPont validation interactive report
 └── test_*.py                          # Test suites
 ```
 
@@ -181,6 +184,31 @@ python3 app.py
 - Company filings: `http://localhost:5003/company/HD`
 - View filing: `http://localhost:5003/view/HD/0000354950-25-000085`
 
+### 7. DuPont Validation Tool (`dupont_validation.py`)
+
+**Purpose**: Validates DuPont analysis calculations with detailed side-by-side comparison and trend visualization.
+
+**Key Features**:
+- Uses average assets methodology for accurate ROA/ROE calculations
+- Generates validation document with step-by-step calculations
+- Creates 5-year trend chart comparing DuPont components
+
+**Outputs**:
+- `output/dupont_validation.md` - Detailed validation with formulas and values
+- `output/dupont_validation.html` - Interactive validation report
+- `output/chart_dupont_annual_trend.html` - 5-year trend line chart
+
+**DuPont Components**:
+- **Net Profit Margin**: Net Income / Revenue
+- **Asset Turnover**: Revenue / Average Total Assets
+- **Equity Multiplier**: Average Total Assets / Average Shareholders' Equity
+- **ROE**: Net Profit Margin × Asset Turnover × Equity Multiplier
+
+**Running**:
+```bash
+python3 dupont_validation.py
+```
+
 ## Data Flow
 
 ```
@@ -276,6 +304,7 @@ python3 app.py
 | Pillar 5 | ✅ | Valuation metrics (P/E bands, peer scatter), 2 charts |
 | Peer CCC | ✅ | Automated peer company CCC extraction (WMT, AMZN, COST, KR) |
 | SEC Browser | ✅ | Flask web app for browsing filings with parsed financial statements |
+| DuPont Validation | ✅ | DuPont analysis validation tool with average assets methodology |
 
 ## Testing & Verification
 
@@ -304,6 +333,9 @@ python3 test_kroger_extraction.py         # Peer CCC extraction test
 
 # Run peer CCC analyzer
 python3 peer_ccc_analyzer.py              # Extract CCC for all peers
+
+# Run DuPont validation
+python3 dupont_validation.py              # Generate DuPont validation reports
 
 # Run SEC Filing Browser
 export PORT=5003
