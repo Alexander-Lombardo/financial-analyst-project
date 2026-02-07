@@ -160,12 +160,14 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 | Income Statement | "Consolidated Statements of Operations/Income" | Revenue, expenses, net income |
 | Balance Sheet | "Consolidated Balance Sheets" | Assets, liabilities, equity |
 | Cash Flow | "Consolidated Statements of Cash Flows" | Operating/investing/financing |
-| Shareholders' Equity | "Stockholders'/Shareholders' Equity" | Equity component changes |
+| Shareholders' Equity | "Stockholders'/Shareholders' Equity/Investment" | Equity component changes |
 | Retained Earnings | Extracted from equity statement | Beginning/ending balance, dividends |
 
 **Retained Earnings Extraction** (handles both filing formats):
 - **10-K (Annual)**: Extracts row-based "Retained Earnings:" section with beginning balance, net income, dividends, ending balance
-- **10-Q (Quarterly)**: Extracts retained earnings column from columnar equity statement, identifies balance rows and activity
+- **10-Q (Quarterly)**: Extracts retained earnings from columnar equity statement using positional logic (4th numeric column is typically Retained Earnings)
+- **Multi-row headers**: Checks first 3 rows of tables for header patterns to handle complex table structures
+- **Company variations**: Supports both "Shareholders' Equity" (Home Depot) and "Shareholders' Investment" (Target) terminology
 
 **Table Formatting**:
 - `_build_clean_financial_table()` - Handles colspan misalignment in SEC HTML
@@ -286,6 +288,8 @@ python3 dupont_validation.py
 | Legacy operating income NULL | FY2015-2017 use different GAAP tag | Add `IncomeLossFromContinuingOperations...` as fallback for EBIT |
 | Peer inventory NULL | Company uses non-standard XBRL tag | `_extract_inventory_from_table()` fallback parses Balance Sheet HTML |
 | Peer CCC abnormal (>200 days) | Wrong GAAP tag extracted (segment vs consolidated) | Check tag priority order; ASC 606 revenue tag first |
+| Retained Earnings shows N/A | Equity statement uses different terminology | EQUITY_PATTERNS supports both "equity" and "investment" |
+| Retained Earnings column misaligned | $ symbols and empty cells break column indexing | Uses positional extraction (4th numeric column) instead of column index |
 
 ## Development History
 
@@ -304,6 +308,7 @@ python3 dupont_validation.py
 | Pillar 5 | ✅ | Valuation metrics (P/E bands, peer scatter), 2 charts |
 | Peer CCC | ✅ | Automated peer company CCC extraction (WMT, AMZN, COST, KR) |
 | SEC Browser | ✅ | Flask web app for browsing filings with parsed financial statements |
+| Retained Earnings | ✅ | Enhanced extraction from equity statements (row-based + columnar formats) |
 | DuPont Validation | ✅ | DuPont analysis validation tool with average assets methodology |
 
 ## Testing & Verification
