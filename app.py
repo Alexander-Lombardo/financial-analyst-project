@@ -7,9 +7,14 @@ import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Response
 import requests
 
+from dotenv import load_dotenv
+
 from cik_resolver import CIKResolver, search_companies, get_company_filings
 from sec_data_fetcher import SECDataFetcher
 from filing_parser import FilingParser
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -18,7 +23,11 @@ filing_parser = FilingParser()
 
 # Initialize components
 cik_resolver = CIKResolver()
-sec_fetcher = SECDataFetcher()
+sec_fetcher = SECDataFetcher(
+    company_name=os.environ.get("SEC_USER_NAME", "Financial Analyzer"),
+    email=os.environ.get("SEC_USER_EMAIL", "user@example.com"),
+    download_dir="data/sec_filings"
+)
 
 
 @app.route("/")
