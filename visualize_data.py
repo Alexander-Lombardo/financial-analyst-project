@@ -1,21 +1,82 @@
 """
-Plotly visualization examples for Target financial data.
-Reads from output/target_timeseries.json
+Plotly visualization for company financial data.
+Supports any company analyzed by CompanyFinancialAnalyzer.
 """
 import json
+import os
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pathlib import Path
 
 
-def load_timeseries_data(filepath: str = "output/target_timeseries.json"):
-    """Load time-series JSON data."""
+def get_company_name(data: dict) -> str:
+    """Extract company name from data metadata, with fallback to 'Target'.
+
+    Args:
+        data: Time-series data dictionary with optional metadata
+
+    Returns:
+        Company name string (e.g., "Target", "Walmart")
+    """
+    if data and 'metadata' in data:
+        return data['metadata'].get('company', 'Target')
+    return 'Target'
+
+
+def get_ticker(data: dict) -> str:
+    """Extract ticker from data metadata, with fallback to 'TGT'.
+
+    Args:
+        data: Time-series data dictionary with optional metadata
+
+    Returns:
+        Ticker string (e.g., "TGT", "WMT")
+    """
+    if data and 'metadata' in data:
+        return data['metadata'].get('ticker', 'TGT')
+    return 'TGT'
+
+
+def load_timeseries_data(ticker: str = "TGT", filepath: str = None):
+    """Load time-series JSON data for a company.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "TGT", "WMT", "AAPL")
+        filepath: Optional explicit filepath (overrides ticker-based path)
+
+    Returns:
+        Dictionary with company financial data
+    """
+    if filepath is None:
+        filepath = f"output/{ticker.lower()}_timeseries.json"
+        # Fallback for legacy Target file naming
+        if ticker.upper() == "TGT" and not os.path.exists(filepath):
+            legacy_path = "output/target_timeseries.json"
+            if os.path.exists(legacy_path):
+                filepath = legacy_path
+
     with open(filepath, 'r') as f:
         return json.load(f)
 
 
-def load_detailed_analysis(filepath: str = "output/target_analysis.json"):
-    """Load detailed analysis JSON for risk heatmap."""
+def load_detailed_analysis(ticker: str = "TGT", filepath: str = None):
+    """Load detailed analysis JSON for risk heatmap.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "TGT", "WMT", "AAPL")
+        filepath: Optional explicit filepath (overrides ticker-based path)
+
+    Returns:
+        Dictionary with detailed analysis including risk heatmap
+    """
+    if filepath is None:
+        filepath = f"output/{ticker.lower()}_analysis.json"
+        # Fallback for legacy Target file naming
+        if ticker.upper() == "TGT" and not os.path.exists(filepath):
+            legacy_path = "output/target_analysis.json"
+            if os.path.exists(legacy_path):
+                filepath = legacy_path
+
     with open(filepath, 'r') as f:
         return json.load(f)
 
@@ -103,8 +164,9 @@ def create_revenue_vs_inventory_chart(data):
         secondary_y=False
     )
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Revenue vs Inventory - Quarterly Trends (Q1 2022 - Q3 2025)",
+        title=f"{company}: Revenue vs Inventory - Quarterly Trends",
         hovermode='x unified',
         height=500,
         xaxis_title="Quarter",
@@ -227,8 +289,9 @@ def create_revenue_growth_yoy_chart(data):
     fig.update_yaxes(title_text="Revenue ($ Billions)", secondary_y=False)
     fig.update_yaxes(title_text="YoY Growth %", secondary_y=True)
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Revenue Growth Year-over-Year (Q1 2022 - Q3 2025)",
+        title=f"{company}: Revenue Growth Year-over-Year",
         hovermode='x unified',
         height=600,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -329,8 +392,9 @@ def create_margin_analysis_chart(data):
         fillcolor='rgba(255, 182, 193, 0.3)'  # Light red
     ))
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Margin Analysis (Gross, Operating, Net Profit) - Q1 2022 to Q3 2025",
+        title=f"{company}: Margin Analysis (Gross, Operating, Net Profit)",
         xaxis_title="Quarter",
         yaxis_title="Margin %",
         hovermode='x unified',
@@ -367,8 +431,9 @@ def create_operating_margin_waterfall(data):
     fig.add_hline(y=5.22, line_dash="dash", line_color="red",
                   annotation_text="FY2024 Baseline (5.22%)")
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Operating Margin Trend (Quarterly)",
+        title=f"{company}: Operating Margin Trend (Quarterly)",
         xaxis_title="Quarter",
         yaxis_title="Operating Margin %",
         hovermode='x unified',
@@ -404,8 +469,9 @@ def create_inventory_efficiency_chart(data):
     fig.update_yaxes(title_text="Turnover Ratio (x)", secondary_y=False)
     fig.update_yaxes(title_text="Days", secondary_y=True)
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Inventory Efficiency Metrics",
+        title=f"{company}: Inventory Efficiency Metrics",
         hovermode='x unified',
         height=500
     )
@@ -443,8 +509,9 @@ def create_debt_health_chart(data):
     fig.update_yaxes(title_text="Coverage Ratio (x)", secondary_y=False)
     fig.update_yaxes(title_text="$ Billions", secondary_y=True)
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Debt Health Monitoring",
+        title=f"{company}: Debt Health Monitoring",
         hovermode='x unified',
         height=500
     )
@@ -488,8 +555,9 @@ def create_cash_flows_chart(data):
     fig.add_hline(y=0, line_dash="solid", line_color="gray",
                   line_width=1, opacity=0.5)
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Statement of Cash Flows (FY2020-Q3 2025)",
+        title=f"{company}: Statement of Cash Flows",
         xaxis_title="Period",
         yaxis_title="Cash Flow ($ Billions)",
         hovermode='x unified',
@@ -660,8 +728,9 @@ def create_earnings_quality_chart(data):
         range=[-150, 650]  # Accommodates negative Q4 values (-104%, -99%) and extreme positives (549%, 506%)
     )
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Earnings Quality Analysis (Net Income vs Operating Cash Flow)<br>Q1 2022 - Q3 2025",
+        title=f"{company}: Earnings Quality Analysis (Net Income vs Operating Cash Flow)",
         hovermode='x unified',
         height=600,
         barmode='group',
@@ -798,8 +867,9 @@ def create_revenue_netincome_longterm_chart(data):
         secondary_y=True
     )
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Revenue & Net Income Long-Term Trajectory<br>Quarterly Data",
+        title=f"{company}: Revenue & Net Income Long-Term Trajectory<br>Quarterly Data",
         hovermode='x unified',
         height=600,
         legend=dict(
@@ -881,8 +951,9 @@ def create_revenue_netincome_annual_chart(data):
     )
 
     # Update layout
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Revenue & Net Income Annual Trajectory<br>Fiscal Year Data (10-Year Period)",
+        title=f"{company}: Revenue & Net Income Annual Trajectory<br>Fiscal Year Data",
         hovermode='x unified',
         height=600,
         legend=dict(
@@ -1051,10 +1122,11 @@ def create_expense_breakdown_chart(data):
     ))
 
     # Step 6: Configure layout
+    company = get_company_name(data)
     fig.update_layout(
         barmode='stack',  # 100% stacked bars
         title={
-            'text': "Target: Operating Expense Breakdown (% of Revenue)<br><sub>Quarterly Breakdown: Q1 2022 - Q3 2025</sub>",
+            'text': f"{company}: Operating Expense Breakdown (% of Revenue)<br><sub>Quarterly Breakdown</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.96,  # Moved down from 0.98
@@ -1107,6 +1179,7 @@ def create_ebitda_bridge_waterfall(data):
     each major expense category: COGS, SG&A, Other Operating Expenses.
     Shows quarterly data (Q1 2022 - Q3 2025) including calculated Q4.
     """
+    company = get_company_name(data)
     periods = data['periods']
 
     # Extract metrics
@@ -1264,7 +1337,7 @@ def create_ebitda_bridge_waterfall(data):
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"Target: EBITDA Bridge Waterfall ({q['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
+                        'text': f"{company}: EBITDA Bridge Waterfall ({q['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.97,
@@ -1276,7 +1349,7 @@ def create_ebitda_bridge_waterfall(data):
 
     fig.update_layout(
         title={
-            'text': f"Target: EBITDA Bridge Waterfall ({quarterly_data[-1]['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
+            'text': f"{company}: EBITDA Bridge Waterfall ({quarterly_data[-1]['period']})<br><sub>Shows how Revenue flows to EBITDA: Start with Revenue, subtract Operating Expenses, add back D&A</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.97,
@@ -1405,8 +1478,9 @@ def create_margin_bridge_waterfall(data):
         totals={"marker": {"color": "blue"}}
     ))
 
+    company = get_company_name(data)
     fig.update_layout(
-        title="Target: Operating Margin Bridge (FY2022-Q3 2025)",
+        title=f"{company}: Operating Margin Bridge",
         xaxis_title="Period",
         yaxis_title="Operating Margin %",
         showlegend=False,
@@ -1418,13 +1492,17 @@ def create_margin_bridge_waterfall(data):
     return fig
 
 
-def create_risk_trends_chart():
+def create_risk_trends_chart(ticker: str = "TGT"):
     """Chart 7: Risk Mention Trends Over Time
 
     Stacked area chart showing shrink and markdown mentions across periods.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "TGT", "WMT")
     """
-    data = load_detailed_analysis()
+    data = load_detailed_analysis(ticker=ticker)
     risk_heatmap = data.get('risk_heatmap', {})
+    company = data.get('metadata', {}).get('company', ticker)
 
     # Extract shrink data
     shrink_details = risk_heatmap.get('shrink', {}).get('details', [])
@@ -1460,7 +1538,7 @@ def create_risk_trends_chart():
     ))
 
     fig.update_layout(
-        title="Target: Risk Mention Trends (2022-2025)",
+        title=f"{company}: Risk Mention Trends",
         xaxis_title="Period",
         yaxis_title="Mention Count",
         hovermode='x unified',
@@ -1474,13 +1552,17 @@ def create_risk_trends_chart():
     return fig
 
 
-def create_risk_heatmap_grid():
+def create_risk_heatmap_grid(ticker: str = "TGT"):
     """Chart 8: Risk Heatmap Grid (Risk Types × Quarters)
 
     Heatmap showing risk mention intensity across periods.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "TGT", "WMT")
     """
-    data = load_detailed_analysis()
+    data = load_detailed_analysis(ticker=ticker)
     risk_heatmap = data.get('risk_heatmap', {})
+    company = data.get('metadata', {}).get('company', ticker)
 
     # Build matrix
     all_periods = set()
@@ -1516,7 +1598,7 @@ def create_risk_heatmap_grid():
     ))
 
     fig.update_layout(
-        title="Target: Risk Heatmap (Mention Intensity)",
+        title=f"{company}: Risk Heatmap (Mention Intensity)",
         xaxis_title="Period",
         yaxis_title="Risk Type",
         height=400
@@ -1536,6 +1618,8 @@ def create_current_ratio_gauge(data):
     - Yellow (1.0-1.5): Adequate liquidity
     - Green (>1.5): Healthy liquidity (retail benchmark)
     """
+    company = get_company_name(data)
+
     # Extract balance sheet data for Q4 calculation
     liquidity_metrics = data['metrics'].get('liquidity', {})
     current_ratios = liquidity_metrics.get('current_ratio', [])
@@ -1638,7 +1722,7 @@ def create_current_ratio_gauge(data):
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"Target: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+                        'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.95,
@@ -1652,7 +1736,7 @@ def create_current_ratio_gauge(data):
     # Initial layout
     fig.update_layout(
         title={
-            'text': f"Target: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+            'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -1699,14 +1783,22 @@ def create_capital_structure_donut(data):
     Shows most recent split between Total Debt and Stockholders' Equity.
     Center displays Debt-to-Equity ratio.
     """
+    company = get_company_name(data)
+    ticker = get_ticker(data)
+
     debt_metrics = data['metrics'].get('debt', {})
     total_debts = debt_metrics.get('total_debt_billion', [])
     periods = [p['period'] for p in data['periods']]
 
     # Need to extract stockholders equity from detailed analysis JSON
-    detailed_path = Path("output/target_analysis.json")
+    detailed_path = Path(f"output/{ticker.lower()}_analysis.json")
+    # Fallback for legacy Target file naming
+    if ticker.upper() == "TGT" and not detailed_path.exists():
+        legacy_path = Path("output/target_analysis.json")
+        if legacy_path.exists():
+            detailed_path = legacy_path
     if not detailed_path.exists():
-        print("⚠️  Skipping Capital Structure Donut: target_analysis.json not found")
+        print(f"⚠️  Skipping Capital Structure Donut: {ticker.lower()}_analysis.json not found")
         return None
 
     with open(detailed_path, 'r') as f:
@@ -1777,7 +1869,7 @@ def create_capital_structure_donut(data):
                 },
                 {
                     'title': {
-                        'text': f"Target: Capital Structure ({fy_data['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
+                        'text': f"{company}: Capital Structure ({fy_data['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
                         'x': 0.5,
                         'xanchor': 'center'
                     },
@@ -1809,7 +1901,7 @@ def create_capital_structure_donut(data):
 
     fig.update_layout(
         title={
-            'text': f"Target: Capital Structure ({most_recent['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
+            'text': f"{company}: Capital Structure ({most_recent['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
             'x': 0.5,
             'xanchor': 'center'
         },
@@ -1872,6 +1964,7 @@ def create_debt_to_ebitda_trend(data):
     - Yellow (3.0-5.0x): Moderate leverage
     - Red (>5.0x): Risky leverage
     """
+    company = get_company_name(data)
     debt_metrics = data['metrics'].get('debt', {})
     debt_to_ebitda = debt_metrics.get('debt_to_ebitda_ratio', [])
     periods = [p['period'] for p in data['periods']]
@@ -1949,7 +2042,7 @@ def create_debt_to_ebitda_trend(data):
 
     fig.update_layout(
         title={
-            'text': "Target: Debt-to-EBITDA Trend<br><sub>Lower is better - Shows how many years of EBITDA needed to repay debt (Healthy: <3.0x)</sub>",
+            'text': f"{company}: Debt-to-EBITDA Trend<br><sub>Lower is better - Shows how many years of EBITDA needed to repay debt (Healthy: <3.0x)</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -2022,6 +2115,7 @@ def create_dupont_analysis_breakdown(data):
     Q4 values are calculated from annual 10-K data minus Q1-Q3.
     """
     import plotly.graph_objects as go
+    company = get_company_name(data)
 
     # Step 1: Collect Q1-Q3 quarterly data from 10-Q filings
     periods_data = []
@@ -2211,7 +2305,7 @@ def create_dupont_analysis_breakdown(data):
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"Target: DuPont Analysis ({period_data['period']})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
+                        'text': f"{company}: DuPont Analysis ({period_data['period']})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.97,
@@ -2226,7 +2320,7 @@ def create_dupont_analysis_breakdown(data):
     most_recent = periods_data[-1]['period']
     fig.update_layout(
         title={
-            'text': f"Target: DuPont Analysis ({most_recent})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
+            'text': f"{company}: DuPont Analysis ({most_recent})<br><sub>ROE = Profit Margin × Asset Turnover × Financial Leverage</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.97,
@@ -2283,7 +2377,7 @@ def _load_peer_comparison_data(filepath: str = "data/peer_comparison_data.json")
     peer_path = Path(filepath)
     if not peer_path.exists():
         print(f"⚠️  WARNING: Peer data not found at {filepath}")
-        print(f"   Chart 20 will display Target data only without peer comparison")
+        print(f"   Chart 20 will display company data only without peer comparison")
         return {}
 
     try:
@@ -2342,13 +2436,13 @@ def _get_all_ccc_data(data):
 
 def _get_latest_ccc_data(data):
     """
-    Extract Target's most recent CCC components from timeseries data.
+    Extract the company's most recent CCC components from timeseries data.
 
     Scans periods from most recent backwards to find the first period with
     complete CCC data (all components non-null).
 
     Args:
-        data: Time-series data dictionary from target_timeseries.json
+        data: Time-series data dictionary
 
     Returns:
         dict: {
@@ -2375,7 +2469,7 @@ def create_cash_conversion_cycle_chart(data):
     """
     Chart 20: Cash Conversion Cycle - Peer Comparison (Pillar 3: Operational Efficiency)
 
-    Grouped bar chart comparing Target's CCC components against retail industry peers.
+    Grouped bar chart comparing the company's CCC components against retail industry peers.
     Shows DSI, DSO, DPO, and total CCC for each company.
 
     Formula: CCC = DSI + DSO - DPO
@@ -2389,16 +2483,19 @@ def create_cash_conversion_cycle_chart(data):
     """
     import plotly.graph_objects as go
 
+    company = get_company_name(data)
+    ticker = get_ticker(data)
+
     print(f"\n📊 Chart 20: Creating peer comparison bar chart with dropdown...")
 
-    # Step 1: Extract ALL Target CCC periods
-    target_ccc_periods = _get_all_ccc_data(data)
+    # Step 1: Extract ALL company CCC periods
+    company_ccc_periods = _get_all_ccc_data(data)
 
-    if not target_ccc_periods:
-        print("❌ Error: No complete CCC data found for Target")
+    if not company_ccc_periods:
+        print(f"❌ Error: No complete CCC data found for {company}")
         return None
 
-    print(f"   Target periods: {len(target_ccc_periods)} ({target_ccc_periods[0]['period']} - {target_ccc_periods[-1]['period']})")
+    print(f"   {company} periods: {len(company_ccc_periods)} ({company_ccc_periods[0]['period']} - {company_ccc_periods[-1]['period']})")
 
     # Step 2: Load peer data (multi-year structure)
     peer_data = _load_peer_comparison_data()
@@ -2412,27 +2509,27 @@ def create_cash_conversion_cycle_chart(data):
     else:
         print(f"   No peer data available - showing Target only")
 
-    # Step 3: Build company list (Target + peers)
-    company_names = ['Target'] + sorted(peer_companies.keys())
+    # Step 3: Build company list (analyzed company + peers)
+    company_names = [company] + sorted(peer_companies.keys())
 
-    # Step 4: Create figure with multiple trace sets (one per Target period)
+    # Step 4: Create figure with multiple trace sets (one per company period)
     fig = go.Figure()
 
-    # For each Target period, create 4 bar traces per company (DSI, DSO, DPO, CCC)
-    # Total traces = len(target_ccc_periods) × len(company_names) × 4
-    for period_idx, target_period in enumerate(target_ccc_periods):
+    # For each company period, create 4 bar traces per company (DSI, DSO, DPO, CCC)
+    # Total traces = len(company_ccc_periods) × len(company_names) × 4
+    for period_idx, current_period in enumerate(company_ccc_periods):
         # Visibility: Only most recent period visible by default
-        visible = (period_idx == len(target_ccc_periods) - 1)
+        visible = (period_idx == len(company_ccc_periods) - 1)
 
         # Build companies_data dict for this period
         companies_data = {}
 
-        # Target data changes per period
-        companies_data['Target'] = {
-            'dsi': target_period['dsi'],
-            'dso': target_period['dso'],
-            'dpo': target_period['dpo'],
-            'ccc': target_period['ccc'],
+        # Primary company data changes per period
+        companies_data[company] = {
+            'dsi': current_period['dsi'],
+            'dso': current_period['dso'],
+            'dpo': current_period['dpo'],
+            'ccc': current_period['ccc'],
             'opacity': 1.0  # Full saturation
         }
 
@@ -2444,7 +2541,7 @@ def create_cash_conversion_cycle_chart(data):
         for peer_name, peer_info in peer_companies.items():
             # Get peer data for THIS fiscal year
             peer_years = peer_info.get('years', {})
-            peer_year_data = peer_years.get(str(target_period['fiscal_year']))
+            peer_year_data = peer_years.get(str(current_period['fiscal_year']))
 
             if peer_year_data:
                 # Use year-specific peer data
@@ -2490,7 +2587,7 @@ def create_cash_conversion_cycle_chart(data):
             textposition='outside',
             visible=visible,
             legendgroup='DSI',
-            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            showlegend=(period_idx == len(company_ccc_periods) - 1),  # Only show legend for default visible period
             hovertemplate='<b>%{x}</b><br>DSI: %{y:.1f} days<extra></extra>'
         ))
 
@@ -2510,7 +2607,7 @@ def create_cash_conversion_cycle_chart(data):
             textposition='outside',
             visible=visible,
             legendgroup='DSO',
-            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            showlegend=(period_idx == len(company_ccc_periods) - 1),  # Only show legend for default visible period
             hovertemplate='<b>%{x}</b><br>DSO: %{y:.1f} days<extra></extra>'
         ))
 
@@ -2530,7 +2627,7 @@ def create_cash_conversion_cycle_chart(data):
             textposition='outside',
             visible=visible,
             legendgroup='DPO',
-            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            showlegend=(period_idx == len(company_ccc_periods) - 1),  # Only show legend for default visible period
             hovertemplate='<b>%{x}</b><br>DPO: %{y:.1f} days<extra></extra>'
         ))
 
@@ -2551,7 +2648,7 @@ def create_cash_conversion_cycle_chart(data):
             textfont=dict(size=12, color='black'),
             visible=visible,
             legendgroup='CCC',
-            showlegend=(period_idx == len(target_ccc_periods) - 1),  # Only show legend for default visible period
+            showlegend=(period_idx == len(company_ccc_periods) - 1),  # Only show legend for default visible period
             hovertemplate='<b>%{x}</b><br>CCC: %{y:.1f} days<extra></extra>'
         ))
 
@@ -2560,15 +2657,15 @@ def create_cash_conversion_cycle_chart(data):
     traces_per_period = 4  # 4 bar traces per period (DSI, DSO, DPO, CCC), each with 5 companies
 
     # Iterate in reverse (most recent first in dropdown)
-    for period_idx in range(len(target_ccc_periods) - 1, -1, -1):
-        target_period = target_ccc_periods[period_idx]
+    for period_idx in range(len(company_ccc_periods) - 1, -1, -1):
+        current_period = company_ccc_periods[period_idx]
 
         # Build visibility array - use 'legendonly' for traces that define the legend (last period's traces)
         # This keeps the legend visible while hiding the bars
         visible_array = []
-        legend_period_idx = len(target_ccc_periods) - 1  # Last period defines legend (has showlegend=True)
+        legend_period_idx = len(company_ccc_periods) - 1  # Last period defines legend (has showlegend=True)
 
-        for trace_period_idx in range(len(target_ccc_periods)):
+        for trace_period_idx in range(len(company_ccc_periods)):
             for _ in range(traces_per_period):  # 4 traces per period
                 if trace_period_idx == period_idx:
                     # Currently selected period - show bars
@@ -2581,13 +2678,13 @@ def create_cash_conversion_cycle_chart(data):
                     visible_array.append(False)
 
         buttons.append({
-            'label': target_period['period'],  # e.g., "FY2024"
+            'label': current_period['period'],  # e.g., "FY2024"
             'method': 'update',
             'args': [
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"Target vs Retail Peers: Cash Conversion Cycle<br><sub>Comparing {target_period['period']} CCC performance (Lower is better)</sub>",
+                        'text': f"{company} vs Retail Peers: Cash Conversion Cycle<br><sub>Comparing {current_period['period']} CCC performance (Lower is better)</sub>",
                         'x': 0.5,
                         'xanchor': 'center'
                     }
@@ -2612,12 +2709,12 @@ def create_cash_conversion_cycle_chart(data):
     )
 
     # Step 7: Layout configuration
-    most_recent = target_ccc_periods[-1]['period']
+    most_recent = company_ccc_periods[-1]['period']
 
     fig.update_layout(
         barmode='group',
         title={
-            'text': f"Target vs Retail Peers: Cash Conversion Cycle<br><sub>Target: {most_recent} vs Peers: FY2024 Benchmark (Lower is better)</sub>",
+            'text': f"{company} vs Retail Peers: Cash Conversion Cycle<br><sub>{company}: {most_recent} vs Peers: FY2024 Benchmark (Lower is better)</sub>",
             'x': 0.5,
             'xanchor': 'center'
         },
@@ -2661,7 +2758,7 @@ def create_cash_conversion_cycle_chart(data):
     fig.write_html(output_path, config=config)
 
     print(f"✅ Chart 20 created: {output_path}")
-    print(f"   Chart type: Peer comparison with dropdown ({len(target_ccc_periods)} periods)")
+    print(f"   Chart type: Peer comparison with dropdown ({len(company_ccc_periods)} periods)")
     print(f"   Companies: {len(company_names)} ({', '.join(company_names)})")
 
     return fig
@@ -2690,6 +2787,7 @@ def create_ocf_vs_capex_chart(data):
     - Quarterly data with calculated Q4 from annual reports
     - Color-coded: Green (OCF bars), Red (CapEx line), Blue (FCF line)
     """
+    company = get_company_name(data)
     cf = data['metrics']['cash_flows']
 
     # Step 1: Collect YTD data from 10-Q filings, grouped by fiscal year
@@ -2857,7 +2955,7 @@ def create_ocf_vs_capex_chart(data):
 
     fig.update_layout(
         title={
-            'text': "Target: Operating Cash Flow vs Capital Expenditures<br><sub>OCF (bars) minus CapEx (line) = Free Cash Flow</sub>",
+            'text': f"{company}: Operating Cash Flow vs Capital Expenditures<br><sub>OCF (bars) minus CapEx (line) = Free Cash Flow</sub>",
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
@@ -2904,6 +3002,7 @@ def create_cash_flow_sankey(data):
 
     Uses quarterly data with calculated Q4 for granular cash allocation view.
     """
+    company = get_company_name(data)
     cf = data['metrics']['cash_flows']
 
     # Step 1: Collect quarterly data from 10-Q filings
@@ -3178,7 +3277,7 @@ def create_cash_flow_sankey(data):
                 },
                 {
                     'title': {
-                        'text': f"Target: Cash Flow Allocation ({qtr})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
+                        'text': f"{company}: Cash Flow Allocation ({qtr})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.95,
@@ -3190,7 +3289,7 @@ def create_cash_flow_sankey(data):
 
     fig.update_layout(
         title={
-            'text': f"Target: Cash Flow Allocation ({latest['period']})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
+            'text': f"{company}: Cash Flow Allocation ({latest['period']})<br><sub>From Operating Cash Flow to CapEx, Dividends, Buybacks & Debt Repayment</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -3454,6 +3553,9 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     import plotly.graph_objects as go
     from market_data_fetcher import MarketDataFetcher
 
+    company = get_company_name(data)
+    ticker = get_ticker(data)
+
     # Fetch current market data for peers
     try:
         fetcher = MarketDataFetcher()
@@ -3697,7 +3799,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"Target: Valuation vs Growth Analysis ({quarter['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
+                        'text': f"{company}: Valuation vs Growth Analysis ({quarter['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.95,
@@ -3719,7 +3821,7 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
     latest_q = valid_quarters[-1]
     fig.update_layout(
         title={
-            'text': f"Target: Valuation vs Growth Analysis ({latest_q['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
+            'text': f"{company}: Valuation vs Growth Analysis ({latest_q['period']})<br><sub>P/E Ratios: Historical for all companies (price-scaled) - Lower right = potentially undervalued</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
@@ -4112,25 +4214,28 @@ def _create_cash_conversion_cycle_trend_DEPRECATED(data):
     pass  # Placeholder for deprecated function - not used
 
 
-def main():
-    """Generate all Plotly visualizations."""
-    print("📊 Generating Plotly visualizations from time-series data...")
+def main(ticker: str = "TGT"):
+    """Generate all Plotly visualizations for a company.
 
-    # Check if timeseries JSON exists
-    timeseries_path = Path("output/target_timeseries.json")
-    if not timeseries_path.exists():
-        print("❌ Error: output/target_timeseries.json not found")
+    Args:
+        ticker: Stock ticker symbol (default: TGT for Target)
+    """
+    print(f"📊 Generating Plotly visualizations for {ticker}...")
+
+    # Load data using functions with legacy fallback
+    try:
+        data = load_timeseries_data(ticker)
+    except FileNotFoundError:
+        print(f"❌ Error: No timeseries data found for {ticker}")
         print("   Please run financial_analyzer.py first to generate the data")
         return
 
-    # Check if detailed analysis JSON exists (for Phase 4 charts)
-    detailed_path = Path("output/target_analysis.json")
-    if not detailed_path.exists():
-        print("❌ Error: output/target_analysis.json not found")
+    try:
+        _ = load_detailed_analysis(ticker)  # Verify detailed analysis exists
+    except FileNotFoundError:
+        print(f"❌ Error: No detailed analysis found for {ticker}")
         print("   Please run financial_analyzer.py first to generate the data")
         return
-
-    data = load_timeseries_data()
     print(f"   Loaded {data['metadata']['total_periods']} periods")
 
     # Create all 22 charts (7 Phase 3 + 4 Phase 4 + 2 new + 1 Phase 6 + 1 Phase 7 + 3 Pillar 2 + 2 Pillar 3 + 2 Pillar 4)
@@ -4147,8 +4252,8 @@ def main():
     create_expense_breakdown_chart(data)  # Chart 14 (Phase 6)
     create_ebitda_bridge_waterfall(data)  # Chart 15 (Phase 7)
     create_margin_bridge_waterfall(data)
-    create_risk_trends_chart()
-    create_risk_heatmap_grid()
+    create_risk_trends_chart(ticker)
+    create_risk_heatmap_grid(ticker)
 
     # Pillar 2: Liquidity & Solvency visualizations
     create_current_ratio_gauge(data)  # Chart 16

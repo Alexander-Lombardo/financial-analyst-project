@@ -1,12 +1,14 @@
 """
-Target Corporation Financial Analyzer
-=====================================
-A comprehensive tool to analyze Target's 10-K and 10-Q filings.
+Company Financial Analyzer
+===========================
+A comprehensive tool to analyze any company's 10-K and 10-Q filings from SEC EDGAR.
 
 Three-Phase Analysis:
 1. Phase 1: Extract baseline "Vital Signs" from 10-K
 2. Phase 2: Compare quarterly trends from 10-Qs against baseline
 3. Phase 3: Output structured JSON for each period
+
+Supports any publicly traded company with SEC filings.
 """
 
 import json
@@ -18,21 +20,53 @@ from decimal import Decimal
 from sec_data_fetcher import SECDataFetcher
 
 
-class TargetFinancialAnalyzer:
-    """Analyzes Target Corporation SEC filings for key financial metrics."""
+class CompanyFinancialAnalyzer:
+    """Analyzes any company's SEC filings for key financial metrics."""
 
-    def __init__(self, data_dir: str, auto_download: bool = False,
+    # Default fiscal year end months for common retailers
+    FISCAL_YEAR_END_MONTHS = {
+        'TGT': 1,   # Target: January (fiscal year ends late Jan/early Feb)
+        'WMT': 1,   # Walmart: January
+        'COST': 8,  # Costco: August
+        'KR': 1,    # Kroger: January
+        # Default is December for most companies
+    }
+
+    def __init__(self, ticker: str = "TGT", cik: str = "0000027419",
+                 company_name: str = None, data_dir: str = None,
+                 fiscal_year_end_month: int = None,
+                 auto_download: bool = False,
                  user_name: str = None, user_email: str = None):
         """
-        Initialize analyzer with data directory.
+        Initialize analyzer for any company.
 
         Args:
-            data_dir: Path to directory containing Target 10-Q/10-K files
+            ticker: Stock ticker symbol (e.g., "TGT", "WMT", "AAPL")
+            cik: SEC Central Index Key (e.g., "0000027419")
+            company_name: Optional company name for reports (defaults to ticker)
+            data_dir: Path to directory for SEC filings (defaults to data/{ticker})
+            fiscal_year_end_month: Month when fiscal year ends (1=Jan, 12=Dec)
+                                   If not provided, uses known defaults or 12
             auto_download: Enable automatic SEC EDGAR filing downloads
             user_name: Your name (required if auto_download=True, for SEC User-Agent)
             user_email: Your email (required if auto_download=True, for SEC User-Agent)
         """
-        self.data_dir = Path(data_dir)
+        self.ticker = ticker.upper()
+        self.cik = cik
+        self.company_name = company_name or self.ticker
+
+        # Set data directory (default: data/{ticker})
+        if data_dir:
+            self.data_dir = Path(data_dir)
+        else:
+            self.data_dir = Path(f"data/{self.ticker}")
+
+        # Determine fiscal year end month
+        if fiscal_year_end_month:
+            self.fiscal_year_end_month = fiscal_year_end_month
+        else:
+            self.fiscal_year_end_month = self.FISCAL_YEAR_END_MONTHS.get(self.ticker, 12)
+
         self.baseline = None
         self.results = []
         self.auto_download = auto_download
@@ -52,16 +86,19 @@ class TargetFinancialAnalyzer:
         if auto_download:
             if not user_name or not user_email:
                 raise ValueError("User name and email required for SEC downloads")
-            self.fetcher = SECDataFetcher(user_name, user_email, str(data_dir))
+            self.fetcher = SECDataFetcher(user_name, user_email, str(self.data_dir))
 
-    def download_required_filings(self, ticker: str = "TGT",
-                                  cik: str = "0000027419") -> bool:
+    def download_required_filings(self, ticker: str = None,
+                                  cik: str = None, num_10k: int = 10,
+                                  num_10q: int = 12) -> bool:
         """
-        Download 5 years of 10-Ks and 12 quarters of 10-Qs from SEC EDGAR.
+        Download years of 10-Ks and quarters of 10-Qs from SEC EDGAR.
 
         Args:
-            ticker: Stock ticker symbol (default: "TGT")
-            cik: Central Index Key (default: "0000027419")
+            ticker: Stock ticker symbol (defaults to self.ticker)
+            cik: Central Index Key (defaults to self.cik)
+            num_10k: Number of 10-K filings to download (default: 10)
+            num_10q: Number of 10-Q filings to download (default: 12)
 
         Returns:
             True if download successful, False otherwise
@@ -70,9 +107,13 @@ class TargetFinancialAnalyzer:
             print("⚠️  Auto-download not enabled. Skipping download.")
             return False
 
-        print("📥 Downloading filings from SEC EDGAR...")
+        # Use instance defaults if not provided
+        ticker = ticker or self.ticker
+        cik = cik or self.cik
+
+        print(f"📥 Downloading filings for {ticker} from SEC EDGAR...")
         try:
-            metadata = self.fetcher.download_filings(ticker, cik, num_10k=10, num_10q=12)
+            metadata = self.fetcher.download_filings(ticker, cik, num_10k=num_10k, num_10q=num_10q)
             print(f"✅ Downloaded {len(metadata.get('10-K', []))} 10-Ks")
             print(f"✅ Downloaded {len(metadata.get('10-Q', []))} 10-Qs")
             return True
@@ -1254,9 +1295,22 @@ class TargetFinancialAnalyzer:
 
         return insights
 
-    def export_executive_insights(self, output_path: str):
-        """Export executive insights to JSON (Phase 4)."""
+    def export_executive_insights(self, output_path: str = None):
+        """Export executive insights to JSON (Phase 4).
+
+        Args:
+            output_path: Optional path for output file.
+                         Defaults to output/{ticker.lower()}_executive_insights.json
+        """
+        # Default output path based on ticker
+        if output_path is None:
+            output_path = f"output/{self.ticker.lower()}_executive_insights.json"
+
         insights = self.extract_executive_insights()
+        insights['metadata'] = {
+            'company': self.company_name,
+            'ticker': self.ticker
+        }
 
         with open(output_path, 'w') as f:
             json.dump(insights, f, indent=2)
@@ -1450,9 +1504,24 @@ class TargetFinancialAnalyzer:
                 for i, priority in enumerate(strat['top_priorities'][:3], 1):
                     print(f"   {i}. {priority[:100]}...")
 
-    def export_json(self, output_path: str):
-        """Export all results to JSON file including risk heatmap (Phase 2)."""
+    def export_json(self, output_path: str = None):
+        """Export all results to JSON file including risk heatmap (Phase 2).
+
+        Args:
+            output_path: Optional path for output file.
+                         Defaults to output/{ticker.lower()}_analysis.json
+        """
+        # Default output path based on ticker
+        if output_path is None:
+            output_path = f"output/{self.ticker.lower()}_analysis.json"
+
         output_data = {
+            'metadata': {
+                'company': self.company_name,
+                'ticker': self.ticker,
+                'cik': self.cik,
+                'fiscal_year_end_month': self.fiscal_year_end_month
+            },
             'filings': self.results,
             'risk_heatmap': self.get_risk_heatmap_summary()
         }
@@ -1462,18 +1531,27 @@ class TargetFinancialAnalyzer:
 
         print(f"\n✅ Results exported to: {output_path}")
 
-    def export_timeseries_json(self, output_path: str):
+    def export_timeseries_json(self, output_path: str = None):
         """
         Export time-series friendly JSON format (Phase 3).
 
         Creates a flat structure optimized for Plotly visualization with parallel
         arrays for each metric category.
+
+        Args:
+            output_path: Optional path for output file.
+                         Defaults to output/{ticker.lower()}_timeseries.json
         """
+        # Default output path based on ticker
+        if output_path is None:
+            output_path = f"output/{self.ticker.lower()}_timeseries.json"
+
         timeseries_data = {
             'metadata': {
-                'company': 'Target Corporation',
-                'ticker': 'TGT',
-                'cik': '0000027419',
+                'company': self.company_name,
+                'ticker': self.ticker,
+                'cik': self.cik,
+                'fiscal_year_end_month': self.fiscal_year_end_month,
                 'total_periods': len(self.results)
             },
             'periods': [],
@@ -1830,11 +1908,20 @@ class TargetFinancialAnalyzer:
 
         print(f"✅ Time-series data exported to: {output_path}")
 
-    def export_summary_report(self, output_path: str):
-        """Export executive summary report."""
+    def export_summary_report(self, output_path: str = None):
+        """Export executive summary report.
+
+        Args:
+            output_path: Optional path for output file.
+                         Defaults to output/{ticker.lower()}_summary.txt
+        """
+        # Default output path based on ticker
+        if output_path is None:
+            output_path = f"output/{self.ticker.lower()}_summary.txt"
+
         report_lines = []
         report_lines.append("=" * 80)
-        report_lines.append("TARGET CORPORATION - FINANCIAL ANALYSIS REPORT")
+        report_lines.append(f"{self.company_name.upper()} - FINANCIAL ANALYSIS REPORT")
         report_lines.append("=" * 80)
         report_lines.append("")
 
@@ -1866,19 +1953,66 @@ class TargetFinancialAnalyzer:
         print(f"✅ Summary report exported to: {output_path}")
 
 
+# Backward compatibility alias - keep existing code working
+class TargetFinancialAnalyzer(CompanyFinancialAnalyzer):
+    """
+    Alias for CompanyFinancialAnalyzer with Target Corporation defaults.
+
+    Maintains backward compatibility with existing code that uses
+    TargetFinancialAnalyzer class name.
+    """
+
+    def __init__(self, data_dir: str = "data/Target 10Q", auto_download: bool = False,
+                 user_name: str = None, user_email: str = None):
+        """
+        Initialize analyzer with Target Corporation defaults.
+
+        Args:
+            data_dir: Path to directory containing Target 10-Q/10-K files
+            auto_download: Enable automatic SEC EDGAR filing downloads
+            user_name: Your name (required if auto_download=True, for SEC User-Agent)
+            user_email: Your email (required if auto_download=True, for SEC User-Agent)
+        """
+        super().__init__(
+            ticker="TGT",
+            cik="0000027419",
+            company_name="Target Corporation",
+            data_dir=data_dir,
+            fiscal_year_end_month=1,  # January
+            auto_download=auto_download,
+            user_name=user_name,
+            user_email=user_email
+        )
+
+
 def main():
-    """Main execution function."""
+    """Main execution function - analyzes Target Corporation by default."""
     import os
+    import sys
     from dotenv import load_dotenv
 
     # Load environment variables
     load_dotenv()
 
-    print("🎯 Target Corporation Financial Analyzer")
+    # Parse command-line arguments for ticker (optional)
+    ticker = "TGT"
+    cik = "0000027419"
+    company_name = "Target Corporation"
+
+    if len(sys.argv) > 1:
+        ticker = sys.argv[1].upper()
+        print(f"📊 Financial Analyzer - {ticker}")
+        # For non-Target tickers, CIK must be provided or looked up
+        if len(sys.argv) > 2:
+            cik = sys.argv[2]
+        else:
+            print(f"⚠️  Note: Using default CIK. For accurate analysis, provide CIK as second argument.")
+    else:
+        print("🎯 Target Corporation Financial Analyzer")
+
     print("=" * 60)
 
     # Configuration
-    data_dir = "data/Target 10Q"
     auto_download = True  # Enable automated downloads
 
     # Get credentials from environment
@@ -1892,8 +2026,10 @@ def main():
         return
 
     # Initialize analyzer with download capability
-    analyzer = TargetFinancialAnalyzer(
-        data_dir=data_dir,
+    analyzer = CompanyFinancialAnalyzer(
+        ticker=ticker,
+        cik=cik,
+        company_name=company_name if ticker == "TGT" else ticker,
         auto_download=auto_download,
         user_name=user_name,
         user_email=user_email
@@ -1902,23 +2038,25 @@ def main():
     # Analyze all filings (will auto-download if enabled)
     results = analyzer.analyze_all_filings()
 
-    # Export results
+    # Export results (uses default paths based on ticker)
     print("\n" + "=" * 60)
     print("📤 Exporting Results...")
     print("=" * 60)
 
-    analyzer.export_json("output/target_analysis.json")
-    analyzer.export_timeseries_json("output/target_timeseries.json")
-    analyzer.export_summary_report("output/target_summary.txt")
-    analyzer.export_executive_insights("output/executive_insights.json")
+    analyzer.export_json()  # Uses default path: output/{ticker}_analysis.json
+    analyzer.export_timeseries_json()  # Uses default path: output/{ticker}_timeseries.json
+    analyzer.export_summary_report()  # Uses default path: output/{ticker}_summary.txt
+    analyzer.export_executive_insights()  # Uses default path: output/{ticker}_executive_insights.json
 
     print("\n✅ Analysis complete!")
+    print(f"   Company: {analyzer.company_name}")
+    print(f"   Ticker: {analyzer.ticker}")
     print(f"   Total filings analyzed: {len(results)}")
     print(f"   Output files:")
-    print(f"     - target_analysis.json (detailed format)")
-    print(f"     - target_timeseries.json (time-series format for Plotly)")
-    print(f"     - target_summary.txt (human-readable report)")
-    print(f"     - executive_insights.json (key insights for reports)")
+    print(f"     - {analyzer.ticker.lower()}_analysis.json (detailed format)")
+    print(f"     - {analyzer.ticker.lower()}_timeseries.json (time-series format for Plotly)")
+    print(f"     - {analyzer.ticker.lower()}_summary.txt (human-readable report)")
+    print(f"     - {analyzer.ticker.lower()}_executive_insights.json (key insights for reports)")
 
 
 if __name__ == "__main__":

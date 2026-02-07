@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Target Corporation Financial Analysis Dashboard
+Company Financial Analysis Dashboard
+=====================================
+Interactive visualization of 24 key financial metrics across 6 pillars.
+Supports any company with SEC filings - just enter the ticker symbol.
 
-Interactive visualization of 24 key financial metrics across 6 pillars:
+Pillars:
 1. Revenue & Growth
 2. Profitability & Margins
 3. Liquidity & Solvency
@@ -14,8 +17,10 @@ Run: streamlit run dashboard.py
 """
 
 import streamlit as st
+from pathlib import Path
 from visualize_data import (
     load_timeseries_data,
+    get_company_name,
     # Pillar 1: Revenue & Growth (4 charts)
     create_revenue_netincome_annual_chart,
     create_revenue_growth_yoy_chart,
@@ -47,16 +52,16 @@ from visualize_data import (
     create_risk_trends_chart,
     create_risk_heatmap_grid,
 )
+from company_analyzer import get_company_info, has_cached_data, analyze_company, list_available_companies
 
 # =============================================================================
-# CHART EXPLANATIONS
+# CHART EXPLANATIONS (Generic - not company-specific)
 # =============================================================================
-# Each chart gets a brief thesis explaining what it shows and key insights
 
 CHART_EXPLANATIONS = {
     # Pillar 1: Revenue & Growth
     "revenue_netincome_annual": """
-**What it shows:** Target's 10-year revenue and net income trajectory from annual 10-K filings.
+**What it shows:** 10-year revenue and net income trajectory from annual 10-K filings.
 
 **Key insight:** Look for consistent growth and whether profits keep pace with revenue. Widening gap between lines suggests margin compression.
 """,
@@ -73,7 +78,7 @@ CHART_EXPLANATIONS = {
     "revenue_netincome_longterm": """
 **What it shows:** Quarterly revenue and net income with calculated Q4 data, revealing seasonal patterns.
 
-**Key insight:** Q4 (holiday season) typically shows peak revenue. Watch for profit volatility vs revenue stability.
+**Key insight:** Q4 (holiday season) typically shows peak revenue for retailers. Watch for profit volatility vs revenue stability.
 """,
 
     # Pillar 2: Profitability & Margins
@@ -83,7 +88,7 @@ CHART_EXPLANATIONS = {
 **Key insight:** Compression between lines reveals where profits leak. Gross margin erosion = pricing/cost issues. Operating margin erosion = overhead creep.
 """,
     "margin_bridge": """
-**What it shows:** Waterfall visualization of margin evolution from FY2022 baseline to current quarter.
+**What it shows:** Waterfall visualization of margin evolution from baseline to current quarter.
 
 **Key insight:** Identifies inflection points and cumulative trend direction. Green bars = improvement, red bars = deterioration.
 """,
@@ -107,10 +112,10 @@ CHART_EXPLANATIONS = {
     "current_ratio": """
 **What it shows:** Current assets divided by current liabilities - can the company pay bills due within 12 months?
 
-**Key insight:** Below 1.0 means current liabilities exceed current assets (warning). Above 1.5 is healthy for retail. Target runs lean by design.
+**Key insight:** Below 1.0 means current liabilities exceed current assets (warning). Above 1.5 is healthy for retail.
 """,
     "capital_structure": """
-**What it shows:** The debt vs equity mix in Target's capital structure.
+**What it shows:** The debt vs equity mix in the company's capital structure.
 
 **Key insight:** Higher debt = higher financial risk but potentially higher returns on equity. Watch for shifts toward more leverage over time.
 """,
@@ -134,7 +139,7 @@ CHART_EXPLANATIONS = {
     "cash_conversion_cycle": """
 **What it shows:** Days to convert inventory investment back to cash, compared to retail peers.
 
-**Key insight:** Lower is better. Negative CCC (like Amazon) means suppliers finance operations. Target's ~60 days is typical for retail.
+**Key insight:** Lower is better. Negative CCC (like Amazon) means suppliers finance operations. ~60 days is typical for retail.
 """,
     "inventory_efficiency": """
 **What it shows:** Inventory turnover ratio and days sales of inventory (DSI) over time.
@@ -166,19 +171,19 @@ CHART_EXPLANATIONS = {
 
     # Pillar 6: Valuation & Risk
     "valuation_scatter": """
-**What it shows:** P/E ratio vs revenue growth for Target and retail peers, plotted by quarter.
+**What it shows:** P/E ratio vs revenue growth for the company and retail peers, plotted by quarter.
 
-**Key insight:** Lower-right quadrant = undervalued (low P/E, high growth). Upper-left = overvalued. Track Target's position drift over time.
+**Key insight:** Lower-right quadrant = undervalued (low P/E, high growth). Upper-left = overvalued. Track position drift over time.
 """,
     "pe_band": """
-**What it shows:** Current stock price overlaid on historical P/E valuation bands based on Target's own 5-year history.
+**What it shows:** Current stock price overlaid on historical P/E valuation bands based on the company's own 5-year history.
 
 **Key insight:** Shows if stock is cheap or expensive vs its own history. Below 25th percentile = historically undervalued opportunity.
 """,
     "risk_trends": """
 **What it shows:** Stacked area chart of risk mentions (shrink, theft, markdown, margin pressure) in SEC filings over time.
 
-**Key insight:** Rising trends signal increasing management concern. Shrink has been a growing theme in recent filings.
+**Key insight:** Rising trends signal increasing management concern. Shrink has been a growing theme in recent retail filings.
 """,
     "risk_heatmap": """
 **What it shows:** Intensity grid showing which risk types are mentioned most frequently in each period.
@@ -193,15 +198,11 @@ CHART_EXPLANATIONS = {
 # =============================================================================
 
 def render_chart_with_explanation(title, explanation_key, fig, position="left"):
-    """
-    Render a chart with staggered explanatory text.
+    """Render a chart with staggered explanatory text."""
+    if fig is None:
+        st.warning(f"Chart '{title}' could not be rendered - missing data.")
+        return
 
-    Args:
-        title: Chart title for the subheader
-        explanation_key: Key to look up in CHART_EXPLANATIONS dict
-        fig: Plotly figure to render
-        position: "left" = explanation on left, "right" = explanation on right
-    """
     st.subheader(title)
 
     explanation = CHART_EXPLANATIONS.get(explanation_key, "")
@@ -225,16 +226,68 @@ def render_chart_with_explanation(title, explanation_key, fig, position="left"):
 # =============================================================================
 
 st.set_page_config(
-    page_title="Target Financial Analysis",
-    page_icon="🎯",
+    page_title="Financial Analysis Dashboard",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Sidebar navigation
-st.sidebar.title("🎯 Target Analysis")
+# =============================================================================
+# SIDEBAR - Company Selection
+# =============================================================================
+
+st.sidebar.title("📊 Financial Analysis")
 st.sidebar.markdown("---")
 
+# Company Selection Section
+st.sidebar.subheader("Company Selection")
+
+# Ticker input
+ticker_input = st.sidebar.text_input(
+    "Enter Ticker Symbol",
+    value="TGT",
+    max_chars=10,
+    help="Enter any stock ticker (e.g., TGT, WMT, AAPL)"
+).upper().strip()
+
+# Get company info
+company_info = get_company_info(ticker_input)
+has_data = has_cached_data(ticker_input)
+
+# Show company info
+if company_info:
+    st.sidebar.success(f"**{company_info['name']}**")
+    st.sidebar.caption(f"CIK: {company_info['cik']}")
+    if has_data:
+        st.sidebar.caption("✅ Data available")
+    else:
+        st.sidebar.caption("⚠️ Data needs to be analyzed")
+else:
+    st.sidebar.warning(f"Unknown ticker: {ticker_input}")
+    st.sidebar.caption("Only known companies are supported. See list below.")
+
+# Analyze button
+if st.sidebar.button("🔄 Analyze Company", disabled=not company_info, type="primary"):
+    if company_info:
+        with st.spinner(f"Analyzing {company_info['name']}... This may take 2-5 minutes."):
+            result = analyze_company(ticker_input, force_refresh=True)
+
+        if result['success']:
+            st.sidebar.success(f"✅ Analysis complete! {result['num_filings']} filings processed.")
+            st.rerun()  # Reload with new data
+        else:
+            st.sidebar.error(f"❌ Analysis failed: {result['error']}")
+
+# Show available companies
+with st.sidebar.expander("📋 Available Companies"):
+    companies = list_available_companies()
+    for ticker, info in sorted(companies.items()):
+        cached = "✓" if info['has_cached_data'] else " "
+        st.caption(f"[{cached}] **{ticker}**: {info['name']}")
+
+st.sidebar.markdown("---")
+
+# Pillar Selection
 pillar = st.sidebar.radio(
     "Select Pillar",
     [
@@ -249,19 +302,58 @@ pillar = st.sidebar.radio(
 )
 
 
-# Load data once (cached for performance)
+# =============================================================================
+# LOAD DATA
+# =============================================================================
+
 @st.cache_data
-def load_data():
-    """Load financial timeseries data with caching."""
-    return load_timeseries_data()
+def load_data_for_ticker(ticker: str):
+    """Load financial timeseries data for a specific ticker."""
+    try:
+        return load_timeseries_data(ticker=ticker)
+    except FileNotFoundError:
+        return None
 
 
-data = load_data()
+# Load data for selected ticker
+data = load_data_for_ticker(ticker_input)
 
-# Main content area
-st.title("Target Corporation Financial Analysis")
-st.markdown("*Interactive dashboard covering 6 pillars of financial analysis (24 charts)*")
+# Get company name for title
+if data:
+    company_name = get_company_name(data)
+else:
+    company_name = company_info['name'] if company_info else ticker_input
+
+
+# =============================================================================
+# MAIN CONTENT AREA
+# =============================================================================
+
+st.title(f"{company_name} Financial Analysis")
+st.markdown(f"*Interactive dashboard covering 6 pillars of financial analysis (24 charts)*")
 st.markdown("---")
+
+# Check if data is available
+if data is None:
+    st.warning(f"No analyzed data found for {ticker_input}.")
+    st.info("Click 'Analyze Company' in the sidebar to download and analyze SEC filings.")
+
+    # Show instructions
+    st.markdown("""
+    ### Getting Started
+
+    1. Enter a ticker symbol in the sidebar (e.g., TGT, WMT, COST)
+    2. Click "Analyze Company" to download SEC filings
+    3. Wait 2-5 minutes for analysis to complete
+    4. Explore the 24 interactive charts across 6 pillars
+
+    **Note:** You need SEC credentials configured in `.env` file:
+    ```
+    SEC_USER_NAME="Your Name"
+    SEC_USER_EMAIL="your@email.com"
+    ```
+    """)
+    st.stop()
 
 
 # =============================================================================
@@ -269,12 +361,10 @@ st.markdown("---")
 # =============================================================================
 
 def render_pillar_1():
-    """Render Pillar 1: Revenue & Growth charts (4 charts) with staggered layout."""
+    """Render Pillar 1: Revenue & Growth charts."""
     st.header("Pillar 1: Revenue & Growth")
     st.markdown("*Is the company growing its top line?*")
-    st.markdown("")
 
-    # Chart 1: Revenue & Net Income (10-Year) - explanation LEFT
     render_chart_with_explanation(
         "Revenue & Net Income (10-Year)",
         "revenue_netincome_annual",
@@ -282,7 +372,6 @@ def render_pillar_1():
         position="left"
     )
 
-    # Chart 2: Revenue Growth YoY - explanation RIGHT
     render_chart_with_explanation(
         "Revenue Growth YoY",
         "revenue_growth_yoy",
@@ -290,7 +379,6 @@ def render_pillar_1():
         position="right"
     )
 
-    # Chart 3: Revenue vs Inventory Growth - explanation LEFT
     render_chart_with_explanation(
         "Revenue vs Inventory Growth",
         "revenue_vs_inventory",
@@ -298,7 +386,6 @@ def render_pillar_1():
         position="left"
     )
 
-    # Chart 4: Revenue & Net Income Long-Term - explanation RIGHT
     render_chart_with_explanation(
         "Revenue & Net Income Long-Term (Quarterly)",
         "revenue_netincome_longterm",
@@ -308,12 +395,10 @@ def render_pillar_1():
 
 
 def render_pillar_2():
-    """Render Pillar 2: Profitability & Margins charts (5 charts) with staggered layout."""
+    """Render Pillar 2: Profitability & Margins charts."""
     st.header("Pillar 2: Profitability & Margins")
     st.markdown("*Is the company making money, and how efficiently?*")
-    st.markdown("")
 
-    # Chart 1: Margin Analysis - explanation LEFT
     render_chart_with_explanation(
         "Margin Analysis (Gross/Operating/Net)",
         "margin_analysis",
@@ -321,7 +406,6 @@ def render_pillar_2():
         position="left"
     )
 
-    # Chart 2: Margin Bridge Waterfall - explanation RIGHT
     render_chart_with_explanation(
         "Margin Bridge Waterfall",
         "margin_bridge",
@@ -329,7 +413,6 @@ def render_pillar_2():
         position="right"
     )
 
-    # Chart 3: Operating Expense Breakdown - explanation LEFT
     render_chart_with_explanation(
         "Operating Expense Breakdown",
         "expense_breakdown",
@@ -337,7 +420,6 @@ def render_pillar_2():
         position="left"
     )
 
-    # Chart 4: Earnings Quality - explanation RIGHT
     render_chart_with_explanation(
         "Earnings Quality",
         "earnings_quality",
@@ -345,7 +427,6 @@ def render_pillar_2():
         position="right"
     )
 
-    # Chart 5: EBITDA Bridge - explanation LEFT
     render_chart_with_explanation(
         "EBITDA Bridge",
         "ebitda_bridge",
@@ -355,12 +436,10 @@ def render_pillar_2():
 
 
 def render_pillar_3():
-    """Render Pillar 3: Liquidity & Solvency charts (4 charts) with staggered layout."""
+    """Render Pillar 3: Liquidity & Solvency charts."""
     st.header("Pillar 3: Liquidity & Solvency")
     st.markdown("*Can the company pay its bills today and its debts in the future?*")
-    st.markdown("")
 
-    # Chart 1: Current Ratio Gauge - explanation LEFT
     render_chart_with_explanation(
         "Current Ratio",
         "current_ratio",
@@ -368,7 +447,6 @@ def render_pillar_3():
         position="left"
     )
 
-    # Chart 2: Capital Structure Donut - explanation RIGHT
     render_chart_with_explanation(
         "Capital Structure",
         "capital_structure",
@@ -376,7 +454,6 @@ def render_pillar_3():
         position="right"
     )
 
-    # Chart 3: Debt-to-EBITDA Trend - explanation LEFT
     render_chart_with_explanation(
         "Debt-to-EBITDA Trend",
         "debt_to_ebitda",
@@ -384,7 +461,6 @@ def render_pillar_3():
         position="left"
     )
 
-    # Chart 4: Debt Health - explanation RIGHT
     render_chart_with_explanation(
         "Debt Health (Interest Coverage)",
         "debt_health",
@@ -394,12 +470,10 @@ def render_pillar_3():
 
 
 def render_pillar_4():
-    """Render Pillar 4: Operational Efficiency charts (4 charts) with staggered layout."""
+    """Render Pillar 4: Operational Efficiency charts."""
     st.header("Pillar 4: Operational Efficiency")
     st.markdown("*How well is management utilizing the company's assets?*")
-    st.markdown("")
 
-    # Chart 1: DuPont Analysis - explanation LEFT
     render_chart_with_explanation(
         "DuPont Analysis",
         "dupont_analysis",
@@ -407,7 +481,6 @@ def render_pillar_4():
         position="left"
     )
 
-    # Chart 2: Cash Conversion Cycle - explanation RIGHT
     render_chart_with_explanation(
         "Cash Conversion Cycle (vs Peers)",
         "cash_conversion_cycle",
@@ -415,7 +488,6 @@ def render_pillar_4():
         position="right"
     )
 
-    # Chart 3: Inventory Efficiency - explanation LEFT
     render_chart_with_explanation(
         "Inventory Efficiency",
         "inventory_efficiency",
@@ -423,7 +495,6 @@ def render_pillar_4():
         position="left"
     )
 
-    # Chart 4: Operating Margin Waterfall - explanation RIGHT
     render_chart_with_explanation(
         "Operating Margin Waterfall",
         "operating_margin_waterfall",
@@ -433,12 +504,10 @@ def render_pillar_4():
 
 
 def render_pillar_5():
-    """Render Pillar 5: Cash Flow Dynamics charts (3 charts) with staggered layout."""
+    """Render Pillar 5: Cash Flow Dynamics charts."""
     st.header("Pillar 5: Cash Flow Dynamics")
     st.markdown("*Where is cash coming from, and where is it going?*")
-    st.markdown("")
 
-    # Chart 1: OCF vs CapEx - explanation LEFT
     render_chart_with_explanation(
         "Operating CF vs CapEx",
         "ocf_vs_capex",
@@ -446,7 +515,6 @@ def render_pillar_5():
         position="left"
     )
 
-    # Chart 2: Statement of Cash Flows - explanation RIGHT
     render_chart_with_explanation(
         "Statement of Cash Flows",
         "cash_flows",
@@ -454,7 +522,6 @@ def render_pillar_5():
         position="right"
     )
 
-    # Chart 3: Cash Flow Sankey - explanation LEFT
     render_chart_with_explanation(
         "Cash Flow Allocation (Sankey)",
         "cash_flow_sankey",
@@ -464,12 +531,10 @@ def render_pillar_5():
 
 
 def render_pillar_6():
-    """Render Pillar 6: Valuation & Risk charts (4 charts) with staggered layout."""
+    """Render Pillar 6: Valuation & Risk charts."""
     st.header("Pillar 6: Valuation & Risk")
     st.markdown("*Is the stock fairly priced, and what are the risks?*")
-    st.markdown("")
 
-    # Chart 1: Valuation vs Growth Scatter - explanation LEFT
     render_chart_with_explanation(
         "Valuation vs Growth",
         "valuation_scatter",
@@ -477,7 +542,6 @@ def render_pillar_6():
         position="left"
     )
 
-    # Chart 2: Historical P/E Band - explanation RIGHT
     render_chart_with_explanation(
         "Historical P/E Band",
         "pe_band",
@@ -485,21 +549,18 @@ def render_pillar_6():
         position="right"
     )
 
-    # Chart 3: Risk Trends - explanation LEFT
-    # Note: create_risk_trends_chart() reads from target_analysis.json directly
+    # Risk charts need ticker parameter
     render_chart_with_explanation(
         "Risk Trends",
         "risk_trends",
-        create_risk_trends_chart(),
+        create_risk_trends_chart(ticker=ticker_input),
         position="left"
     )
 
-    # Chart 4: Risk Heatmap - explanation RIGHT
-    # Note: create_risk_heatmap_grid() reads from target_analysis.json directly
     render_chart_with_explanation(
         "Risk Heatmap",
         "risk_heatmap",
-        create_risk_heatmap_grid(),
+        create_risk_heatmap_grid(ticker=ticker_input),
         position="right"
     )
 
@@ -530,7 +591,6 @@ else:  # All Charts
     st.header("📊 Complete Dashboard")
     st.markdown("*All 24 visualizations across 6 pillars of financial analysis*")
 
-    # Use tabs for organized viewing
     tabs = st.tabs([
         "Revenue & Growth",
         "Profitability",
@@ -542,26 +602,24 @@ else:  # All Charts
 
     with tabs[0]:
         render_pillar_1()
-
     with tabs[1]:
         render_pillar_2()
-
     with tabs[2]:
         render_pillar_3()
-
     with tabs[3]:
         render_pillar_4()
-
     with tabs[4]:
         render_pillar_5()
-
     with tabs[5]:
         render_pillar_6()
 
-# Sidebar footer
+# =============================================================================
+# SIDEBAR FOOTER
+# =============================================================================
+
 st.sidebar.markdown("---")
 st.sidebar.info("**Data Sources**\n- SEC EDGAR (10-K/10-Q)\n- Yahoo Finance")
-st.sidebar.caption("Coverage: FY2015-FY2024 (24 charts)")
+st.sidebar.caption(f"Ticker: {ticker_input} | 24 charts")
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     "[View Documentation](https://github.com/anthropics/claude-code) | "
