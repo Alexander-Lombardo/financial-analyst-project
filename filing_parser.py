@@ -33,10 +33,10 @@ class FilingParser:
     ]
 
     EQUITY_PATTERNS = [
-        r'consolidated\s+statements?\s+of\s+(stockholders?|shareholders?)[\'|\u2019]?\s+equity',
-        r'statements?\s+of\s+(stockholders?|shareholders?)[\'|\u2019]?\s+equity',
-        r'(stockholders?|shareholders?)[\'|\u2019]?\s+equity',
-        r'changes\s+in\s+(stockholders?|shareholders?)[\'|\u2019]?\s+equity',
+        r'consolidated\s+statements?\s+of\s+(stockholders?|shareholders?)[\'|\u2019]?\s+(equity|investment)',
+        r'statements?\s+of\s+(stockholders?|shareholders?)[\'|\u2019]?\s+(equity|investment)',
+        r'(stockholders?|shareholders?)[\'|\u2019]?\s+(equity|investment)',
+        r'changes\s+in\s+(stockholders?|shareholders?)[\'|\u2019]?\s+(equity|investment)',
     ]
 
     RETAINED_EARNINGS_PATTERNS = [
@@ -197,15 +197,19 @@ class FilingParser:
                             score = self._score_table(table, idx * 10)
                             candidates.append((table, caption.get_text(strip=True), score))
 
-            # Check first row for header patterns
-            first_row = table.find('tr')
-            if first_row:
-                row_text = first_row.get_text(strip=True).lower()
+            # Check first few rows for header patterns (some tables have multi-row headers)
+            all_rows = table.find_all('tr')
+            for row in all_rows[:3]:  # Check first 3 rows
+                row_text = row.get_text(strip=True).lower()
                 for pattern in patterns:
                     if re.search(pattern, row_text, re.IGNORECASE):
                         if self._is_financial_data_table(table):
                             score = self._score_table(table, idx * 10)
-                            candidates.append((table, first_row.get_text(strip=True)[:100], score))
+                            candidates.append((table, row.get_text(strip=True)[:100], score))
+                            break
+                else:
+                    continue
+                break  # Found a match in this table, move to next table
 
         # Return the highest-scored candidate
         if candidates:
@@ -481,27 +485,12 @@ class FilingParser:
         """Extract retained earnings activity from equity statement (10-Q columnar format)."""
         rows = equity_data.get('rows', [])
 
-        # Strategy: Find the column with large balance values (>50000) for RE balances
-        # and find activity values (income/dividends) from those specific rows
+        # Strategy: Due to inconsistent column alignment from $ symbols and empty cells,
+        # we extract numeric values per row and identify RE by position relative to other columns.
+        # Typically: Common Stock Shares | Par Value | Add'l Paid-in | Retained Earnings | AOCI | Total
 
-        # Step 1: Find the balance column by looking for large numbers in "Balances" rows
-        balance_col_idx = None
-        for row in rows:
-            label = str(row[0]).lower() if row else ''
-            if 'balances as of' in label:
-                for idx, cell in enumerate(row):
-                    cell_str = str(cell).replace(',', '').replace('$', '').replace(' ', '')
-                    if cell_str.isdigit() and int(cell_str) > 50000:
-                        balance_col_idx = idx
-                        break
-                if balance_col_idx:
-                    break
-
-        if balance_col_idx is None:
-            return None
-
-        # Step 2: Extract retained earnings activity
         extracted_rows = []
+
         for row in rows:
             if not row:
                 continue
@@ -512,27 +501,47 @@ class FilingParser:
             # Skip empty or header rows
             if not row_label or 'amounts in millions' in row_label_lower:
                 continue
+            if row_label_lower in ['retained', 'earnings', 'retained earnings', 'stock', 'par', 'paid-in', 'capital']:
+                continue
+            if 'consolidated statements' in row_label_lower:
+                continue
+            if '(millions)' in row_label_lower or '(unaudited)' in row_label_lower:
+                continue
 
-            # For balance rows, use the balance column
-            if 'balances as of' in row_label_lower:
-                if len(row) > balance_col_idx:
-                    val = str(row[balance_col_idx]).strip()
-                    if val and val not in ['—', '-', '$', '']:
-                        extracted_rows.append([row_label, val])
+            # Extract all numeric values from this row
+            values = []
+            for cell in row[1:]:  # Skip the label
+                cell_str = str(cell).strip()
+                if cell_str in ['—', '-', '$', '', 'Common', 'Stock', 'Additional']:
+                    continue
+                # Check if it's a number (with optional parentheses for negatives)
+                cleaned = cell_str.replace(',', '').replace('(', '').replace(')', '').replace(' ', '').replace('$', '')
+                if cleaned.isdigit() or (cleaned and cleaned.replace('.', '').isdigit()):
+                    values.append(cell_str)
 
-            # For income/dividend rows, find any significant numeric value
+            # Date rows are balance rows (e.g., "February 3, 2024")
+            is_date_row = bool(re.match(
+                r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d',
+                row_label_lower
+            ))
+            is_balance_row = 'balances as of' in row_label_lower or is_date_row
+
+            # For date/balance rows, we expect ~5-6 values: Shares, Par, Add'l Paid-in, Retained, AOCI, Total
+            # Retained Earnings is typically the 4th value (index 3)
+            if is_balance_row and len(values) >= 4:
+                re_value = values[3]  # 4th column is typically Retained Earnings
+                extracted_rows.append([row_label, re_value])
+
+            # For activity rows (net earnings, dividends), find the non-zero RE column value
             elif any(term in row_label_lower for term in [
                 'consolidated net income', 'net income', 'net earnings',
                 'dividends declared', 'cash dividends'
             ]):
-                # Find the first significant value that could affect RE
-                for cell in row[1:]:
-                    cell_str = str(cell).strip()
-                    if cell_str in ['—', '-', '$', '']:
-                        continue
-                    cleaned = cell_str.replace(',', '').replace('(', '').replace(')', '').replace(' ', '').replace('$', '')
-                    if cleaned.isdigit() and int(cleaned) > 100:
-                        extracted_rows.append([row_label, cell_str])
+                # Find significant value that's not the total (usually 2nd non-zero after skipping small values)
+                for val in values:
+                    cleaned = val.replace(',', '').replace('(', '').replace(')', '').replace(' ', '').replace('$', '')
+                    if cleaned.isdigit() and int(cleaned) >= 100:
+                        extracted_rows.append([row_label, val])
                         break
 
         # Need at least balance rows and some activity
@@ -548,22 +557,60 @@ class FilingParser:
 
     def _build_retained_earnings_html(self, headers: list, rows: list) -> str:
         """Build HTML table for retained earnings statement."""
+        if not rows:
+            return ''
+
+        # Clean rows: extract label and non-empty numeric values
+        cleaned_rows = []
+        max_value_cols = 0
+
+        for row in rows:
+            label = ''
+            values = []
+
+            for cell in row:
+                cell_str = str(cell).strip()
+                if not cell_str or cell_str in ['$', '—', '-']:
+                    continue
+
+                # Check if it looks like a number (with optional parentheses, commas)
+                is_numeric = bool(re.match(r'^[\(\$\s]*[\d,]+\.?\d*[\)\s]*$', cell_str.replace(' ', '')))
+
+                if is_numeric:
+                    values.append(cell_str)
+                elif not label:
+                    label = cell_str
+
+            if label or values:
+                cleaned_rows.append((label, values))
+                max_value_cols = max(max_value_cols, len(values))
+
         html = ['<table class="financial-table">']
 
-        if headers:
+        # Add header row if we have multiple years
+        if max_value_cols > 1:
             html.append('<thead><tr>')
             html.append('<th>Description</th>')
-            for h in headers[1:]:  # Skip first empty column header
-                html.append(f'<th>{h}</th>')
+            # Generate year labels (most recent first based on typical SEC format)
+            for i in range(max_value_cols):
+                html.append(f'<th>Year {i + 1}</th>')
             html.append('</tr></thead>')
 
         html.append('<tbody>')
-        for row in rows:
+        for label, values in cleaned_rows:
+            if not label and not values:
+                continue
+
             html.append('<tr>')
-            for i, cell in enumerate(row):
-                tag = 'th' if i == 0 else 'td'
-                html.append(f'<{tag}>{cell}</{tag}>')
+            html.append(f'<th>{label}</th>')
+
+            # Pad values to consistent column count
+            for i in range(max_value_cols):
+                val = values[i] if i < len(values) else ''
+                html.append(f'<td>{val}</td>')
+
             html.append('</tr>')
+
         html.append('</tbody></table>')
 
         return '\n'.join(html)

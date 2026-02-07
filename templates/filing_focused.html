@@ -295,8 +295,9 @@
             Shareholders' Equity
             {% if not parsed_data.shareholders_equity.found %}<span style="opacity:0.5">(N/A)</span>{% endif %}
         </button>
-        <button class="statement-tab" data-tab="retained">
+        <button class="statement-tab" data-tab="retained" {% if not parsed_data.retained_earnings.found %}disabled title="Not found in filing"{% endif %}>
             Retained Earnings
+            {% if not parsed_data.retained_earnings.found %}<span style="opacity:0.5">(N/A)</span>{% endif %}
         </button>
     </div>
 
