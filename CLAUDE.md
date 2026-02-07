@@ -34,8 +34,18 @@ financial-analyst-project/
 ├── peer_ccc_analyzer.py        # Peer company CCC extraction
 ├── thesis_generator.py         # Investment thesis auto-generation
 ├── create_presentation.py      # PowerPoint generation
+├── cik_resolver.py             # Company CIK lookup and filing retrieval
+├── app.py                      # SEC Filing Browser Flask app
+├── filing_parser.py            # Financial statement parser
 ├── requirements.txt            # Python dependencies
 ├── .env                        # SEC credentials (git-ignored)
+├── templates/                  # Flask HTML templates
+│   ├── base.html
+│   ├── index.html
+│   ├── company.html
+│   ├── filing_focused.html
+│   └── error.html
+├── static/css/                 # CSS styles
 ├── data/
 │   ├── Target 10Q/sec-edgar-filings/  # Downloaded SEC filings (git-ignored)
 │   ├── peer_filings/                  # Peer company SEC filings (git-ignored)
@@ -125,6 +135,51 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 - Inventory: Fallback chain includes `FIFOInventoryAmount`, `InventoryLIFO`
 
 **Output**: `data/peer_comparison_data.json` with multi-year CCC data per company
+
+### 6. SEC Filing Browser (`app.py` + `filing_parser.py`)
+
+**Purpose**: Flask web application for browsing and viewing SEC filings with parsed financial statements.
+
+**Main Components**:
+- `app.py` - Flask routes for company search, filing list, and filing views
+- `filing_parser.py` - Extracts and formats financial statements from SEC HTML
+
+**Key Features**:
+- Company search by ticker or name
+- Filing list with form type and year filtering
+- Focused view with tabbed financial statements
+- Full filing view with original SEC content
+
+**Financial Statement Parsing** (`FilingParser` class):
+
+| Statement | Source Pattern | Output |
+|-----------|---------------|--------|
+| Income Statement | "Consolidated Statements of Operations/Income" | Revenue, expenses, net income |
+| Balance Sheet | "Consolidated Balance Sheets" | Assets, liabilities, equity |
+| Cash Flow | "Consolidated Statements of Cash Flows" | Operating/investing/financing |
+| Shareholders' Equity | "Stockholders'/Shareholders' Equity" | Equity component changes |
+| Retained Earnings | Extracted from equity statement | Beginning/ending balance, dividends |
+
+**Retained Earnings Extraction** (handles both filing formats):
+- **10-K (Annual)**: Extracts row-based "Retained Earnings:" section with beginning balance, net income, dividends, ending balance
+- **10-Q (Quarterly)**: Extracts retained earnings column from columnar equity statement, identifies balance rows and activity
+
+**Table Formatting**:
+- `_build_clean_financial_table()` - Handles colspan misalignment in SEC HTML
+- Extracts labels and numeric values intelligently
+- Removes empty columns for readability
+
+**Running the Browser**:
+```bash
+export PORT=5003  # Optional, defaults to 5000
+python3 app.py
+# Open http://localhost:5003
+```
+
+**URL Examples**:
+- Search: `http://localhost:5003/search?q=apple`
+- Company filings: `http://localhost:5003/company/HD`
+- View filing: `http://localhost:5003/view/HD/0000354950-25-000085`
 
 ## Data Flow
 
@@ -220,6 +275,7 @@ Creates 24 interactive Plotly charts. See [Chart Catalog](#chart-catalog) below.
 | Pillar 4 | ✅ | Cash flow dynamics (FCF, Sankey), 2 charts |
 | Pillar 5 | ✅ | Valuation metrics (P/E bands, peer scatter), 2 charts |
 | Peer CCC | ✅ | Automated peer company CCC extraction (WMT, AMZN, COST, KR) |
+| SEC Browser | ✅ | Flask web app for browsing filings with parsed financial statements |
 
 ## Testing & Verification
 
@@ -248,6 +304,10 @@ python3 test_kroger_extraction.py         # Peer CCC extraction test
 
 # Run peer CCC analyzer
 python3 peer_ccc_analyzer.py              # Extract CCC for all peers
+
+# Run SEC Filing Browser
+export PORT=5003
+python3 app.py                            # Browse filings at http://localhost:5003
 ```
 
 ## Environment Setup
