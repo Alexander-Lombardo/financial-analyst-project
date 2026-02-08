@@ -31,7 +31,7 @@ open output/Target_Financial_Analysis.pptx
 - **12 quarters of quarterly data** - 10-Q filings for recent quarters
 - **XBRL parsing** - Accurate extraction directly from SEC XBRL tags
 - **24 interactive charts** - Comprehensive financial visualizations
-- **PowerPoint presentation** - Ready-to-present analysis organized by 5 pillars
+- **37-slide PowerPoint** - Professional presentation with pillar summaries
 
 ## 5 Pillars of Analysis
 
@@ -47,10 +47,17 @@ open output/Target_Financial_Analysis.pptx
 
 | File | Description |
 |------|-------------|
-| `output/Target_Financial_Analysis.pptx` | PowerPoint presentation |
+| `output/Target_Financial_Analysis.pptx` | 37-slide PowerPoint presentation |
 | `output/chart_*.html` | 24 interactive Plotly charts |
 | `output/target_timeseries.json` | Time-series data for charts |
 | `output/target_analysis.json` | Detailed analysis data |
+
+### Presentation Structure
+
+- 3 introduction slides (Title, Executive Summary, Investment Thesis)
+- 5 pillar section dividers
+- 24 chart slides across 5 pillars
+- 5 pillar summary slides with key findings
 
 ## Charts Generated
 
