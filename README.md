@@ -1,103 +1,145 @@
-# SEC Filing Browser
+# Target Financial Analyzer
 
-A Flask web application for browsing and analyzing SEC filings. Provides a clean interface to search companies, view filing lists, and read individual 10-K and 10-Q filings with parsed financial statements.
+Automated financial analysis tool that extracts metrics from Target Corporation's SEC 10-K and 10-Q filings and generates:
+- 24 interactive Plotly charts
+- Professional PowerPoint presentation
+
+## Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/target-financial-analyzer.git
+cd target-financial-analyzer
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure SEC credentials
+cp .env.example .env
+# Edit .env with your name and email
+
+# 4. Run the analysis
+python run_analysis.py
+
+# 5. View results
+open output/Target_Financial_Analysis.pptx
+```
 
 ## Features
 
-- **Company Search**: Search for companies by ticker symbol or name
-- **Filing List**: View all SEC filings for a company with filtering by form type and year
-- **Focused View**: Parsed financial statements with clean, readable formatting
-- **Full Filing View**: Original SEC filing content
+- **10 years of annual data** - 10-K filings from FY2015 to FY2024
+- **12 quarters of quarterly data** - 10-Q filings for recent quarters
+- **XBRL parsing** - Accurate extraction directly from SEC XBRL tags
+- **24 interactive charts** - Comprehensive financial visualizations
+- **PowerPoint presentation** - Ready-to-present analysis organized by 5 pillars
 
-## Financial Statement Parsing
+## 5 Pillars of Analysis
 
-The filing parser (`filing_parser.py`) extracts and formats the following statements:
+| Pillar | Focus | Charts |
+|--------|-------|--------|
+| 1. Growth & Revenue | Is the business growing? | 4 |
+| 2. Profitability & Margins | How efficiently is profit generated? | 6 |
+| 3. Liquidity & Solvency | Can the company pay its bills? | 5 |
+| 4. Operational Efficiency | How well are assets utilized? | 4 |
+| 5. Valuation & Risk | Is the stock fairly priced? | 5 |
 
-### Income Statement
-- Extracts from "Consolidated Statements of Operations/Income/Earnings"
-- Displays revenues, expenses, and net income with proper column alignment
+## Output Files
 
-### Balance Sheet
-- Extracts from "Consolidated Balance Sheets"
-- Shows assets, liabilities, and shareholders' equity
+| File | Description |
+|------|-------------|
+| `output/Target_Financial_Analysis.pptx` | PowerPoint presentation |
+| `output/chart_*.html` | 24 interactive Plotly charts |
+| `output/target_timeseries.json` | Time-series data for charts |
+| `output/target_analysis.json` | Detailed analysis data |
 
-### Cash Flow Statement
-- Extracts from "Consolidated Statements of Cash Flows"
-- Operating, investing, and financing activities
+## Charts Generated
 
-### Shareholders' Equity
-- Extracts from "Consolidated Statements of Stockholders'/Shareholders' Equity"
-- Shows changes in equity components over time
+### Pillar 1: Growth & Revenue
+1. Revenue & Net Income (10-Year Annual)
+2. Revenue Growth YoY
+3. Revenue vs Inventory Growth
+4. Revenue & Net Income (Quarterly)
 
-### Retained Earnings
-Intelligent extraction that handles both filing formats:
+### Pillar 2: Profitability & Margins
+5. Margin Analysis (Gross/Operating/Net)
+6. Margin Bridge Waterfall
+7. Operating Expense Breakdown
+8. EBITDA Bridge
+9. Operating Margin Waterfall
+10. Earnings Quality
 
-- **10-K (Annual)**: Extracts the dedicated "Retained Earnings:" section showing:
-  - Beginning balance
-  - Net income
-  - Dividends
-  - Ending balance
+### Pillar 3: Liquidity & Solvency
+11. Current Ratio Gauge
+12. Capital Structure
+13. Debt-to-EBITDA Trend
+14. Debt Health (Interest Coverage)
+15. Statement of Cash Flows
 
-- **10-Q (Quarterly)**: Extracts retained earnings activity from the columnar equity statement:
-  - Quarterly beginning/ending balances
-  - Net income contributions
-  - Dividend declarations
+### Pillar 4: Operational Efficiency
+16. DuPont Analysis
+17. Inventory Efficiency
+18. Cash Conversion Cycle
+19. OCF vs CapEx
 
-## Table Formatting
+### Pillar 5: Valuation & Risk
+20. Valuation vs Growth Scatter
+21. Historical P/E Band
+22. Cash Flow Sankey
+23. Risk Trends
+24. Risk Heatmap
 
-All financial tables are cleaned and formatted for readability:
-- Empty columns removed
-- Values properly aligned
-- Section headers preserved
-- Numeric data formatted consistently
+## Requirements
 
-## Running the Application
+- Python 3.8+
+- SEC EDGAR API credentials (free registration)
+- Internet connection for SEC filing downloads
 
-```bash
-# Set port (optional, defaults to 5000)
-export PORT=5003
+### SEC Credentials
 
-# Run the application
-python3 app.py
+The SEC requires identification for API access. Create a `.env` file:
+
+```
+SEC_USER_NAME=Your Name
+SEC_USER_EMAIL=your.email@example.com
 ```
 
-Then open `http://localhost:5003` in your browser.
+This is used in the User-Agent header as required by SEC EDGAR.
 
 ## Project Structure
 
 ```
-├── app.py              # Flask web application
-├── filing_parser.py    # SEC filing parser for financial statements
-├── cik_resolver.py     # Company CIK lookup and filing retrieval
-├── sec_data_fetcher.py # SEC EDGAR API client
-├── templates/          # HTML templates
-│   ├── base.html
-│   ├── index.html
-│   ├── company.html
-│   ├── filing_focused.html
-│   └── filing_full.html
-└── static/             # CSS and JavaScript assets
+target-financial-analyzer/
+├── run_analysis.py           # Main entry point
+├── financial_analyzer.py     # Core XBRL parsing & analysis
+├── sec_data_fetcher.py       # SEC EDGAR downloader
+├── visualize_data.py         # Chart generation (24 Plotly charts)
+├── create_presentation.py    # PowerPoint generation
+├── market_data_fetcher.py    # Yahoo Finance integration
+├── xbrl_parser.py            # XBRL tag extraction utilities
+├── requirements.txt          # Python dependencies
+├── .env.example              # SEC credentials template
+└── data/
+    └── Target 10Q/           # Downloaded SEC filings
 ```
 
-## Dependencies
+## Key Metrics Extracted
 
-- Flask
-- BeautifulSoup4
-- Requests
+| Category | Metrics |
+|----------|---------|
+| Revenue | Net Sales, Revenue Growth YoY |
+| Profitability | Gross Margin, Operating Margin, Net Margin |
+| Efficiency | Inventory Turnover, Days Sales of Inventory |
+| Debt | Interest Coverage, Debt-to-Equity, Debt-to-EBITDA |
+| Liquidity | Current Ratio, Quick Ratio |
+| Cash Flow | Free Cash Flow, FCF Margin |
+| Valuation | P/E Ratio, P/S Ratio |
 
-## Usage Examples
+## License
 
-1. **View Home Depot 10-K**:
-   ```
-   http://localhost:5003/view/HD/0000354950-25-000085
-   ```
+MIT License - see LICENSE file for details.
 
-2. **View Walmart 10-Q**:
-   ```
-   http://localhost:5003/view/WMT/0000104169-25-000191
-   ```
+## Acknowledgments
 
-3. **Search for a company**:
-   ```
-   http://localhost:5003/search?q=apple
-   ```
+- Financial data sourced from SEC EDGAR
+- Market data from Yahoo Finance
+- Built with Plotly, python-pptx, and BeautifulSoup4

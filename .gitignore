@@ -49,12 +49,18 @@ wheels/
 ehthumbs.db
 Thumbs.db
 
-# Project specific
-data/Target 10Q/*.zip
-output/*.pdf
-*.log
-*_cache.json
+# Output files (regeneratable)
+output/*.html
+output/*.json
+output/*.pptx
+output/*.png
+output/*.txt
 
-# SEC EDGAR Downloaded Filings - DO NOT COMMIT
-# These are large files that can be re-downloaded automatically
-data/Target 10Q/sec-edgar-filings/
+# SEC EDGAR Downloaded Filings (large, re-downloadable)
+data/*/sec-edgar-filings/
+
+# Cache files
+.sec_cache/
+data/market_data_cache.json
+*_cache.json
+*.log

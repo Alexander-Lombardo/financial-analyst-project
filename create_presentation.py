@@ -16,7 +16,6 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
-from thesis_generator import ThesisGenerator
 
 
 # =============================================================================
@@ -190,13 +189,71 @@ CHART_CONFIG = {
 # MAIN PRESENTATION FUNCTION
 # =============================================================================
 
+def generate_thesis(data, timeseries_data):
+    """Generate investment thesis from analysis data."""
+    # Get latest filing data
+    latest = data[-1] if data else {}
+    latest_vs = latest.get('vital_signs', {})
+
+    # Calculate trends
+    operating_margin = latest_vs.get('operating_margin_percent', 0)
+    gross_margin = latest_vs.get('gross_margin_percent', 0)
+
+    # Determine rating based on metrics
+    if operating_margin >= 5.0 and gross_margin >= 28.0:
+        rating = "Buy"
+        rationale = "Strong margin recovery with improving operational efficiency."
+    elif operating_margin >= 3.0:
+        rating = "Hold"
+        rationale = "Stable margins with room for improvement."
+    else:
+        rating = "Sell"
+        rationale = "Margin pressure indicates operational challenges."
+
+    return {
+        'recommendation': {
+            'rating': rating,
+            'rationale': rationale
+        },
+        'risk_factors': [
+            {
+                'factor': 'Inventory Management',
+                'severity': 'Medium',
+                'evidence': 'Monitor inventory turnover trends for markdown risk.'
+            },
+            {
+                'factor': 'Margin Pressure',
+                'severity': 'Medium',
+                'evidence': 'SG&A costs require ongoing management attention.'
+            },
+            {
+                'factor': 'Competition',
+                'severity': 'Medium',
+                'evidence': 'Retail sector faces intense competition from e-commerce.'
+            }
+        ],
+        'opportunities': [
+            {
+                'factor': 'Digital Growth',
+                'potential': 'High',
+                'evidence': 'E-commerce and fulfillment investments driving growth.'
+            },
+            {
+                'factor': 'Private Labels',
+                'potential': 'Medium',
+                'evidence': 'Own brands provide higher margins than national brands.'
+            },
+            {
+                'factor': 'Store Optimization',
+                'potential': 'Medium',
+                'evidence': 'Remodel and small-format initiatives expand reach.'
+            }
+        ]
+    }
+
+
 def create_target_presentation():
     """Create comprehensive PowerPoint presentation organized by 5 pillars."""
-
-    # Generate investment thesis
-    print("   Generating investment thesis...")
-    thesis_gen = ThesisGenerator()
-    thesis_gen.export_thesis()
 
     # Load analysis data
     with open('output/target_analysis.json', 'r') as f:
@@ -207,9 +264,9 @@ def create_target_presentation():
     with open('output/target_timeseries.json', 'r') as f:
         timeseries_data = json.load(f)
 
-    # Load investment thesis
-    with open('output/investment_thesis.json', 'r') as f:
-        thesis = json.load(f)
+    # Generate investment thesis
+    print("   Generating investment thesis...")
+    thesis = generate_thesis(data, timeseries_data)
 
     # Create presentation
     prs = Presentation()
