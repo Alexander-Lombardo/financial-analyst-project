@@ -366,33 +366,57 @@ def create_margin_analysis_chart(data):
 
 def create_operating_margin_waterfall(data):
     """Chart 3: Operating Margin Waterfall (Year-over-Year Changes)"""
-    periods = [p['period'] for p in data['periods']]
     operating_margins = data['metrics']['margins']['operating_margin_percent']
 
     # Filter quarterly data
-    quarterly_periods = []
-    quarterly_margins = []
+    quarterly_data = []
     for i, period in enumerate(data['periods']):
         if period['filing_type'] == '10-Q':
-            quarterly_periods.append(period['period'])
-            quarterly_margins.append(operating_margins[i])
+            quarterly_data.append({
+                'period': period['period'],
+                'margin': operating_margins[i]
+            })
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(x=quarterly_periods, y=quarterly_margins,
-                   mode='lines+markers', name='Operating Margin %',
-                   line=dict(color='green', width=3), marker=dict(size=8))
-    )
+    # Build waterfall data: start value, deltas, end value
+    x_labels = [quarterly_data[0]['period']]
+    y_values = [quarterly_data[0]['margin']]
+    measures = ['absolute']
+    text_values = [f"{quarterly_data[0]['margin']:.2f}%"]
 
-    # Add baseline reference line (FY2024)
-    fig.add_hline(y=5.22, line_dash="dash", line_color="red",
-                  annotation_text="FY2024 Baseline (5.22%)")
+    # Add changes between quarters
+    for i in range(1, len(quarterly_data)):
+        delta = quarterly_data[i]['margin'] - quarterly_data[i-1]['margin']
+        x_labels.append(quarterly_data[i]['period'])
+        y_values.append(delta)
+        measures.append('relative')
+        sign = '+' if delta >= 0 else ''
+        text_values.append(f"{sign}{delta:.2f}%")
+
+    # Add final total
+    x_labels.append('Final')
+    y_values.append(quarterly_data[-1]['margin'])
+    measures.append('total')
+    text_values.append(f"{quarterly_data[-1]['margin']:.2f}%")
+
+    fig = go.Figure(go.Waterfall(
+        name="Operating Margin",
+        orientation="v",
+        measure=measures,
+        x=x_labels,
+        y=y_values,
+        text=text_values,
+        textposition="outside",
+        connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker": {"color": "#2E7D32"}},  # Green for increases
+        decreasing={"marker": {"color": "#C62828"}},  # Red for decreases
+        totals={"marker": {"color": "#1565C0"}}       # Blue for totals
+    ))
 
     fig.update_layout(
-        title="Target: Operating Margin Trend (Quarterly)",
+        title="Target: Operating Margin Waterfall (Quarterly Changes)<br><sub>Shows how margin evolved quarter-over-quarter</sub>",
         xaxis_title="Quarter",
         yaxis_title="Operating Margin %",
-        hovermode='x unified',
+        showlegend=False,
         height=500
     )
 

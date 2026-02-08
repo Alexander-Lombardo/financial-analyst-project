@@ -22,6 +22,58 @@ from pptx.dml.color import RGBColor
 # CHART CONFIGURATION - All 24 charts organized by pillar
 # =============================================================================
 
+# =============================================================================
+# PILLAR SUMMARIES - Key findings for each pillar
+# =============================================================================
+
+PILLAR_SUMMARIES = {
+    "pillar_1": {
+        "title": "Growth & Revenue Summary",
+        "findings": [
+            ("Revenue Trajectory", "Target has grown from ~$70B to over $100B in annual revenue over 10 years, demonstrating consistent top-line expansion."),
+            ("Seasonal Patterns", "Q4 (holiday season) consistently delivers peak revenue, with Q1 showing post-holiday normalization."),
+            ("Net Income Correlation", "Profits generally track revenue growth, though margin compression in FY2022 temporarily decoupled the relationship."),
+            ("Inventory Alignment", "Inventory levels have largely tracked sales growth, with occasional buildups requiring markdown management."),
+        ]
+    },
+    "pillar_2": {
+        "title": "Profitability & Margins Summary",
+        "findings": [
+            ("Margin Recovery", "Operating margins have recovered from FY2022 lows (~3%) back toward historical norms (~5-6%)."),
+            ("Cost Structure", "COGS represents ~70% of revenue; SG&A at ~20% leaves operating income around 5-6%."),
+            ("Earnings Quality", "Operating cash flow consistently exceeds net income, indicating high-quality earnings with strong cash conversion."),
+            ("EBITDA Health", "D&A add-back of ~$2-3B annually demonstrates significant capital investment in stores and infrastructure."),
+        ]
+    },
+    "pillar_3": {
+        "title": "Liquidity & Solvency Summary",
+        "findings": [
+            ("Current Ratio", "Ratio below 1.0 is typical for retail (inventory turns quickly); Target operates efficiently with ~0.9x."),
+            ("Debt Levels", "Long-term debt of ~$14B is manageable with Debt/EBITDA around 2-3x, well within healthy range."),
+            ("Interest Coverage", "Coverage ratio of 8-12x indicates strong ability to service debt obligations."),
+            ("Cash Generation", "Consistent positive operating cash flow of $6-8B annually provides financial flexibility."),
+        ]
+    },
+    "pillar_4": {
+        "title": "Operational Efficiency Summary",
+        "findings": [
+            ("DuPont Decomposition", "ROE driven primarily by asset turnover and financial leverage rather than profit margins."),
+            ("Inventory Turnover", "Turns inventory ~6x annually (60 days on hand), competitive with retail peers."),
+            ("Cash Conversion Cycle", "CCC of ~30-40 days reflects efficient working capital management."),
+            ("Free Cash Flow", "OCF consistently exceeds CapEx, generating $2-4B in annual free cash flow for shareholders."),
+        ]
+    },
+    "pillar_5": {
+        "title": "Valuation & Risk Summary",
+        "findings": [
+            ("Valuation", "P/E ratio fluctuates between 10-20x; currently trading near historical averages."),
+            ("Risk Factors", "Shrink/theft mentions have increased in recent filings, indicating ongoing loss prevention challenges."),
+            ("Capital Allocation", "Management prioritizes dividends, share buybacks, and store investments."),
+            ("Competitive Position", "Positioned between discount (Walmart) and premium (specialty) retailers with differentiated assortment."),
+        ]
+    },
+}
+
 CHART_CONFIG = {
     # Pillar 1: Growth & Revenue (4 charts)
     "pillar_1": {
@@ -279,40 +331,45 @@ def create_target_presentation():
     add_executive_summary(prs, data)
     add_investment_thesis_slide(prs, thesis)
 
-    # === PILLAR 1: Growth & Revenue (5 slides) ===
+    # === PILLAR 1: Growth & Revenue ===
     print("   Creating Pillar 1: Growth & Revenue...")
     pillar = CHART_CONFIG["pillar_1"]
     add_pillar_section_slide(prs, 1, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, 1, PILLAR_SUMMARIES["pillar_1"])
 
-    # === PILLAR 2: Profitability & Margins (7 slides) ===
+    # === PILLAR 2: Profitability & Margins ===
     print("   Creating Pillar 2: Profitability & Margins...")
     pillar = CHART_CONFIG["pillar_2"]
     add_pillar_section_slide(prs, 2, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, 2, PILLAR_SUMMARIES["pillar_2"])
 
-    # === PILLAR 3: Liquidity & Solvency (6 slides) ===
+    # === PILLAR 3: Liquidity & Solvency ===
     print("   Creating Pillar 3: Liquidity & Solvency...")
     pillar = CHART_CONFIG["pillar_3"]
     add_pillar_section_slide(prs, 3, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, 3, PILLAR_SUMMARIES["pillar_3"])
 
-    # === PILLAR 4: Operational Efficiency (5 slides) ===
+    # === PILLAR 4: Operational Efficiency ===
     print("   Creating Pillar 4: Operational Efficiency...")
     pillar = CHART_CONFIG["pillar_4"]
     add_pillar_section_slide(prs, 4, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, 4, PILLAR_SUMMARIES["pillar_4"])
 
-    # === PILLAR 5: Valuation & Risk (6 slides) ===
+    # === PILLAR 5: Valuation & Risk ===
     print("   Creating Pillar 5: Valuation & Risk...")
     pillar = CHART_CONFIG["pillar_5"]
     add_pillar_section_slide(prs, 5, pillar["title"], pillar["question"])
     for chart in pillar["charts"]:
         add_chart_slide(prs, chart["title"], chart["file"], chart["description"])
+    add_pillar_summary_slide(prs, 5, PILLAR_SUMMARIES["pillar_5"])
 
     # Save presentation
     output_path = 'output/Target_Financial_Analysis.pptx'
@@ -320,13 +377,14 @@ def create_target_presentation():
 
     # Summary output
     total_charts = sum(len(p["charts"]) for p in CHART_CONFIG.values())
-    total_slides = 3 + 5 + len(CHART_CONFIG)  # intro + section dividers + charts
+    total_slides = 3 + 5 + total_charts + 5  # intro + section dividers + charts + summaries
 
     print(f"\n   Presentation created: {output_path}")
-    print(f"   {3 + 5 * 2 + total_charts} slides total:")
+    print(f"   {total_slides} slides total:")
     print("     - 3 introduction slides (Title, Executive Summary, Investment Thesis)")
     print("     - 5 pillar section dividers")
     print(f"     - {total_charts} chart slides across 5 pillars")
+    print("     - 5 pillar summary slides with key findings")
     print("     - Charts embedded as PNG images (run visualize_data.py first)")
 
     return output_path
@@ -335,6 +393,51 @@ def create_target_presentation():
 # =============================================================================
 # PILLAR SECTION SLIDE
 # =============================================================================
+
+def add_pillar_summary_slide(prs, pillar_num, summary_config):
+    """Add a summary slide at the end of each pillar section."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(0.6))
+    title_frame = title_box.text_frame
+    p = title_frame.paragraphs[0]
+    p.text = summary_config["title"]
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(204, 0, 0)  # Target red
+
+    # Key findings
+    findings_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(9), Inches(6))
+    findings_frame = findings_box.text_frame
+    findings_frame.word_wrap = True
+
+    for i, (finding_title, finding_detail) in enumerate(summary_config["findings"]):
+        # Finding title (bold)
+        p = findings_frame.paragraphs[0] if i == 0 else findings_frame.add_paragraph()
+        p.text = finding_title
+        p.font.size = Pt(18)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(50, 50, 50)
+        p.space_before = Pt(12) if i > 0 else Pt(0)
+
+        # Finding detail
+        p = findings_frame.add_paragraph()
+        p.text = finding_detail
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(80, 80, 80)
+        p.space_after = Pt(6)
+
+    # Pillar indicator at bottom
+    indicator_box = slide.shapes.add_textbox(Inches(0.5), Inches(7.0), Inches(9), Inches(0.3))
+    indicator_frame = indicator_box.text_frame
+    p = indicator_frame.paragraphs[0]
+    p.text = f"Pillar {pillar_num} | Key Takeaways"
+    p.font.size = Pt(11)
+    p.font.color.rgb = RGBColor(150, 150, 150)
+    p.font.italic = True
+    p.alignment = PP_ALIGN.RIGHT
+
 
 def add_pillar_section_slide(prs, pillar_num, title, question):
     """Add a pillar section divider slide."""
