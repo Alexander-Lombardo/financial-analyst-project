@@ -50,17 +50,14 @@ ehthumbs.db
 Thumbs.db
 
 # Output files (regeneratable)
-output/*.html
-output/*.json
-output/*.pptx
-output/*.png
-output/*.txt
+output/*
+!output/.gitkeep
 
 # SEC EDGAR Downloaded Filings (large, re-downloadable)
-data/*/sec-edgar-filings/
+data/Target 10Q/
+!data/.gitkeep
 
 # Cache files
 .sec_cache/
-data/market_data_cache.json
 *_cache.json
 *.log
