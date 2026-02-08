@@ -384,6 +384,7 @@ class CompanyFinancialAnalyzer:
             'us-gaap:OperatingIncomeLoss': 'operating_income',
             'us-gaap:InventoryNet': 'inventory',
             'us-gaap:InterestExpense': 'interest_expense',
+            'us-gaap:InterestExpenseNonoperating': 'interest_expense',  # FY2024+ tag variant
             'us-gaap:LongTermDebt': 'long_term_debt',
             'us-gaap:ShortTermBorrowings': 'short_term_debt',
             'us-gaap:DebtCurrent': 'short_term_debt',
