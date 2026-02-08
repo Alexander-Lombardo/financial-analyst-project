@@ -1,10 +1,34 @@
-# Target Corporation Financial Analyzer
+# Financial Analysis Dashboard
 
-Automated SEC filing analysis tool that extracts financial metrics from 10-K and 10-Q XBRL filings and generates comprehensive reports.
+Automated SEC filing analysis tool that extracts financial metrics from 10-K and 10-Q XBRL filings for **any publicly traded US company**.
+
+## Key Features
+
+- **Dynamic Ticker Lookup**: Analyze ~10,000 SEC-registered companies by entering any ticker symbol
+- **Interactive Dashboard**: Streamlit-based UI with 24 charts across 6 financial pillars
+- **Automated Downloads**: SEC EDGAR filings fetched automatically (10 years 10-K, 3 years 10-Q)
+- **XBRL Parsing**: Extracts 40+ financial metrics using US-GAAP taxonomy
+- **24-Hour Caching**: Fast repeated access to company data
+
+## Quick Start
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Configure SEC credentials
+cp .env.example .env
+# Edit .env with your name and email
+
+# 3. Run the interactive dashboard
+streamlit run dashboard.py
+
+# 4. Enter any ticker (e.g., TGT, F, AAPL, NFLX) and click "Analyze"
+```
 
 ## Overview
 
-This analyzer implements a **three-phase approach** to financial analysis:
+This analyzer implements a **multi-phase approach** to financial analysis:
 
 ### Phase 1: The Baseline (10-K Analysis)
 Extracts "Vital Signs" from the annual 10-K report:
@@ -98,14 +122,43 @@ Comprehensive trend analysis with multiple comparison methods:
 }
 ```
 
-**7 Interactive Charts:**
-1. Revenue vs Inventory Growth (dual-axis line, **15 quarters Q1 2022-Q3 2025 including calculated Q4**)
-2. Revenue Growth Year-over-Year (dual-axis: revenue bars + YoY growth % line, **15 quarters with Q4**)
-3. **Margin Analysis** (3-line chart: Gross, Operating, Net Profit margins, **15 quarters Q1 2022-Q3 2025**)
-4. Operating Margin Waterfall (quarterly trend)
-5. Inventory Efficiency (turnover + DSI)
-6. Debt Health (coverage ratio + total debt)
-7. Statement of Cash Flows (3 lines: operating, investing, financing)
+**24 Interactive Charts across 6 Pillars:**
+
+**Pillar 1: Revenue & Growth**
+1. Revenue & Net Income (10-Year Annual)
+2. Revenue Growth Year-over-Year
+3. Revenue vs Inventory Growth
+4. Revenue & Net Income Long-Term (Quarterly)
+
+**Pillar 2: Profitability & Margins**
+5. Margin Analysis (Gross/Operating/Net)
+6. Margin Bridge Waterfall
+7. Operating Expense Breakdown (100% stacked)
+8. Earnings Quality (Net Income vs OCF)
+9. EBITDA Bridge
+
+**Pillar 3: Liquidity & Solvency**
+10. Current Ratio Gauge
+11. Capital Structure Donut
+12. Debt-to-EBITDA Trend
+13. Debt Health (Interest Coverage)
+
+**Pillar 4: Operational Efficiency**
+14. DuPont Analysis Breakdown
+15. Cash Conversion Cycle (vs Peers)
+16. Inventory Efficiency
+17. Operating Margin Waterfall
+
+**Pillar 5: Cash Flow Dynamics**
+18. Operating CF vs CapEx
+19. Statement of Cash Flows
+20. Cash Flow Allocation (Sankey)
+
+**Pillar 6: Valuation & Risk**
+21. Valuation vs Growth (Peer Comparison)
+22. Historical P/E Band
+23. Risk Trends
+24. Risk Heatmap
 
 ## Installation
 
@@ -133,10 +186,41 @@ cp .env.example .env
 
 ## Usage
 
-### Quick Start
+### Interactive Dashboard (Recommended)
 
 ```bash
-# Run the analyzer (automatically downloads SEC filings)
+# Start the Streamlit dashboard
+streamlit run dashboard.py
+```
+
+1. Open http://localhost:8501 in your browser
+2. Enter any ticker symbol (e.g., `F` for Ford, `AAPL` for Apple)
+3. Click "Analyze Company" to download and process SEC filings
+4. Explore 24 interactive charts across 6 pillars:
+   - Revenue & Growth
+   - Profitability & Margins
+   - Liquidity & Solvency
+   - Operational Efficiency
+   - Cash Flow Dynamics
+   - Valuation & Risk
+
+### Command Line Usage
+
+```bash
+# Analyze any company by ticker
+python company_analyzer.py AAPL
+
+# Force refresh (re-download even if cached)
+python company_analyzer.py F --force
+
+# Generate visualizations for a specific company
+python visualize_data.py --ticker TGT
+```
+
+### Legacy Single-Company Mode
+
+```bash
+# Run the original Target-focused analyzer
 python financial_analyzer.py
 
 # Generate interactive visualizations
@@ -149,30 +233,18 @@ python thesis_generator.py
 python create_presentation.py
 ```
 
-The analyzer will automatically:
-1. **Download** 5 years of 10-K reports and 12 quarters of 10-Q reports from SEC EDGAR
-2. **Extract** financial metrics from each filing using XBRL parsing
-3. **Analyze** trends and compare against baseline
-4. **Export** results to:
-   - `output/target_analysis.json` (detailed format)
-   - `output/target_timeseries.json` (time-series format)
-   - `output/target_summary.txt` (human-readable report)
-   - `output/executive_insights.json` (key insights for reports - Phase 4)
+### What Gets Generated
 
-The visualization script will generate:
-- 10 interactive HTML charts in the `output/` directory (7 from Phase 3 + 3 from Phase 4)
-- Charts include hover tooltips, zoom, and pan features
-- Open any `.html` file in your browser to view
+For each company analyzed, the tool creates:
+- `output/{ticker}_analysis.json` - Detailed financial data
+- `output/{ticker}_timeseries.json` - Time-series format for charting
+- `output/{ticker}_summary.txt` - Human-readable report
+- `output/{ticker}_executive_insights.json` - Key insights
 
-The thesis generator (Phase 4) will produce:
-- Auto-generated investment thesis with Buy/Hold/Sell recommendation
-- Risk factor analysis and opportunity identification
-- Exported to `output/investment_thesis.json`
-
-The presentation generator (Phase 4) will create:
-- Professional PowerPoint with 11 slides including Phase 4 enhancements
-- Investment thesis, margin bridge, and risk heatmap slides
-- Links to all 10 interactive charts
+The dashboard displays 24 interactive Plotly charts with:
+- Hover tooltips showing exact values
+- Zoom and pan features
+- Explanatory text for each chart
 
 ### SEC Credentials Setup
 
@@ -195,37 +267,42 @@ The SEC requires all automated downloads to include contact information in the U
 
 ### Data Structure (Automated)
 
-After the first run, SEC filings are organized automatically:
+After analyzing companies, data is organized automatically:
 
 ```
 financial-analyst-project/
 ├── data/
-│   └── Target 10Q/
-│       └── sec-edgar-filings/          # Auto-downloaded (git-ignored)
-│           └── TGT/
-│               ├── 10-K/
-│               │   ├── 0000027419-25-000018/
-│               │   │   └── primary-document.html
-│               │   └── ... (5 years)
-│               └── 10-Q/
-│                   ├── 0000027419-25-000101/
-│                   │   └── primary-document.html
-│                   └── ... (12 quarters)
+│   ├── sec_company_tickers.json        # SEC ticker cache (~10,000 companies, 24hr TTL)
+│   ├── TGT/                            # Per-company SEC filings
+│   │   └── sec-edgar-filings/
+│   │       ├── 10-K/                   # 10 years of annual reports
+│   │       └── 10-Q/                   # 12 quarters of quarterly reports
+│   ├── F/                              # Ford filings
+│   ├── AAPL/                           # Apple filings
+│   └── ...                             # Any analyzed company
 ├── output/
-│   ├── target_analysis.json            # Detailed format
-│   ├── target_timeseries.json          # Time-series format (Phase 3)
-│   ├── target_summary.txt              # Human-readable report
-│   ├── chart_revenue_vs_inventory.html # Interactive charts (Phase 3)
-│   ├── chart_revenue_growth_yoy.html   # Revenue Growth YoY (Phase 3)
-│   ├── chart_operating_margin_waterfall.html
-│   ├── chart_inventory_efficiency.html
-│   ├── chart_debt_health.html
-│   └── chart_cash_flows.html
-├── financial_analyzer.py               # Main analyzer
-├── visualize_data.py                   # Plotly visualizations (Phase 3)
+│   ├── tgt_analysis.json               # Target detailed format
+│   ├── tgt_timeseries.json             # Target time-series format
+│   ├── f_analysis.json                 # Ford detailed format
+│   ├── f_timeseries.json               # Ford time-series format
+│   ├── chart_*.html                    # 24 interactive Plotly charts
+│   └── ...
+├── dashboard.py                        # Streamlit interactive dashboard
+├── company_analyzer.py                 # Dynamic ticker lookup & orchestration
+├── financial_analyzer.py               # Core XBRL parsing logic
+├── visualize_data.py                   # Plotly chart generation
 ├── sec_data_fetcher.py                 # SEC EDGAR downloader
 └── .env                                # Your credentials (git-ignored)
 ```
+
+### Supported Companies
+
+The tool supports **any publicly traded US company** with SEC filings:
+- ~10,000 companies available via SEC EDGAR API
+- Ticker lookup happens automatically when you enter a symbol
+- Company list cached for 24 hours at `data/sec_company_tickers.json`
+
+**Examples:** TGT (Target), F (Ford), AAPL (Apple), MSFT (Microsoft), NFLX (Netflix), TSLA (Tesla), WMT (Walmart), COST (Costco), AMZN (Amazon), etc.
 
 ### Output Files
 
@@ -432,7 +509,7 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 
 ### ✅ Phase 1: Automated Data Acquisition (Complete)
 - Automated SEC EDGAR filing downloads
-- 5 years of 10-K annual reports
+- 10 years of 10-K annual reports
 - 12 quarters of 10-Q quarterly reports
 - Environment-based credential management
 
@@ -460,14 +537,26 @@ Generates `output/Target_Financial_Analysis.pptx` with charts and data tables.
 - ✅ Executive insights extraction (inflection points, top trends, warnings)
 - ✅ Risk heatmap visualizations (2 interactive charts)
 - ✅ Enhanced PowerPoint with Phase 4 slides
-- ✅ 9 total Plotly charts (6 from Phase 3 + 3 from Phase 4)
+
+### ✅ Phase 5: Multi-Company Support (Complete)
+- ✅ Dynamic ticker lookup via SEC EDGAR API (~10,000 companies)
+- ✅ 24-hour caching of SEC company tickers
+- ✅ Per-company output files (output/{ticker}_*.json)
+- ✅ Streamlit interactive dashboard with 24 charts
+- ✅ 6 financial pillars covering all key metrics
+- ✅ Error handling for problematic SEC filings
+
+### ✅ Pillars 2-5: Advanced Analysis (Complete)
+- ✅ Pillar 2: Liquidity & Solvency (Current Ratio, Quick Ratio, D/E)
+- ✅ Pillar 3: Operational Efficiency (DuPont Analysis, Cash Conversion Cycle)
+- ✅ Pillar 4: Cash Flow Dynamics (FCF, OCF vs CapEx, Sankey diagrams)
+- ✅ Pillar 5: Valuation & Market Sentiment (P/E bands, peer comparison)
 
 ### Future Considerations
-- Balance sheet ratio calculations (Current Ratio, Quick Ratio)
 - Segment-level analysis (if disclosed)
-- Real-time dashboard (Plotly Dash)
 - Excel export with embedded charts
 - API endpoints for data access
+- Automated alerts for significant changes
 
 ## Technical Notes
 
