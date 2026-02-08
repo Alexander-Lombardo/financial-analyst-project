@@ -9,6 +9,25 @@ from plotly.subplots import make_subplots
 from pathlib import Path
 
 
+# =============================================================================
+# Professional Dark Theme Color Constants
+# Based on financial dashboard best practices (Bloomberg, Robinhood, PitchBook)
+# =============================================================================
+DARK_BG = '#0E1117'           # Midnight background
+LIGHT_TEXT = '#E8EAED'        # Primary text (titles, labels)
+SECONDARY_TEXT = '#9AA0A6'    # Secondary text (subtitles, axis)
+GRID_LINE = 'rgba(255,255,255,0.08)'  # Subtle grid (almost invisible)
+AXIS_LINE = 'rgba(255,255,255,0.15)'  # Slightly visible axis
+FONT_FAMILY = 'Inter, Roboto, sans-serif'  # Clean sans-serif
+
+# Semantic colors for data
+COLOR_POSITIVE = '#27AE60'    # Green for growth/gains
+COLOR_NEGATIVE = '#E74C3C'    # Red for losses/declines
+COLOR_NEUTRAL = '#3498DB'     # Blue for neutral/totals
+COLOR_ACCENT = '#9B59B6'      # Purple for accents
+COLOR_WARNING = '#F39C12'     # Orange for warnings
+
+
 def get_company_name(data: dict) -> str:
     """Extract company name from data metadata, with fallback to 'Target'.
 
@@ -154,23 +173,43 @@ def create_revenue_vs_inventory_chart(data):
 
     fig.add_trace(
         go.Scatter(x=quarterly_periods, y=quarterly_revenue, name="Net Sales",
-                   line=dict(color='blue', width=3), mode='lines+markers'),
+                   line=dict(color=COLOR_NEUTRAL, width=3), mode='lines+markers'),
         secondary_y=False
     )
 
     fig.add_trace(
         go.Scatter(x=quarterly_periods, y=quarterly_inventory, name="Inventory",
-                   line=dict(color='orange', width=3), mode='lines+markers'),
+                   line=dict(color=COLOR_WARNING, width=3), mode='lines+markers'),
         secondary_y=False
     )
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Revenue vs Inventory - Quarterly Trends",
+        title={
+            'text': f"{company}: Revenue vs Inventory - Quarterly Trends",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
         height=500,
-        xaxis_title="Quarter",
-        yaxis_title="$ Billions"
+        xaxis={
+            'title': {'text': 'Quarter', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE,
+            'zeroline': False
+        },
+        yaxis={
+            'title': {'text': '$ Billions', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)')
     )
 
     fig.write_html("output/chart_revenue_vs_inventory.html")
@@ -267,34 +306,65 @@ def create_revenue_growth_yoy_chart(data):
     # Revenue bars on primary axis
     fig.add_trace(
         go.Bar(x=quarterly_periods, y=quarterly_revenue, name="Net Sales",
-               marker_color='lightblue', opacity=0.7),
+               marker_color=COLOR_NEUTRAL, opacity=0.7),
         secondary_y=False
     )
 
     # YoY growth line on secondary axis
     # Color code: green for positive, red for negative
-    colors = ['green' if g and g >= 0 else 'red' for g in quarterly_yoy_growth]
+    colors = [COLOR_POSITIVE if g and g >= 0 else COLOR_NEGATIVE for g in quarterly_yoy_growth]
 
     fig.add_trace(
         go.Scatter(x=quarterly_periods, y=quarterly_yoy_growth, name="YoY Growth %",
-                   line=dict(color='darkblue', width=3), mode='lines+markers',
-                   marker=dict(size=10, color=colors, line=dict(color='darkblue', width=2))),
+                   line=dict(color=LIGHT_TEXT, width=3), mode='lines+markers',
+                   marker=dict(size=10, color=colors, line=dict(color=LIGHT_TEXT, width=2))),
         secondary_y=True
     )
 
     # Add zero line for YoY growth reference
-    fig.add_hline(y=0, line_dash="dash", line_color="gray", line_width=1, secondary_y=True)
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.3)", line_width=1, secondary_y=True)
 
-    fig.update_xaxes(title_text="Quarter")
-    fig.update_yaxes(title_text="Revenue ($ Billions)", secondary_y=False)
-    fig.update_yaxes(title_text="YoY Growth %", secondary_y=True)
+    fig.update_xaxes(
+        title_text="Quarter",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
+    fig.update_yaxes(
+        title_text="Revenue ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=False
+    )
+    fig.update_yaxes(
+        title_text="YoY Growth %",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=True
+    )
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Revenue Growth Year-over-Year",
+        title={
+            'text': f"{company}: Revenue Growth Year-over-Year",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
         height=600,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)'
+        )
     )
 
     fig.write_html("output/chart_revenue_growth_yoy.html")
@@ -366,40 +436,61 @@ def create_margin_analysis_chart(data):
     fig.add_trace(go.Scatter(
         x=quarterly_periods, y=quarterly_gross,
         name='Gross Margin %',
-        line=dict(color='blue', width=3),
+        line=dict(color=COLOR_NEUTRAL, width=3),
         mode='lines+markers',
         fill='tozeroy',
-        fillcolor='rgba(173, 216, 230, 0.3)'  # Light blue
+        fillcolor='rgba(52, 152, 219, 0.2)'
     ))
 
     # Operating margin line (middle)
     fig.add_trace(go.Scatter(
         x=quarterly_periods, y=quarterly_operating,
         name='Operating Margin %',
-        line=dict(color='green', width=3),
+        line=dict(color=COLOR_POSITIVE, width=3),
         mode='lines+markers',
         fill='tozeroy',
-        fillcolor='rgba(144, 238, 144, 0.3)'  # Light green
+        fillcolor='rgba(39, 174, 96, 0.2)'
     ))
 
     # Net profit margin line (bottom)
     fig.add_trace(go.Scatter(
         x=quarterly_periods, y=quarterly_net_profit,
         name='Net Profit Margin %',
-        line=dict(color='red', width=3),
+        line=dict(color=COLOR_ACCENT, width=3),
         mode='lines+markers',
         fill='tozeroy',
-        fillcolor='rgba(255, 182, 193, 0.3)'  # Light red
+        fillcolor='rgba(155, 89, 182, 0.2)'
     ))
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Margin Analysis (Gross, Operating, Net Profit)",
-        xaxis_title="Quarter",
-        yaxis_title="Margin %",
+        title={
+            'text': f"{company}: Margin Analysis (Gross, Operating, Net Profit)",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Quarter', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Margin %', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         hovermode='x unified',
         height=600,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)'
+        )
     )
 
     fig.write_html("output/chart_margin_analysis.html")
@@ -408,45 +499,109 @@ def create_margin_analysis_chart(data):
 
 
 def create_operating_margin_waterfall(data):
-    """Chart 3: Operating Margin Waterfall (Year-over-Year Changes)"""
-    periods = [p['period'] for p in data['periods']]
-    operating_margins = data['metrics']['margins']['operating_margin_percent']
+    """Chart 4: Operating Margin Waterfall (Quarterly Changes)
 
-    # Filter quarterly data
-    quarterly_periods = []
-    quarterly_margins = []
+    True waterfall chart showing how operating margin evolves quarter-over-quarter.
+    Each bar shows the change from the previous quarter.
+    """
+    # Filter quarterly data only (10-Q filings)
+    quarterly_data = []
     for i, period in enumerate(data['periods']):
         if period['filing_type'] == '10-Q':
-            quarterly_periods.append(period['period'])
-            quarterly_margins.append(operating_margins[i])
+            margin = data['metrics']['margins']['operating_margin_percent'][i]
+            if margin is not None:
+                quarterly_data.append({
+                    'period': period['period'],
+                    'margin': margin
+                })
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(x=quarterly_periods, y=quarterly_margins,
-                   mode='lines+markers', name='Operating Margin %',
-                   line=dict(color='green', width=3), marker=dict(size=8))
-    )
+    if len(quarterly_data) < 2:
+        print("⚠️  Not enough quarterly data for waterfall chart")
+        return None
 
-    # Add baseline reference line (FY2024)
-    fig.add_hline(y=5.22, line_dash="dash", line_color="red",
-                  annotation_text="FY2024 Baseline (5.22%)")
+    # Build waterfall data
+    measure_types = []
+    x_labels = []
+    y_values = []
+    text_values = []
+
+    # Starting point (first quarter as baseline)
+    measure_types.append('absolute')
+    x_labels.append(f"{quarterly_data[0]['period']}<br>(Baseline)")
+    y_values.append(quarterly_data[0]['margin'])
+    text_values.append(f"{quarterly_data[0]['margin']:.2f}%")
+
+    # Quarterly deltas
+    for i in range(1, len(quarterly_data) - 1):
+        delta = quarterly_data[i]['margin'] - quarterly_data[i-1]['margin']
+        measure_types.append('relative')
+        x_labels.append(quarterly_data[i]['period'])
+        y_values.append(delta)
+        sign = '+' if delta >= 0 else ''
+        text_values.append(f"{sign}{delta:.2f}%")
+
+    # Ending point (total - shows current margin)
+    measure_types.append('total')
+    last_idx = len(quarterly_data) - 1
+    x_labels.append(f"{quarterly_data[last_idx]['period']}<br>(Current)")
+    y_values.append(quarterly_data[last_idx]['margin'])
+    text_values.append(f"{quarterly_data[last_idx]['margin']:.2f}%")
+
+    fig = go.Figure(go.Waterfall(
+        name="Operating Margin",
+        orientation="v",
+        measure=measure_types,
+        x=x_labels,
+        y=y_values,
+        text=text_values,
+        textposition="outside",
+        textfont={'color': LIGHT_TEXT, 'size': 12},
+        connector={"line": {"color": "rgba(255,255,255,0.3)", "width": 1}},
+        decreasing={"marker": {"color": COLOR_NEGATIVE}},
+        increasing={"marker": {"color": COLOR_POSITIVE}},
+        totals={"marker": {"color": COLOR_NEUTRAL}}
+    ))
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Operating Margin Trend (Quarterly)",
-        xaxis_title="Quarter",
-        yaxis_title="Operating Margin %",
-        hovermode='x unified',
-        height=500
+        title={
+            'text': f"{company}: Operating Margin Waterfall (Quarterly Changes)<br><sub>Quarter-over-quarter margin changes</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Quarter', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE,
+            'zeroline': False
+        },
+        yaxis={
+            'title': {'text': 'Operating Margin %', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'ticksuffix': '%',
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE,
+            'zeroline': True,
+            'zerolinecolor': 'rgba(255,255,255,0.2)',
+            'zerolinewidth': 1
+        },
+        showlegend=False,
+        height=550,
+        plot_bgcolor=DARK_BG,   # Midnight dark background
+        paper_bgcolor=DARK_BG,  # Consistent dark paper
+        margin=dict(t=100, b=80, l=70, r=40),
+        font={'family': 'Inter, Roboto, sans-serif'}  # Clean sans-serif
     )
 
     fig.write_html("output/chart_operating_margin_waterfall.html")
-    print("✅ Chart created: output/chart_operating_margin_waterfall.html")
+    print("✅ Chart 4 created: output/chart_operating_margin_waterfall.html")
     return fig
 
 
 def create_inventory_efficiency_chart(data):
-    """Chart 3: Inventory Turnover Ratio & Days Sales of Inventory"""
+    """Chart 5: Inventory Turnover Ratio & Days Sales of Inventory"""
     periods = [p['period'] for p in data['periods']]
     turnover = data['metrics']['inventory']['inventory_turnover_ratio']
     dsi = data['metrics']['inventory']['days_sales_of_inventory']
@@ -455,25 +610,54 @@ def create_inventory_efficiency_chart(data):
 
     fig.add_trace(
         go.Bar(x=periods, y=turnover, name="Inventory Turnover Ratio",
-               marker_color='lightblue'),
+               marker_color=COLOR_NEUTRAL, opacity=0.8),
         secondary_y=False
     )
 
     fig.add_trace(
         go.Scatter(x=periods, y=dsi, name="Days Sales of Inventory",
-                   line=dict(color='red', width=2), mode='lines+markers'),
+                   line=dict(color=COLOR_WARNING, width=2), mode='lines+markers'),
         secondary_y=True
     )
 
-    fig.update_xaxes(title_text="Period")
-    fig.update_yaxes(title_text="Turnover Ratio (x)", secondary_y=False)
-    fig.update_yaxes(title_text="Days", secondary_y=True)
+    fig.update_xaxes(
+        title_text="Period",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
+    fig.update_yaxes(
+        title_text="Turnover Ratio (x)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=False
+    )
+    fig.update_yaxes(
+        title_text="Days",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=True
+    )
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Inventory Efficiency Metrics",
+        title={
+            'text': f"{company}: Inventory Efficiency Metrics",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
-        height=500
+        height=500,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)')
     )
 
     fig.write_html("output/chart_inventory_efficiency.html")
@@ -482,47 +666,105 @@ def create_inventory_efficiency_chart(data):
 
 
 def create_debt_health_chart(data):
-    """Chart 4: Interest Coverage Ratio & Total Debt"""
-    periods = [p['period'] for p in data['periods']]
+    """Chart 6: Interest Coverage Ratio & Total Debt - Annual Data Only
+
+    Filters to 10-K annual filings only for cleaner debt visualization.
+    Quarterly 10-Q filings often have incomplete debt data, causing gaps.
+    """
+    # Filter to annual 10-K filings only for complete debt data
+    annual_periods = []
+    annual_coverage = []
+    annual_debt = []
+
+    all_periods = [p['period'] for p in data['periods']]
     coverage = data['metrics']['debt']['interest_coverage_ratio']
     total_debt = data['metrics']['debt']['total_debt_billion']
+
+    for i, period_data in enumerate(data['periods']):
+        if period_data['filing_type'] == '10-K':
+            annual_periods.append(all_periods[i])
+            annual_coverage.append(coverage[i])
+            annual_debt.append(total_debt[i])
+
+    # Count non-null values for display
+    coverage_count = sum(1 for c in annual_coverage if c is not None)
+    debt_count = sum(1 for d in annual_debt if d is not None)
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     fig.add_trace(
-        go.Scatter(x=periods, y=coverage, name="Interest Coverage Ratio",
-                   line=dict(color='green', width=3), mode='lines+markers'),
+        go.Scatter(x=annual_periods, y=annual_coverage, name="Interest Coverage Ratio",
+                   line=dict(color=COLOR_POSITIVE, width=3), mode='lines+markers',
+                   connectgaps=True),
         secondary_y=False
     )
 
     fig.add_trace(
-        go.Bar(x=periods, y=total_debt, name="Total Debt",
-               marker_color='lightcoral', opacity=0.6),
+        go.Bar(x=annual_periods, y=annual_debt, name="Total Debt",
+               marker_color=COLOR_NEGATIVE, opacity=0.6),
         secondary_y=True
     )
 
     # Add warning threshold line
-    fig.add_hline(y=2.0, line_dash="dash", line_color="red",
-                  annotation_text="Warning Threshold (2.0x)", secondary_y=False)
+    fig.add_hline(y=2.0, line_dash="dash", line_color=COLOR_NEGATIVE,
+                  annotation_text="Warning Threshold (2.0x)",
+                  annotation_font_color=LIGHT_TEXT,
+                  secondary_y=False)
 
-    fig.update_xaxes(title_text="Period")
-    fig.update_yaxes(title_text="Coverage Ratio (x)", secondary_y=False)
-    fig.update_yaxes(title_text="$ Billions", secondary_y=True)
+    fig.update_xaxes(
+        title_text="Fiscal Year",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
+    fig.update_yaxes(
+        title_text="Coverage Ratio (x)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=False
+    )
+    fig.update_yaxes(
+        title_text="$ Billions",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        secondary_y=True
+    )
 
     company = get_company_name(data)
+
+    # Determine period range for subtitle
+    if annual_periods:
+        period_range = f"{annual_periods[0]} - {annual_periods[-1]}"
+    else:
+        period_range = "No annual data"
+
     fig.update_layout(
-        title=f"{company}: Debt Health Monitoring",
+        title={
+            'text': f"{company}: Debt Health Monitoring<br><sub>Annual Data (10-K Filings): {period_range}</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
-        height=500
+        height=500,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)')
     )
 
     fig.write_html("output/chart_debt_health.html")
-    print("✅ Chart created: output/chart_debt_health.html")
+    print(f"✅ Chart created: output/chart_debt_health.html ({len(annual_periods)} annual periods, {coverage_count} coverage values, {debt_count} debt values)")
     return fig
 
 
 def create_cash_flows_chart(data):
-    """Chart 5: Statement of Cash Flows (Operating, Investing, Financing)"""
+    """Chart 7: Statement of Cash Flows (Operating, Investing, Financing)"""
     periods = [p['period'] for p in data['periods']]
     operating_cf = data['metrics']['cash_flows']['operating_cash_flow_billion']
     investing_cf = data['metrics']['cash_flows']['investing_cash_flow_billion']
@@ -533,37 +775,57 @@ def create_cash_flows_chart(data):
     # Operating Cash Flow (green solid)
     fig.add_trace(
         go.Scatter(x=periods, y=operating_cf, name="Operating Cash Flow",
-                   line=dict(color='green', width=3), mode='lines+markers',
+                   line=dict(color=COLOR_POSITIVE, width=3), mode='lines+markers',
                    marker=dict(size=8))
     )
 
     # Investing Cash Flow (blue dashed)
     fig.add_trace(
         go.Scatter(x=periods, y=investing_cf, name="Investing Cash Flow",
-                   line=dict(color='blue', width=3, dash='dash'),
+                   line=dict(color=COLOR_NEUTRAL, width=3, dash='dash'),
                    mode='lines+markers', marker=dict(size=8))
     )
 
     # Financing Cash Flow (orange dotted)
     fig.add_trace(
         go.Scatter(x=periods, y=financing_cf, name="Financing Cash Flow",
-                   line=dict(color='orange', width=3, dash='dot'),
+                   line=dict(color=COLOR_WARNING, width=3, dash='dot'),
                    mode='lines+markers', marker=dict(size=8))
     )
 
     # Zero line
-    fig.add_hline(y=0, line_dash="solid", line_color="gray",
-                  line_width=1, opacity=0.5)
+    fig.add_hline(y=0, line_dash="solid", line_color="rgba(255,255,255,0.3)",
+                  line_width=1)
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Statement of Cash Flows",
-        xaxis_title="Period",
-        yaxis_title="Cash Flow ($ Billions)",
+        title={
+            'text': f"{company}: Statement of Cash Flows",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Period', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Cash Flow ($ Billions)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         hovermode='x unified',
         height=600,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02,
-                    xanchor="right", x=1)
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)'
+        )
     )
 
     fig.write_html("output/chart_cash_flows.html")
@@ -669,7 +931,7 @@ def create_earnings_quality_chart(data):
             x=quarterly_periods,
             y=quarterly_net_income,
             name="Net Income",
-            marker_color='lightblue',
+            marker_color=COLOR_NEUTRAL,
             opacity=0.7
         ),
         secondary_y=False
@@ -681,7 +943,7 @@ def create_earnings_quality_chart(data):
             x=quarterly_periods,
             y=quarterly_operating_cf,
             name="Operating Cash Flow",
-            marker_color='lightgreen',
+            marker_color=COLOR_POSITIVE,
             opacity=0.7
         ),
         secondary_y=False
@@ -689,7 +951,7 @@ def create_earnings_quality_chart(data):
 
     # Cash Conversion Ratio line on secondary axis
     # Color code markers: green if > 100%, red if < 100%
-    colors = ['green' if r and r >= 100 else 'red' if r else 'gray'
+    colors = [COLOR_POSITIVE if r and r >= 100 else COLOR_NEGATIVE if r else SECONDARY_TEXT
               for r in quarterly_cash_conversion]
 
     fig.add_trace(
@@ -697,10 +959,10 @@ def create_earnings_quality_chart(data):
             x=quarterly_periods,
             y=quarterly_cash_conversion,
             name="Cash Conversion Ratio %",
-            line=dict(color='darkred', width=3),
+            line=dict(color=COLOR_ACCENT, width=3),
             mode='lines+markers',
             marker=dict(size=10, color=colors,
-                       line=dict(color='darkred', width=2))
+                       line=dict(color=COLOR_ACCENT, width=2))
         ),
         secondary_y=True
     )
@@ -709,37 +971,62 @@ def create_earnings_quality_chart(data):
     fig.add_hline(
         y=100,
         line_dash="dash",
-        line_color="gray",
+        line_color="rgba(255,255,255,0.4)",
         line_width=2,
         secondary_y=True,
         annotation_text="100% (Earnings = Cash)",
-        annotation_position="right"
+        annotation_position="right",
+        annotation_font_color=LIGHT_TEXT
     )
 
-    fig.update_xaxes(title_text="Quarter")
+    fig.update_xaxes(
+        title_text="Quarter",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
     fig.update_yaxes(
         title_text="Amount ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=False,
-        range=[0, 12]  # Fixed range: max Operating CF is 10.53B, provides 14% headroom
+        range=[0, 12]
     )
     fig.update_yaxes(
         title_text="Cash Conversion Ratio %",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=True,
-        range=[-150, 650]  # Accommodates negative Q4 values (-104%, -99%) and extreme positives (549%, 506%)
+        range=[-150, 650]
     )
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Earnings Quality Analysis (Net Income vs Operating Cash Flow)",
+        title={
+            'text': f"{company}: Earnings Quality Analysis (Net Income vs Operating Cash Flow)",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
         height=600,
         barmode='group',
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         )
     )
 
@@ -837,7 +1124,7 @@ def create_revenue_netincome_longterm_chart(data):
             x=quarterly_periods,
             y=quarterly_revenue,
             name="Revenue (Net Sales)",
-            line=dict(color='blue', width=3),
+            line=dict(color=COLOR_NEUTRAL, width=3),
             mode='lines+markers',
             marker=dict(size=6)
         ),
@@ -850,34 +1137,58 @@ def create_revenue_netincome_longterm_chart(data):
             x=quarterly_periods,
             y=quarterly_net_income,
             name="Net Income",
-            line=dict(color='green', width=3),
+            line=dict(color=COLOR_POSITIVE, width=3),
             mode='lines+markers',
             marker=dict(size=6)
         ),
         secondary_y=True
     )
 
-    fig.update_xaxes(title_text="Quarter")
+    fig.update_xaxes(
+        title_text="Quarter",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
     fig.update_yaxes(
         title_text="Revenue ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=False
     )
     fig.update_yaxes(
         title_text="Net Income ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=True
     )
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Revenue & Net Income Long-Term Trajectory<br>Quarterly Data",
+        title={
+            'text': f"{company}: Revenue & Net Income Long-Term Trajectory<br><sub>Quarterly Data</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
         height=600,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         )
     )
 
@@ -919,7 +1230,7 @@ def create_revenue_netincome_annual_chart(data):
             x=annual_periods,
             y=annual_revenue,
             name="Revenue (Net Sales)",
-            line=dict(color='blue', width=4),
+            line=dict(color=COLOR_NEUTRAL, width=4),
             mode='lines+markers',
             marker=dict(size=10)
         ),
@@ -932,7 +1243,7 @@ def create_revenue_netincome_annual_chart(data):
             x=annual_periods,
             y=annual_net_income,
             name="Net Income",
-            line=dict(color='green', width=4),
+            line=dict(color=COLOR_POSITIVE, width=4),
             mode='lines+markers',
             marker=dict(size=10)
         ),
@@ -940,28 +1251,52 @@ def create_revenue_netincome_annual_chart(data):
     )
 
     # Update axes
-    fig.update_xaxes(title_text="Fiscal Year")
+    fig.update_xaxes(
+        title_text="Fiscal Year",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE
+    )
     fig.update_yaxes(
         title_text="Revenue ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=False
     )
     fig.update_yaxes(
         title_text="Net Income ($ Billions)",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
         secondary_y=True
     )
 
     # Update layout
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Revenue & Net Income Annual Trajectory<br>Fiscal Year Data",
+        title={
+            'text': f"{company}: Revenue & Net Income Annual Trajectory<br><sub>Fiscal Year Data</sub>",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
         hovermode='x unified',
         height=600,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         )
     )
 
@@ -1090,7 +1425,7 @@ def create_expense_breakdown_chart(data):
         x=quarterly_periods,
         y=oi_pct,
         name='Operating Income %',
-        marker_color='#27AE60',  # Green
+        marker_color=COLOR_POSITIVE,
         hovertemplate='<b>Operating Income</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
     ))
 
@@ -1099,7 +1434,7 @@ def create_expense_breakdown_chart(data):
         x=quarterly_periods,
         y=other_pct,
         name='Other Operating Expenses %',
-        marker_color='#F39C12',  # Orange
+        marker_color=COLOR_WARNING,
         hovertemplate='<b>Other Expenses</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
     ))
 
@@ -1108,7 +1443,7 @@ def create_expense_breakdown_chart(data):
         x=quarterly_periods,
         y=sga_pct,
         name='SG&A Expenses %',
-        marker_color='#9B59B6',  # Purple
+        marker_color=COLOR_ACCENT,
         hovertemplate='<b>SG&A</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
     ))
 
@@ -1117,43 +1452,56 @@ def create_expense_breakdown_chart(data):
         x=quarterly_periods,
         y=cogs_pct,
         name='Cost of Sales (COGS) %',
-        marker_color='#E74C3C',  # Red
+        marker_color=COLOR_NEGATIVE,
         hovertemplate='<b>COGS</b><br>%{y:.2f}% of Revenue<br><extra></extra>'
     ))
 
     # Step 6: Configure layout
     company = get_company_name(data)
     fig.update_layout(
-        barmode='stack',  # 100% stacked bars
+        barmode='stack',
         title={
             'text': f"{company}: Operating Expense Breakdown (% of Revenue)<br><sub>Quarterly Breakdown</sub>",
             'x': 0.5,
             'xanchor': 'center',
-            'y': 0.96,  # Moved down from 0.98
-            'yanchor': 'top'
+            'y': 0.96,
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        xaxis_title="Quarter",
-        yaxis_title="% of Net Sales",
+        xaxis={
+            'title': {'text': 'Quarter', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         yaxis=dict(
-            range=[-5, 105],  # Allow negative values for bad quarters
+            title={'text': '% of Net Sales', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            range=[-5, 105],
             ticksuffix='%',
             zeroline=True,
             zerolinewidth=2,
-            zerolinecolor='black'
+            zerolinecolor='rgba(255,255,255,0.3)',
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE
         ),
         hovermode='x unified',
-        height=750,  # Increased from 700 for even more spacing
+        height=750,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.10,  # Decreased from 1.12 to move legend down
+            y=1.10,
             xanchor="right",
             x=1,
-            traceorder='reversed'  # Show stack order: COGS at top of legend
+            traceorder='reversed',
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
-        bargap=0.15,  # Space between bars
-        font=dict(size=12),
-        margin=dict(t=140, b=80)  # Increased top margin, added bottom margin
+        bargap=0.15,
+        margin=dict(t=140, b=80)
     )
 
     # Add annotation explaining the chart
@@ -1162,7 +1510,7 @@ def create_expense_breakdown_chart(data):
         xref="paper", yref="paper",
         x=0.5, y=-0.12,
         showarrow=False,
-        font=dict(size=10, color='gray'),
+        font=dict(size=10, color=SECONDARY_TEXT),
         xanchor='center'
     )
 
@@ -1317,17 +1665,18 @@ def create_ebitda_bridge_waterfall(data):
             measure=measure_types,
             text=text_labels,
             textposition="outside",
-            connector={"line": {"color": "rgb(63, 63, 63)"}},
-            increasing={"marker": {"color": "#27AE60"}},
-            decreasing={"marker": {"color": "#E74C3C"}},
-            totals={"marker": {"color": "#3498DB"}},
-            visible=(idx == len(quarterly_data) - 1)  # Only show latest quarter initially
+            textfont={'color': LIGHT_TEXT, 'size': 11},
+            connector={"line": {"color": "rgba(255,255,255,0.3)"}},
+            increasing={"marker": {"color": COLOR_POSITIVE}},
+            decreasing={"marker": {"color": COLOR_NEGATIVE}},
+            totals={"marker": {"color": COLOR_NEUTRAL}},
+            visible=(idx == len(quarterly_data) - 1)
         ))
 
     # Create dropdown menu buttons (reverse order for most recent first)
     buttons = []
     for idx, q in enumerate(reversed(quarterly_data)):
-        actual_idx = len(quarterly_data) - 1 - idx  # Map reversed index to actual data index
+        actual_idx = len(quarterly_data) - 1 - idx
         visible_array = [False] * len(quarterly_data)
         visible_array[actual_idx] = True
         buttons.append({
@@ -1341,7 +1690,8 @@ def create_ebitda_bridge_waterfall(data):
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.97,
-                        'yanchor': 'top'
+                        'yanchor': 'top',
+                        'font': {'color': LIGHT_TEXT, 'size': 16}
                     }
                 }
             ]
@@ -1353,28 +1703,35 @@ def create_ebitda_bridge_waterfall(data):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.97,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
         xaxis={
             'title': {
                 'text': "Flow: Revenue → Operating Expenses → EBITDA",
-                'font': {'size': 14, 'color': '#555'}
+                'font': {'size': 14, 'color': SECONDARY_TEXT}
             },
-            'tickfont': {'size': 12}
+            'tickfont': {'size': 12, 'color': SECONDARY_TEXT},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
         },
         yaxis={
             'title': {
                 'text': "$ Billions",
-                'font': {'size': 14}
+                'font': {'size': 14, 'color': SECONDARY_TEXT}
             },
+            'tickfont': {'color': SECONDARY_TEXT},
             'tickprefix': '$',
             'ticksuffix': 'B',
-            'gridcolor': '#E5E5E5'
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
         },
         height=700,
         hovermode='x unified',
         showlegend=False,
-        plot_bgcolor='white',
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         updatemenus=[{
             'buttons': buttons,
             'direction': 'down',
@@ -1383,9 +1740,10 @@ def create_ebitda_bridge_waterfall(data):
             'xanchor': 'left',
             'y': 1.12,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': '#BDBDBD',
-            'borderwidth': 1
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'borderwidth': 1,
+            'font': {'color': LIGHT_TEXT}
         }],
         annotations=[
             {
@@ -1396,20 +1754,20 @@ def create_ebitda_bridge_waterfall(data):
                 'yref': 'paper',
                 'align': 'left',
                 'showarrow': False,
-                'font': {'size': 12, 'color': '#333'}
+                'font': {'size': 12, 'color': LIGHT_TEXT}
             },
             {
                 'text': 'RED bars = expenses reducing profit  |  GREEN bar = non-cash D&A added back  |  BLUE bars = totals',
                 'x': 0.5,
                 'xref': 'paper',
-                'y': -0.15,
+                'y': -0.22,
                 'yref': 'paper',
                 'xanchor': 'center',
                 'showarrow': False,
-                'font': {'size': 11, 'color': '#666'}
+                'font': {'size': 11, 'color': SECONDARY_TEXT}
             }
         ],
-        margin=dict(t=120, b=100, l=80, r=40)
+        margin=dict(t=120, b=130, l=80, r=40)
     )
 
     fig.write_html("output/chart_ebitda_bridge.html")
@@ -1472,19 +1830,38 @@ def create_margin_bridge_waterfall(data):
         x=x_labels,
         y=y_values,
         textposition="outside",
-        connector={"line": {"color": "rgb(63, 63, 63)"}},
-        decreasing={"marker": {"color": "red"}},
-        increasing={"marker": {"color": "green"}},
-        totals={"marker": {"color": "blue"}}
+        textfont={'color': LIGHT_TEXT, 'size': 11},
+        connector={"line": {"color": "rgba(255,255,255,0.3)"}},
+        decreasing={"marker": {"color": COLOR_NEGATIVE}},
+        increasing={"marker": {"color": COLOR_POSITIVE}},
+        totals={"marker": {"color": COLOR_NEUTRAL}}
     ))
 
     company = get_company_name(data)
     fig.update_layout(
-        title=f"{company}: Operating Margin Bridge",
-        xaxis_title="Period",
-        yaxis_title="Operating Margin %",
+        title={
+            'text': f"{company}: Operating Margin Bridge",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Period', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Operating Margin %', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         showlegend=False,
-        height=600
+        height=600,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY}
     )
 
     fig.write_html("output/chart_margin_bridge.html")
@@ -1523,8 +1900,9 @@ def create_risk_trends_chart(ticker: str = "TGT"):
         name='Markdown/Promotional',
         mode='lines+markers',
         fill='tozeroy',
-        line=dict(color='orange', width=2),
-        marker=dict(size=8)
+        line=dict(color=COLOR_WARNING, width=2),
+        marker=dict(size=8),
+        fillcolor='rgba(243, 156, 18, 0.3)'
     ))
 
     fig.add_trace(go.Scatter(
@@ -1533,18 +1911,39 @@ def create_risk_trends_chart(ticker: str = "TGT"):
         name='Shrink/Theft',
         mode='lines+markers',
         fill='tonexty',
-        line=dict(color='red', width=2),
-        marker=dict(size=8)
+        line=dict(color=COLOR_NEGATIVE, width=2),
+        marker=dict(size=8),
+        fillcolor='rgba(231, 76, 60, 0.3)'
     ))
 
     fig.update_layout(
-        title=f"{company}: Risk Mention Trends",
-        xaxis_title="Period",
-        yaxis_title="Mention Count",
+        title={
+            'text': f"{company}: Risk Mention Trends",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Period', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Mention Count', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         hovermode='x unified',
         height=500,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02,
-                    xanchor="right", x=1)
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font={'color': LIGHT_TEXT}, bgcolor='rgba(0,0,0,0)'
+        )
     )
 
     fig.write_html("output/chart_risk_trends.html")
@@ -1592,16 +1991,37 @@ def create_risk_heatmap_grid(ticker: str = "TGT"):
         z=z_matrix,
         x=all_periods,
         y=[rt.capitalize() for rt in risk_heatmap.keys()],
-        colorscale='Reds',
+        colorscale=[[0, DARK_BG], [0.5, COLOR_WARNING], [1, COLOR_NEGATIVE]],
         hoverongaps=False,
-        colorbar=dict(title="Mentions")
+        colorbar=dict(
+            title=dict(text="Mentions", font={'color': LIGHT_TEXT}),
+            tickfont={'color': LIGHT_TEXT}
+        )
     ))
 
     fig.update_layout(
-        title=f"{company}: Risk Heatmap (Mention Intensity)",
-        xaxis_title="Period",
-        yaxis_title="Risk Type",
-        height=400
+        title={
+            'text': f"{company}: Risk Heatmap (Mention Intensity)",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
+        },
+        xaxis={
+            'title': {'text': 'Period', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Risk Type', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        height=400,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY}
     )
 
     fig.write_html("output/chart_risk_heatmap_grid.html")
@@ -1684,28 +2104,30 @@ def create_current_ratio_gauge(data):
             value=ratio,
             delta={
                 'reference': 1.5,
-                'increasing': {'color': 'green'},
-                'decreasing': {'color': 'red'},
-                'font': {'size': 24}  # Smaller delta font
+                'increasing': {'color': COLOR_POSITIVE},
+                'decreasing': {'color': COLOR_NEGATIVE},
+                'font': {'size': 24, 'color': LIGHT_TEXT}
             },
-            title={'text': f"Current Ratio ({period})", 'font': {'size': 18}},
-            number={'font': {'size': 48}},
+            title={'text': f"Current Ratio ({period})", 'font': {'size': 18, 'color': LIGHT_TEXT}},
+            number={'font': {'size': 48, 'color': LIGHT_TEXT}},
             gauge={
-                'axis': {'range': [None, 3.0], 'tickwidth': 1, 'tickfont': {'size': 14}},
-                'bar': {'color': "darkblue"},
+                'axis': {'range': [None, 3.0], 'tickwidth': 1, 'tickfont': {'size': 14, 'color': SECONDARY_TEXT}},
+                'bar': {'color': COLOR_NEUTRAL},
                 'steps': [
-                    {'range': [0, 1.0], 'color': '#ffcccc'},    # Red - Warning
-                    {'range': [1.0, 1.5], 'color': '#ffffcc'},  # Yellow - Adequate
-                    {'range': [1.5, 3.0], 'color': '#ccffcc'}   # Green - Healthy
+                    {'range': [0, 1.0], 'color': 'rgba(231, 76, 60, 0.3)'},    # Red - Warning
+                    {'range': [1.0, 1.5], 'color': 'rgba(243, 156, 18, 0.3)'},  # Yellow - Adequate
+                    {'range': [1.5, 3.0], 'color': 'rgba(39, 174, 96, 0.3)'}   # Green - Healthy
                 ],
                 'threshold': {
-                    'line': {'color': "red", 'width': 4},
+                    'line': {'color': COLOR_NEGATIVE, 'width': 4},
                     'thickness': 0.75,
                     'value': 1.5
-                }
+                },
+                'bgcolor': DARK_BG,
+                'bordercolor': AXIS_LINE
             },
             domain={'x': [0, 1], 'y': [0, 1]},
-            visible=(idx == len(quarterly_data) - 1)  # Show most recent by default
+            visible=(idx == len(quarterly_data) - 1)
         ))
 
     # Create dropdown menu buttons (reverse order for most recent first)
@@ -1722,12 +2144,12 @@ def create_current_ratio_gauge(data):
                 {'visible': visible_array},
                 {
                     'title': {
-                        'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+                        'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub>Current Assets ÷ Current Liabilities | Benchmark: >1.5</sub>",
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.95,
                         'yanchor': 'top',
-                        'font': {'size': 20}
+                        'font': {'size': 20, 'color': LIGHT_TEXT}
                     }
                 }
             ]
@@ -1736,37 +2158,41 @@ def create_current_ratio_gauge(data):
     # Initial layout
     fig.update_layout(
         title={
-            'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub style='font-size:11px'>Formula: Current Assets ÷ Current Liabilities | Benchmark: >1.5 for retail | Red (<1.0) Yellow (1.0-1.5) Green (>1.5)</sub>",
+            'text': f"{company}: Current Ratio Gauge (Liquidity Health)<br><sub>Current Assets ÷ Current Liabilities | Benchmark: >1.5</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
             'yanchor': 'top',
-            'font': {'size': 20}
+            'font': {'size': 20, 'color': LIGHT_TEXT}
         },
         height=550,
-        margin=dict(t=140, b=80, l=60, r=60),
+        margin=dict(t=100, b=80, l=60, r=150),
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         updatemenus=[{
             'buttons': buttons,
             'direction': 'down',
             'showactive': True,
-            'x': 0.17,
+            'x': 1.02,
             'xanchor': 'left',
-            'y': 1.15,
+            'y': 0.9,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': '#BDBDBD',
-            'borderwidth': 1
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'borderwidth': 1,
+            'font': {'color': LIGHT_TEXT}
         }],
         annotations=[
             {
-                'text': 'Select Quarter:',
-                'x': 0.01,
+                'text': 'Quarter:',
+                'x': 1.02,
                 'xref': 'paper',
-                'y': 1.15,
+                'y': 0.97,
                 'yref': 'paper',
                 'align': 'left',
                 'showarrow': False,
-                'font': {'size': 12, 'color': '#333'}
+                'font': {'size': 11, 'color': LIGHT_TEXT}
             }
         ]
     )
@@ -1840,14 +2266,15 @@ def create_capital_structure_donut(data):
             labels=['Total Debt', 'Stockholders\' Equity'],
             values=[fy_data['total_debt'], fy_data['stockholders_equity']],
             hole=0.5,
-            domain={'x': [0.05, 0.75], 'y': [0.1, 0.9]},  # Fixed position - centered, leaving right side for dropdown
-            marker=dict(colors=['#ff6666', '#66cc66']),
+            domain={'x': [0.05, 0.75], 'y': [0.1, 0.9]},
+            marker=dict(colors=[COLOR_NEGATIVE, COLOR_POSITIVE]),
             textinfo='label+percent',
             textposition='outside',
-            automargin=False,  # Prevent automatic margin adjustments
-            pull=[0, 0],  # No slice separation
+            textfont={'color': LIGHT_TEXT},
+            automargin=False,
+            pull=[0, 0],
             hovertemplate='<b>%{label}</b><br>$%{value:.2f}B<br>%{percent}<extra></extra>',
-            visible=(idx == len(fiscal_year_data) - 1),  # Show most recent by default
+            visible=(idx == len(fiscal_year_data) - 1),
             name=fy_data['period']
         ))
 
@@ -1871,7 +2298,8 @@ def create_capital_structure_donut(data):
                     'title': {
                         'text': f"{company}: Capital Structure ({fy_data['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
                         'x': 0.5,
-                        'xanchor': 'center'
+                        'xanchor': 'center',
+                        'font': {'color': LIGHT_TEXT, 'size': 16}
                     },
                     'annotations': [
                         {
@@ -1882,13 +2310,14 @@ def create_capital_structure_donut(data):
                             'yref': 'paper',
                             'xanchor': 'left',
                             'showarrow': False,
-                            'font': {'size': 12, 'color': '#333'}
+                            'font': {'size': 12, 'color': LIGHT_TEXT}
                         },
                         {
                             'text': f"D/E Ratio<br><b>{fy_data['de_ratio']:.2f}</b>",
                             'x': 0.4,
                             'y': 0.5,
                             'font_size': 16,
+                            'font_color': LIGHT_TEXT,
                             'showarrow': False
                         }
                     ]
@@ -1903,20 +2332,26 @@ def create_capital_structure_donut(data):
         title={
             'text': f"{company}: Capital Structure ({most_recent['period']})<br><sub>Total Debt vs Stockholders' Equity</sub>",
             'x': 0.5,
-            'xanchor': 'center'
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        autosize=False,  # Disable automatic resizing
-        width=800,  # Fixed width
-        height=600,  # Increased from 550 to accommodate dropdown
+        autosize=False,
+        width=800,
+        height=600,
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=-0.15,
             xanchor="center",
-            x=0.5
+            x=0.5,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
-        margin=dict(t=100, b=100, l=60, r=200),  # Reduced top margin, increased right margin for dropdown
+        margin=dict(t=100, b=100, l=60, r=200),
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         updatemenus=[{
             'buttons': buttons,
             'direction': 'down',
@@ -1925,9 +2360,10 @@ def create_capital_structure_donut(data):
             'xanchor': 'left',
             'y': 0.9,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': '#BDBDBD',
-            'borderwidth': 1
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'borderwidth': 1,
+            'font': {'color': LIGHT_TEXT}
         }],
         annotations=[
             {
@@ -1938,13 +2374,14 @@ def create_capital_structure_donut(data):
                 'yref': 'paper',
                 'xanchor': 'left',
                 'showarrow': False,
-                'font': {'size': 12, 'color': '#333'}
+                'font': {'size': 12, 'color': LIGHT_TEXT}
             },
             {
                 'text': f"D/E Ratio<br><b>{most_recent['de_ratio']:.2f}</b>",
                 'x': 0.4,
                 'y': 0.5,
                 'font_size': 16,
+                'font_color': LIGHT_TEXT,
                 'showarrow': False
             }
         ]
@@ -1985,11 +2422,11 @@ def create_debt_to_ebitda_trend(data):
     marker_colors = []
     for ratio in ratios:
         if ratio < 3.0:
-            marker_colors.append('#66cc66')  # Green - Healthy
+            marker_colors.append(COLOR_POSITIVE)  # Green - Healthy
         elif ratio <= 5.0:
-            marker_colors.append('#ffcc66')  # Yellow - Moderate
+            marker_colors.append(COLOR_WARNING)   # Yellow - Moderate
         else:
-            marker_colors.append('#ff6666')  # Red - Risky
+            marker_colors.append(COLOR_NEGATIVE)  # Red - Risky
 
     # Create line chart
     fig = go.Figure()
@@ -2001,12 +2438,12 @@ def create_debt_to_ebitda_trend(data):
         name='Debt-to-EBITDA',
         text=[f"{r:.2f}x" for r in ratios],
         textposition="top center",
-        textfont=dict(size=10),
-        line=dict(color='#4472C4', width=3),
+        textfont=dict(size=10, color=LIGHT_TEXT),
+        line=dict(color=COLOR_NEUTRAL, width=3),
         marker=dict(
             size=10,
             color=marker_colors,
-            line=dict(color='white', width=2)
+            line=dict(color=DARK_BG, width=2)
         ),
         hovertemplate='<b>%{x}</b><br>Debt-to-EBITDA: %{y:.2f}x<extra></extra>'
     ))
@@ -2015,7 +2452,7 @@ def create_debt_to_ebitda_trend(data):
     fig.add_trace(go.Scatter(
         x=[None], y=[None],
         mode='markers',
-        marker=dict(size=10, color='#66cc66', line=dict(color='white', width=2)),
+        marker=dict(size=10, color=COLOR_POSITIVE, line=dict(color=DARK_BG, width=2)),
         name='Healthy (<3.0x)',
         showlegend=True
     ))
@@ -2023,7 +2460,7 @@ def create_debt_to_ebitda_trend(data):
     fig.add_trace(go.Scatter(
         x=[None], y=[None],
         mode='markers',
-        marker=dict(size=10, color='#ffcc66', line=dict(color='white', width=2)),
+        marker=dict(size=10, color=COLOR_WARNING, line=dict(color=DARK_BG, width=2)),
         name='Moderate (3.0-5.0x)',
         showlegend=True
     ))
@@ -2031,14 +2468,14 @@ def create_debt_to_ebitda_trend(data):
     fig.add_trace(go.Scatter(
         x=[None], y=[None],
         mode='markers',
-        marker=dict(size=10, color='#ff6666', line=dict(color='white', width=2)),
+        marker=dict(size=10, color=COLOR_NEGATIVE, line=dict(color=DARK_BG, width=2)),
         name='Risky (>5.0x)',
         showlegend=True
     ))
 
-    # Add reference lines (without annotations - we'll add them separately)
-    fig.add_hline(y=3.0, line_dash="dash", line_color="green", line_width=1)
-    fig.add_hline(y=5.0, line_dash="dash", line_color="red", line_width=1)
+    # Add reference lines
+    fig.add_hline(y=3.0, line_dash="dash", line_color=COLOR_POSITIVE, line_width=1)
+    fig.add_hline(y=5.0, line_dash="dash", line_color=COLOR_NEGATIVE, line_width=1)
 
     fig.update_layout(
         title={
@@ -2046,24 +2483,40 @@ def create_debt_to_ebitda_trend(data):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        xaxis_title="Fiscal Year",
-        yaxis_title="Debt-to-EBITDA Ratio (x)",
+        xaxis={
+            'title': {'text': 'Fiscal Year', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis={
+            'title': {'text': 'Debt-to-EBITDA Ratio (x)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
         height=550,
         hovermode='x unified',
         showlegend=True,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=-0.25,
             xanchor="center",
-            x=0.5
+            x=0.5,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         margin=dict(t=100, b=120, l=80, r=40),
         annotations=[
             dict(
-                text="Healthy Threshold (3.0x)",
+                text="Healthy (3.0x)",
                 x=0.02,
                 y=3.0,
                 xref="paper",
@@ -2071,14 +2524,14 @@ def create_debt_to_ebitda_trend(data):
                 xanchor="left",
                 yanchor="middle",
                 showarrow=False,
-                bgcolor="white",
-                bordercolor="green",
-                borderwidth=1,
-                borderpad=4,
-                font=dict(size=10)
+                bgcolor="rgba(0,0,0,0)",
+                bordercolor=COLOR_POSITIVE,
+                borderwidth=0,
+                borderpad=2,
+                font=dict(size=10, color=COLOR_POSITIVE)
             ),
             dict(
-                text="Risky Threshold (5.0x)",
+                text="Risky (5.0x)",
                 x=0.02,
                 y=5.0,
                 xref="paper",
@@ -2086,11 +2539,11 @@ def create_debt_to_ebitda_trend(data):
                 xanchor="left",
                 yanchor="middle",
                 showarrow=False,
-                bgcolor="white",
-                bordercolor="red",
-                borderwidth=1,
-                borderpad=4,
-                font=dict(size=10)
+                bgcolor="rgba(0,0,0,0)",
+                bordercolor=COLOR_NEGATIVE,
+                borderwidth=0,
+                borderpad=2,
+                font=dict(size=10, color=COLOR_NEGATIVE)
             )
         ]
     )
@@ -2246,11 +2699,12 @@ def create_dupont_analysis_breakdown(data):
             name='Profit Margin (%)',
             x=['Profit Margin'],
             y=[period_data['profit_margin']],
-            marker_color='#3498db',  # Blue
+            marker_color=COLOR_NEUTRAL,
             text=[f"{period_data['profit_margin']:.2f}%"],
             textposition='outside',
+            textfont={'color': LIGHT_TEXT},
             visible=visible,
-            showlegend=(idx == 0)  # Only show legend for first trace set
+            showlegend=(idx == 0)
         ))
 
         # Bar 2: Asset Turnover
@@ -2258,9 +2712,10 @@ def create_dupont_analysis_breakdown(data):
             name='Asset Turnover (x)',
             x=['Asset Turnover'],
             y=[period_data['asset_turnover']],
-            marker_color='#e67e22',  # Orange
+            marker_color=COLOR_WARNING,
             text=[f"{period_data['asset_turnover']:.2f}x"],
             textposition='outside',
+            textfont={'color': LIGHT_TEXT},
             visible=visible,
             showlegend=(idx == 0)
         ))
@@ -2270,9 +2725,10 @@ def create_dupont_analysis_breakdown(data):
             name='Financial Leverage (x)',
             x=['Financial Leverage'],
             y=[period_data['financial_leverage']],
-            marker_color='#9b59b6',  # Purple
+            marker_color=COLOR_ACCENT,
             text=[f"{period_data['financial_leverage']:.2f}x"],
             textposition='outside',
+            textfont={'color': LIGHT_TEXT},
             visible=visible,
             showlegend=(idx == 0)
         ))
@@ -2282,9 +2738,10 @@ def create_dupont_analysis_breakdown(data):
             name='ROE (%)',
             x=['ROE (Result)'],
             y=[period_data['roe']],
-            marker_color='#27ae60',  # Green
+            marker_color=COLOR_POSITIVE,
             text=[f"{period_data['roe']:.2f}%"],
             textposition='outside',
+            textfont={'color': LIGHT_TEXT},
             visible=visible,
             showlegend=(idx == 0)
         ))
@@ -2309,9 +2766,10 @@ def create_dupont_analysis_breakdown(data):
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.97,
-                        'yanchor': 'top'
+                        'yanchor': 'top',
+                        'font': {'color': LIGHT_TEXT, 'size': 16}
                     },
-                    'yaxis': {'range': [y_min, y_max]}  # Preserve fixed Y-axis range
+                    'yaxis': {'range': [y_min, y_max]}
                 }
             ]
         })
@@ -2324,19 +2782,35 @@ def create_dupont_analysis_breakdown(data):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.97,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        xaxis_title="DuPont Components",
-        yaxis_title="Value",
-        yaxis=dict(range=[y_min, y_max]),  # Fixed Y-axis range for consistent scaling
+        xaxis={
+            'title': {'text': 'DuPont Components', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            'tickfont': {'color': SECONDARY_TEXT, 'size': 11},
+            'gridcolor': GRID_LINE,
+            'linecolor': AXIS_LINE
+        },
+        yaxis=dict(
+            title={'text': 'Value', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
+            range=[y_min, y_max]
+        ),
         height=600,
         showlegend=True,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="center",
-            x=0.5
+            x=0.5,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         updatemenus=[{
             'buttons': buttons,
@@ -2346,9 +2820,10 @@ def create_dupont_analysis_breakdown(data):
             'xanchor': 'left',
             'y': 1.15,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': '#BDBDBD',
-            'borderwidth': 1
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'borderwidth': 1,
+            'font': {'color': LIGHT_TEXT}
         }],
         margin=dict(t=140, b=80, l=80, r=40)
     )
@@ -2645,40 +3120,34 @@ def create_cash_conversion_cycle_chart(data):
             ),
             text=[f'{v:.1f}' for v in ccc_values],
             textposition='outside',
-            textfont=dict(size=12, color='black'),
+            textfont=dict(size=12, color=LIGHT_TEXT),
             visible=visible,
             legendgroup='CCC',
-            showlegend=(period_idx == len(company_ccc_periods) - 1),  # Only show legend for default visible period
+            showlegend=(period_idx == len(company_ccc_periods) - 1),
             hovertemplate='<b>%{x}</b><br>CCC: %{y:.1f} days<extra></extra>'
         ))
 
     # Step 5: Create dropdown menu buttons
     buttons = []
-    traces_per_period = 4  # 4 bar traces per period (DSI, DSO, DPO, CCC), each with 5 companies
+    traces_per_period = 4
 
-    # Iterate in reverse (most recent first in dropdown)
     for period_idx in range(len(company_ccc_periods) - 1, -1, -1):
         current_period = company_ccc_periods[period_idx]
 
-        # Build visibility array - use 'legendonly' for traces that define the legend (last period's traces)
-        # This keeps the legend visible while hiding the bars
         visible_array = []
-        legend_period_idx = len(company_ccc_periods) - 1  # Last period defines legend (has showlegend=True)
+        legend_period_idx = len(company_ccc_periods) - 1
 
         for trace_period_idx in range(len(company_ccc_periods)):
-            for _ in range(traces_per_period):  # 4 traces per period
+            for _ in range(traces_per_period):
                 if trace_period_idx == period_idx:
-                    # Currently selected period - show bars
                     visible_array.append(True)
                 elif trace_period_idx == legend_period_idx:
-                    # Legend-defining period - keep legend visible but hide bars
                     visible_array.append('legendonly')
                 else:
-                    # Other periods - fully hidden
                     visible_array.append(False)
 
         buttons.append({
-            'label': current_period['period'],  # e.g., "FY2024"
+            'label': current_period['period'],
             'method': 'update',
             'args': [
                 {'visible': visible_array},
@@ -2686,7 +3155,8 @@ def create_cash_conversion_cycle_chart(data):
                     'title': {
                         'text': f"{company} vs Retail Peers: Cash Conversion Cycle<br><sub>Comparing {current_period['period']} CCC performance (Lower is better)</sub>",
                         'x': 0.5,
-                        'xanchor': 'center'
+                        'xanchor': 'center',
+                        'font': {'color': LIGHT_TEXT, 'size': 16}
                     }
                 }
             ]
@@ -2696,15 +3166,16 @@ def create_cash_conversion_cycle_chart(data):
     fig.add_hline(
         y=60,
         line_dash="dash",
-        line_color="gray",
+        line_color=SECONDARY_TEXT,
         annotation_text="Retail Benchmark (60 days)",
-        annotation_position="right"
+        annotation_position="right",
+        annotation_font_color=LIGHT_TEXT
     )
 
     fig.add_hline(
         y=0,
         line_dash="dot",
-        line_color="black",
+        line_color="rgba(255,255,255,0.3)",
         opacity=0.3
     )
 
@@ -2716,25 +3187,37 @@ def create_cash_conversion_cycle_chart(data):
         title={
             'text': f"{company} vs Retail Peers: Cash Conversion Cycle<br><sub>{company}: {most_recent} vs Peers: FY2024 Benchmark (Lower is better)</sub>",
             'x': 0.5,
-            'xanchor': 'center'
+            'xanchor': 'center',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
         xaxis=dict(
-            title="Company",
+            title={'text': 'Company', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             tickangle=0
         ),
         yaxis=dict(
-            title="Days",
-            range=[-70, 175]  # Accommodate Amazon CCC (-51.6) + text label padding below
+            title={'text': 'Days', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
+            range=[-70, 175]
         ),
         height=600,
         width=1000,
         showlegend=True,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=-0.20,
             xanchor="center",
-            x=0.5
+            x=0.5,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         updatemenus=[{
             'buttons': buttons,
@@ -2744,11 +3227,12 @@ def create_cash_conversion_cycle_chart(data):
             'xanchor': 'left',
             'y': 1.15,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': '#BDBDBD',
-            'borderwidth': 1
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'borderwidth': 1,
+            'font': {'color': LIGHT_TEXT}
         }],
-        margin=dict(t=120, b=120, l=80, r=100),  # Increased top margin for dropdown
+        margin=dict(t=120, b=120, l=80, r=100),
         hovermode='closest'
     )
 
@@ -2905,10 +3389,10 @@ def create_ocf_vs_capex_chart(data):
             x=periods,
             y=ocf_values,
             name="Operating Cash Flow",
-            marker_color='#27ae60',
+            marker_color=COLOR_POSITIVE,
             text=[f'${v:.2f}B' for v in ocf_values],
             textposition='outside',
-            textfont=dict(size=9)
+            textfont=dict(size=9, color=LIGHT_TEXT)
         )
     )
 
@@ -2918,12 +3402,12 @@ def create_ocf_vs_capex_chart(data):
             x=periods,
             y=capex_values,
             name="Capital Expenditures",
-            line=dict(color='#e74c3c', width=3),
+            line=dict(color=COLOR_NEGATIVE, width=3),
             mode='lines+markers+text',
             marker=dict(size=8, symbol='circle'),
             text=[f'${v:.2f}B' for v in capex_values],
             textposition='top center',
-            textfont=dict(size=9, color='#e74c3c')
+            textfont=dict(size=9, color=COLOR_NEGATIVE)
         )
     )
 
@@ -2933,25 +3417,25 @@ def create_ocf_vs_capex_chart(data):
             x=periods,
             y=fcf_values,
             name="Free Cash Flow (FCF)",
-            line=dict(color='#3498db', width=3),
+            line=dict(color=COLOR_NEUTRAL, width=3),
             mode='lines+markers+text',
             marker=dict(size=10, symbol='diamond'),
             text=[f'${v:.2f}B' for v in fcf_values],
             textposition='top center',
-            textfont=dict(size=10, color='#3498db')
+            textfont=dict(size=10, color=COLOR_NEUTRAL)
         )
     )
 
     # Add zero line reference
-    fig.add_hline(y=0, line_dash="dash", line_color="gray",
-                  line_width=1, opacity=0.5)
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.3)",
+                  line_width=1)
 
     # Calculate data range for y-axis with extra padding for labels
     all_values = ocf_values + capex_values + fcf_values
     min_val = min(all_values)
     max_val = max(all_values)
-    y_min = min_val * 1.3 if min_val < 0 else -1  # Allow room below zero
-    y_max = max_val * 1.4  # Extra padding for labels
+    y_min = min_val * 1.3 if min_val < 0 else -1
+    y_max = max_val * 1.4
 
     fig.update_layout(
         title={
@@ -2959,27 +3443,43 @@ def create_ocf_vs_capex_chart(data):
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
         barmode='group',
         height=700,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.05,
             xanchor="right",
-            x=1
+            x=1,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         hovermode='x unified',
         margin=dict(t=130, b=80),
         yaxis=dict(
-            title_text="Cash Flow ($ Billions)",
+            title={'text': 'Cash Flow ($ Billions)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             range=[y_min, y_max]
         )
     )
 
     # Update x-axis
-    fig.update_xaxes(title_text="Quarter", tickangle=-45)
+    fig.update_xaxes(
+        title_text="Quarter",
+        title_font={'color': SECONDARY_TEXT, 'size': 12},
+        tickfont={'color': SECONDARY_TEXT, 'size': 11},
+        gridcolor=GRID_LINE,
+        linecolor=AXIS_LINE,
+        tickangle=-45
+    )
 
     output_path = "output/chart_ocf_vs_capex.html"
     fig.write_html(output_path)
@@ -3171,16 +3671,16 @@ def create_cash_flow_sankey(data):
         node=dict(
             pad=20,
             thickness=30,
-            line=dict(color="black", width=1),
+            line=dict(color=DARK_BG, width=1),
             label=labels,
             color=[
-                '#27ae60',  # OCF - Green
-                '#3498db',  # FCF - Blue
-                '#e74c3c',  # CapEx - Red
-                '#9b59b6',  # Dividends - Purple
-                '#e67e22',  # Buybacks - Orange
-                '#f1c40f',  # Debt Repay - Yellow
-                '#2ecc71'   # Retained - Light Green
+                COLOR_POSITIVE,  # OCF - Green
+                COLOR_NEUTRAL,   # FCF - Blue
+                COLOR_NEGATIVE,  # CapEx - Red
+                COLOR_ACCENT,    # Dividends - Purple
+                COLOR_WARNING,   # Buybacks - Orange
+                '#f1c40f',       # Debt Repay - Yellow
+                '#2ecc71'        # Retained - Light Green
             ]
         ),
         link=dict(
@@ -3188,7 +3688,8 @@ def create_cash_flow_sankey(data):
             target=target,
             value=value,
             color=colors
-        )
+        ),
+        textfont=dict(color=LIGHT_TEXT, size=11)
     )])
 
     # Create dropdown for different quarters (most recent 15)
@@ -3293,10 +3794,13 @@ def create_cash_flow_sankey(data):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
         height=600,
-        font=dict(size=12),
+        font=dict(size=12, family=FONT_FAMILY, color=LIGHT_TEXT),
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
         updatemenus=[
             dict(
                 active=0,
@@ -3307,9 +3811,9 @@ def create_cash_flow_sankey(data):
                 xanchor="right",
                 y=1.15,
                 yanchor="top",
-                bgcolor="white",
-                bordercolor="#2c3e50",
-                font=dict(size=11)
+                bgcolor='#1a1a2e',
+                bordercolor=SECONDARY_TEXT,
+                font=dict(size=11, color=LIGHT_TEXT)
             )
         ],
         annotations=[
@@ -3321,7 +3825,7 @@ def create_cash_flow_sankey(data):
                 yref="paper",
                 align="right",
                 showarrow=False,
-                font=dict(size=11)
+                font=dict(size=11, color=LIGHT_TEXT)
             )
         ],
         margin=dict(t=120, b=50, l=50, r=50)
@@ -3803,7 +4307,8 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                         'x': 0.5,
                         'xanchor': 'center',
                         'y': 0.95,
-                        'yanchor': 'top'
+                        'yanchor': 'top',
+                        'font': {'color': LIGHT_TEXT, 'size': 16}
                     },
                     'showlegend': True,
                     'legend': {
@@ -3811,7 +4316,8 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
                         'yanchor': 'middle',
                         'y': 0.5,
                         'xanchor': 'left',
-                        'x': 1.08
+                        'x': 1.08,
+                        'font': {'color': LIGHT_TEXT}
                     }
                 }
             ]
@@ -3825,32 +4331,41 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        xaxis_title="Revenue Growth YoY (%)",
-        yaxis_title="P/E Ratio (x)",
         height=650,
         width=1100,
         showlegend=True,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="v",
             yanchor="middle",
             y=0.5,
             xanchor="left",
-            x=1.08
+            x=1.08,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         margin=dict(l=120, r=220, t=140, b=80),
-        plot_bgcolor='white',
         xaxis=dict(
-            gridcolor='lightgray',
+            title={'text': 'Revenue Growth YoY (%)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             zeroline=True,
-            zerolinecolor='gray',
+            zerolinecolor='rgba(255,255,255,0.2)',
             range=[growth_min, growth_max]
         ),
         yaxis=dict(
-            gridcolor='lightgray',
+            title={'text': 'P/E Ratio (x)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             zeroline=True,
-            zerolinecolor='gray',
+            zerolinecolor='rgba(255,255,255,0.2)',
             range=[pe_min, pe_max]
         ),
         updatemenus=[{
@@ -3861,8 +4376,9 @@ def create_valuation_vs_growth_scatter(data, market_data=None):
             'xanchor': 'left',
             'y': 1.12,
             'yanchor': 'top',
-            'bgcolor': 'white',
-            'bordercolor': 'lightgray'
+            'bgcolor': '#1a1a2e',
+            'bordercolor': SECONDARY_TEXT,
+            'font': {'color': LIGHT_TEXT}
         }]
     )
 
@@ -4084,7 +4600,7 @@ def create_pe_band_area_chart(data, market_data=None):
         y=pe_df['Close'],
         mode='lines',
         name='TGT Stock Price',
-        line=dict(color='#2c3e50', width=2.5),
+        line=dict(color=LIGHT_TEXT, width=2.5),
         hovertemplate=(
             "<b>%{x|%Y-%m-%d}</b><br>"
             "Price: $%{y:.2f}<br>"
@@ -4098,7 +4614,7 @@ def create_pe_band_area_chart(data, market_data=None):
         y=pe_df['price_p50'],
         mode='lines',
         name=f'Median P/E ({bands["p50"]:.1f}x)',
-        line=dict(color='#2c3e50', width=1.5, dash='dash'),
+        line=dict(color=SECONDARY_TEXT, width=1.5, dash='dash'),
         hoverinfo='skip'
     ))
 
@@ -4111,16 +4627,16 @@ def create_pe_band_area_chart(data, market_data=None):
     # Determine valuation status
     if current_percentile < 25:
         valuation_status = "Undervalued"
-        status_color = "#27ae60"  # Green
+        status_color = COLOR_POSITIVE
     elif current_percentile < 50:
         valuation_status = "Fair Value (Low)"
-        status_color = "#2ecc71"  # Light green
+        status_color = "#2ecc71"
     elif current_percentile < 75:
         valuation_status = "Fair Value (High)"
-        status_color = "#f39c12"  # Yellow/Orange
+        status_color = COLOR_WARNING
     else:
         valuation_status = "Overvalued"
-        status_color = "#e74c3c"  # Red
+        status_color = COLOR_NEGATIVE
 
     # Add current valuation annotation
     fig.add_annotation(
@@ -4138,8 +4654,8 @@ def create_pe_band_area_chart(data, market_data=None):
         arrowcolor=status_color,
         ax=-80,
         ay=-50,
-        font=dict(size=11, color='#2c3e50'),
-        bgcolor="white",
+        font=dict(size=11, color=LIGHT_TEXT),
+        bgcolor=DARK_BG,
         bordercolor=status_color,
         borderwidth=2
     )
@@ -4155,28 +4671,37 @@ def create_pe_band_area_chart(data, market_data=None):
             'x': 0.5,
             'xanchor': 'center',
             'y': 0.95,
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {'color': LIGHT_TEXT, 'size': 16}
         },
-        xaxis_title="Date",
-        yaxis_title="Stock Price ($)",
         height=650,
         width=1100,
         showlegend=True,
+        plot_bgcolor=DARK_BG,
+        paper_bgcolor=DARK_BG,
+        font={'family': FONT_FAMILY},
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=-0.22,
             xanchor="center",
-            x=0.5
+            x=0.5,
+            font={'color': LIGHT_TEXT},
+            bgcolor='rgba(0,0,0,0)'
         ),
         margin=dict(l=80, r=100, t=100, b=140),
-        plot_bgcolor='white',
         xaxis=dict(
-            gridcolor='lightgray',
+            title={'text': 'Date', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             type='date'
         ),
         yaxis=dict(
-            gridcolor='lightgray',
+            title={'text': 'Stock Price ($)', 'font': {'color': SECONDARY_TEXT, 'size': 12}},
+            tickfont={'color': SECONDARY_TEXT, 'size': 11},
+            gridcolor=GRID_LINE,
+            linecolor=AXIS_LINE,
             tickprefix='$'
         ),
         hovermode='x unified'
