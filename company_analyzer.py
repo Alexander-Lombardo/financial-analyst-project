@@ -17,38 +17,119 @@ Usage:
 import os
 import json
 import re
+import requests
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from datetime import datetime
 
 
-# Known company CIKs for common tickers
-KNOWN_CIKS = {
-    'TGT': ('0000027419', 'Target Corporation', 1),      # January FY end
-    'WMT': ('0000104169', 'Walmart Inc.', 1),             # January FY end
-    'COST': ('0000909832', 'Costco Wholesale Corporation', 8),  # August FY end
-    'AMZN': ('0001018724', 'Amazon.com, Inc.', 12),       # December FY end
-    'KR': ('0000056873', 'The Kroger Co.', 1),            # January FY end
-    'AAPL': ('0000320193', 'Apple Inc.', 9),              # September FY end
-    'MSFT': ('0000789019', 'Microsoft Corporation', 6),   # June FY end
-    'HD': ('0000354950', 'The Home Depot, Inc.', 1),      # January FY end
-    'LOW': ('0000060667', "Lowe's Companies, Inc.", 1),   # January FY end
-    'DG': ('0000029534', 'Dollar General Corporation', 1),  # January FY end
-    'DLTR': ('0000935703', 'Dollar Tree, Inc.', 1),       # January FY end
-    'CVS': ('0000064803', 'CVS Health Corporation', 12),  # December FY end
-    'WBA': ('0001618921', 'Walgreens Boots Alliance, Inc.', 8),  # August FY end
+# Cache for SEC company tickers data
+_SEC_TICKERS_CACHE = None
+_SEC_TICKERS_CACHE_FILE = Path("data/sec_company_tickers.json")
+
+# Known fiscal year end months for common tickers (optional override)
+# If not in this dict, defaults to December (12)
+KNOWN_FISCAL_YEAR_ENDS = {
+    'TGT': 1,   # January FY end
+    'WMT': 1,   # January FY end
+    'COST': 8,  # August FY end
+    'KR': 1,    # January FY end
+    'AAPL': 9,  # September FY end
+    'MSFT': 6,  # June FY end
+    'HD': 1,    # January FY end
+    'LOW': 1,   # January FY end
+    'DG': 1,    # January FY end
+    'DLTR': 1,  # January FY end
+    'WBA': 8,   # August FY end
 }
+
+
+def fetch_sec_company_tickers() -> dict:
+    """
+    Fetch company tickers from SEC EDGAR API.
+    URL: https://www.sec.gov/files/company_tickers.json
+
+    Returns dict mapping ticker -> {cik, name}
+    Caches to file for 24 hours.
+    """
+    global _SEC_TICKERS_CACHE
+
+    # Check memory cache
+    if _SEC_TICKERS_CACHE:
+        return _SEC_TICKERS_CACHE
+
+    # Check file cache (if less than 24 hours old)
+    if _SEC_TICKERS_CACHE_FILE.exists():
+        try:
+            mtime = datetime.fromtimestamp(_SEC_TICKERS_CACHE_FILE.stat().st_mtime)
+            if (datetime.now() - mtime).total_seconds() < 86400:
+                with open(_SEC_TICKERS_CACHE_FILE, 'r') as f:
+                    _SEC_TICKERS_CACHE = json.load(f)
+                    return _SEC_TICKERS_CACHE
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"Warning: Could not read SEC tickers cache: {e}")
+
+    # Fetch from SEC
+    # SEC requires a User-Agent with company name and email
+    # See: https://www.sec.gov/os/accessing-edgar-data
+    print("📡 Fetching company list from SEC EDGAR...")
+    url = "https://www.sec.gov/files/company_tickers.json"
+
+    # Try to get email from environment, fallback to generic
+    user_email = os.environ.get("SEC_USER_EMAIL", "user@example.com")
+    user_name = os.environ.get("SEC_USER_NAME", "CompanyAnalyzer")
+
+    headers = {
+        "User-Agent": f"{user_name} {user_email}",
+        "Accept": "application/json"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        # Transform to ticker -> info mapping
+        raw_data = response.json()
+        ticker_map = {}
+        for entry in raw_data.values():
+            ticker = entry['ticker'].upper()
+            ticker_map[ticker] = {
+                'cik': str(entry['cik_str']).zfill(10),
+                'name': entry['title']
+            }
+
+        # Cache to file
+        _SEC_TICKERS_CACHE_FILE.parent.mkdir(exist_ok=True)
+        with open(_SEC_TICKERS_CACHE_FILE, 'w') as f:
+            json.dump(ticker_map, f)
+
+        _SEC_TICKERS_CACHE = ticker_map
+        print(f"   ✅ Loaded {len(ticker_map)} companies from SEC")
+        return ticker_map
+
+    except requests.RequestException as e:
+        print(f"❌ SEC API request failed: {e}")
+        # Try to use stale cache as fallback
+        if _SEC_TICKERS_CACHE_FILE.exists():
+            print("   Using stale cache as fallback...")
+            try:
+                with open(_SEC_TICKERS_CACHE_FILE, 'r') as f:
+                    _SEC_TICKERS_CACHE = json.load(f)
+                    return _SEC_TICKERS_CACHE
+            except (IOError, json.JSONDecodeError):
+                pass
+        raise
 
 
 def get_company_info(ticker: str) -> Optional[Dict]:
     """
-    Look up company information for a ticker.
+    Look up company information for ANY ticker using SEC EDGAR API.
 
     Args:
-        ticker: Stock ticker symbol (e.g., "TGT", "AAPL")
+        ticker: Stock ticker symbol (e.g., "TGT", "AAPL", "F", "NFLX")
 
     Returns:
-        Dictionary with company info or None if unknown:
+        Dictionary with company info or None if not found:
         {
             'ticker': 'AAPL',
             'cik': '0000320193',
@@ -58,17 +139,27 @@ def get_company_info(ticker: str) -> Optional[Dict]:
     """
     ticker = ticker.upper().strip()
 
-    if ticker in KNOWN_CIKS:
-        cik, name, fy_month = KNOWN_CIKS[ticker]
-        return {
-            'ticker': ticker,
-            'cik': cik,
-            'name': name,
-            'fiscal_year_end_month': fy_month
-        }
+    if not ticker:
+        return None
 
-    # Try SEC EDGAR company search (could implement API call here)
-    # For now, return None for unknown tickers
+    try:
+        # Fetch from SEC API (uses cache if available)
+        tickers = fetch_sec_company_tickers()
+
+        if ticker in tickers:
+            info = tickers[ticker]
+            # Use known fiscal year end if available, otherwise default to December
+            fy_month = KNOWN_FISCAL_YEAR_ENDS.get(ticker, 12)
+
+            return {
+                'ticker': ticker,
+                'cik': info['cik'],
+                'name': info['name'],
+                'fiscal_year_end_month': fy_month
+            }
+    except Exception as e:
+        print(f"SEC lookup failed: {e}")
+
     return None
 
 
@@ -76,18 +167,14 @@ def lookup_cik_from_sec(ticker: str) -> Optional[str]:
     """
     Look up CIK from SEC EDGAR API.
 
-    Note: This is a placeholder - implement actual SEC API call if needed.
-
     Args:
         ticker: Stock ticker symbol
 
     Returns:
         CIK string or None if not found
     """
-    # SEC provides a company tickers JSON file:
-    # https://www.sec.gov/files/company_tickers.json
-    # Could fetch and cache this for lookups
-    return None
+    info = get_company_info(ticker)
+    return info['cik'] if info else None
 
 
 def has_cached_data(ticker: str) -> bool:
@@ -285,21 +372,48 @@ def analyze_company(ticker: str, force_refresh: bool = False,
 
 def list_available_companies() -> Dict[str, Dict]:
     """
-    List all companies with known CIKs and cached data status.
+    List companies with known fiscal year ends and cached data status.
+
+    Note: ANY publicly traded company can be analyzed via SEC lookup.
+    This list shows companies with known fiscal year configurations.
 
     Returns:
-        Dictionary of ticker -> info for all known companies
+        Dictionary of ticker -> info for companies with known FY ends
     """
     companies = {}
 
-    for ticker, (cik, name, fy_month) in KNOWN_CIKS.items():
-        companies[ticker] = {
-            'ticker': ticker,
-            'cik': cik,
-            'name': name,
-            'fiscal_year_end_month': fy_month,
-            'has_cached_data': has_cached_data(ticker)
-        }
+    # First, add companies with cached data
+    output_dir = Path("output")
+    if output_dir.exists():
+        for json_file in output_dir.glob("*_timeseries.json"):
+            ticker = json_file.stem.replace("_timeseries", "").upper()
+            if ticker == "TARGET":
+                ticker = "TGT"
+            info = get_company_info(ticker)
+            if info:
+                companies[ticker] = {
+                    'ticker': ticker,
+                    'cik': info['cik'],
+                    'name': info['name'],
+                    'fiscal_year_end_month': info['fiscal_year_end_month'],
+                    'has_cached_data': True
+                }
+
+    # Then add known FY companies that don't have cached data yet
+    try:
+        tickers = fetch_sec_company_tickers()
+        for ticker, fy_month in KNOWN_FISCAL_YEAR_ENDS.items():
+            if ticker not in companies and ticker in tickers:
+                info = tickers[ticker]
+                companies[ticker] = {
+                    'ticker': ticker,
+                    'cik': info['cik'],
+                    'name': info['name'],
+                    'fiscal_year_end_month': fy_month,
+                    'has_cached_data': has_cached_data(ticker)
+                }
+    except Exception:
+        pass  # SEC API may fail, that's okay
 
     return companies
 

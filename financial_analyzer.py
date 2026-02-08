@@ -160,17 +160,22 @@ class CompanyFinancialAnalyzer:
             print(f"📊 Analyzing: {period}")
             print(f"{'='*60}")
 
-            # Determine filing type based on period label
-            is_10k = period.startswith("FY") or period == "10-K FY2024"
+            try:
+                # Determine filing type based on period label
+                is_10k = period.startswith("FY") or period == "10-K FY2024"
 
-            if is_10k:
-                result = self.analyze_10k(filepath, period)
-                self.baseline = result
-            else:
-                result = self.analyze_10q(filepath, period)
+                if is_10k:
+                    result = self.analyze_10k(filepath, period)
+                    self.baseline = result
+                else:
+                    result = self.analyze_10q(filepath, period)
 
-            self.results.append(result)
-            self._print_summary(result)
+                self.results.append(result)
+                self._print_summary(result)
+            except Exception as e:
+                print(f"⚠️  Error parsing {period}: {e}")
+                print(f"   Skipping this filing and continuing...")
+                continue
 
         return self.results
 

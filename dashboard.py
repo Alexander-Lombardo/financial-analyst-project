@@ -250,11 +250,29 @@ ticker_input = st.sidebar.text_input(
     help="Enter any stock ticker (e.g., TGT, WMT, AAPL)"
 ).upper().strip()
 
-# Get company info
-company_info = get_company_info(ticker_input)
+# Get company info (now uses SEC API for ANY ticker)
 has_data = has_cached_data(ticker_input)
 
-# Show company info
+# Initialize company_info in session state to track lookup status
+if 'company_info' not in st.session_state:
+    st.session_state.company_info = None
+if 'last_ticker' not in st.session_state:
+    st.session_state.last_ticker = None
+
+# Only lookup if ticker changed
+if st.session_state.last_ticker != ticker_input:
+    st.session_state.last_ticker = ticker_input
+    st.session_state.company_info = None  # Reset for new ticker
+
+# Show company info - lookup on demand
+company_info = st.session_state.company_info
+
+if company_info is None and ticker_input:
+    # Try to get company info (uses cached SEC data if available)
+    with st.sidebar.container():
+        company_info = get_company_info(ticker_input)
+        st.session_state.company_info = company_info
+
 if company_info:
     st.sidebar.success(f"**{company_info['name']}**")
     st.sidebar.caption(f"CIK: {company_info['cik']}")
@@ -262,12 +280,13 @@ if company_info:
         st.sidebar.caption("✅ Data available")
     else:
         st.sidebar.caption("⚠️ Data needs to be analyzed")
-else:
-    st.sidebar.warning(f"Unknown ticker: {ticker_input}")
-    st.sidebar.caption("Only known companies are supported. See list below.")
+elif ticker_input:
+    st.sidebar.warning(f"Ticker '{ticker_input}' not found in SEC database")
+    st.sidebar.caption("Check spelling or try a different ticker")
 
-# Analyze button
-if st.sidebar.button("🔄 Analyze Company", disabled=not company_info, type="primary"):
+# Analyze button - enabled for any valid ticker
+button_disabled = not company_info or not ticker_input
+if st.sidebar.button("🔄 Analyze Company", disabled=button_disabled, type="primary"):
     if company_info:
         with st.spinner(f"Analyzing {company_info['name']}... This may take 2-5 minutes."):
             result = analyze_company(ticker_input, force_refresh=True)
@@ -279,11 +298,15 @@ if st.sidebar.button("🔄 Analyze Company", disabled=not company_info, type="pr
             st.sidebar.error(f"❌ Analysis failed: {result['error']}")
 
 # Show available companies
-with st.sidebar.expander("📋 Available Companies"):
+with st.sidebar.expander("📋 Companies with Data"):
+    st.caption("*Enter ANY ticker above - these are just cached/configured:*")
     companies = list_available_companies()
-    for ticker, info in sorted(companies.items()):
-        cached = "✓" if info['has_cached_data'] else " "
-        st.caption(f"[{cached}] **{ticker}**: {info['name']}")
+    if companies:
+        for ticker, info in sorted(companies.items()):
+            cached = "✓" if info['has_cached_data'] else " "
+            st.caption(f"[{cached}] **{ticker}**: {info['name']}")
+    else:
+        st.caption("No companies analyzed yet. Enter a ticker and click Analyze.")
 
 st.sidebar.markdown("---")
 
@@ -342,10 +365,13 @@ if data is None:
     st.markdown("""
     ### Getting Started
 
-    1. Enter a ticker symbol in the sidebar (e.g., TGT, WMT, COST)
-    2. Click "Analyze Company" to download SEC filings
-    3. Wait 2-5 minutes for analysis to complete
-    4. Explore the 24 interactive charts across 6 pillars
+    1. **Enter ANY ticker symbol** in the sidebar (e.g., TGT, F, NFLX, AAPL)
+    2. The system will look up the company in the SEC EDGAR database
+    3. Click "Analyze Company" to download SEC filings
+    4. Wait 2-5 minutes for analysis to complete
+    5. Explore the 24 interactive charts across 6 pillars
+
+    **Supported:** All ~10,000 publicly traded US companies with SEC filings.
 
     **Note:** You need SEC credentials configured in `.env` file:
     ```

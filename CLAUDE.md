@@ -4,15 +4,17 @@ This document is designed for AI assistants (like Claude) to understand the Targ
 
 ## Project Overview
 
-**Purpose**: Automated financial analysis tool that extracts metrics from SEC 10-K and 10-Q XBRL filings for Target Corporation.
+**Purpose**: Automated financial analysis tool that extracts metrics from SEC 10-K and 10-Q XBRL filings for **any publicly traded US company**.
 
 **Key Features**:
-- Automated SEC EDGAR filing downloads (5 years of 10-K, 12 quarters of 10-Q)
+- **Dynamic ticker lookup**: Analyze ANY of ~10,000 SEC-registered companies by entering their ticker symbol
+- Automated SEC EDGAR filing downloads (10 years of 10-K, 12 quarters of 10-Q)
 - XBRL/iXBRL parsing for financial data extraction
 - Year-over-year trend analysis
 - Inventory efficiency tracking
 - Debt health monitoring
 - Risk heatmap generation
+- Interactive Streamlit dashboard with 24 charts across 6 pillars
 
 **Tech Stack**:
 - Python 3.x
@@ -28,6 +30,8 @@ financial-analyst-project/
 ├── financial_analyzer.py       # Main analyzer (core logic)
 ├── visualize_data.py           # Plotly visualizations (Phase 3)
 ├── sec_data_fetcher.py         # SEC EDGAR downloader
+├── company_analyzer.py         # Dynamic ticker lookup & orchestration
+├── dashboard.py                # Streamlit interactive dashboard
 ├── market_data_fetcher.py      # Yahoo Finance market data (Pillar 5)
 ├── create_presentation.py      # PowerPoint generation (optional)
 ├── create_google_slides.py     # Google Slides generation (optional)
@@ -215,35 +219,111 @@ def _extract_period_from_file(self, filepath: Path, filing_type: str) -> str
 - Returns period labels: "FY2024", "Q1 2025", etc.
 - Handles Target's fiscal year (ends late Jan/early Feb)
 
+### 3. `company_analyzer.py`
+
+**Purpose**: Dynamic ticker lookup and analysis orchestration for ANY publicly traded company.
+
+**Key Functions**:
+
+```python
+def fetch_sec_company_tickers() -> dict
+```
+- Fetches ~10,000 company tickers from SEC EDGAR API
+- URL: https://www.sec.gov/files/company_tickers.json
+- Caches to `data/sec_company_tickers.json` for 24 hours
+- Returns dict mapping ticker -> {cik, name}
+
+```python
+def get_company_info(ticker: str) -> Optional[Dict]
+```
+- Looks up ANY ticker using SEC EDGAR API (cached)
+- Returns: {ticker, cik, name, fiscal_year_end_month}
+- Uses `KNOWN_FISCAL_YEAR_ENDS` dict for FY override, defaults to December (12)
+
+```python
+def analyze_company(ticker: str, force_refresh: bool = False,
+                    num_10k: int = 10, num_10q: int = 12) -> Dict
+```
+- Main orchestration function for analyzing any company
+- Steps: CIK lookup → cache check → download filings → analyze → export
+- Returns: {success, ticker, company_name, timeseries_path, num_filings, error}
+
+**Configuration**:
+```python
+KNOWN_FISCAL_YEAR_ENDS = {
+    'TGT': 1,   # January FY end
+    'WMT': 1,   # January FY end
+    'COST': 8,  # August FY end
+    'AAPL': 9,  # September FY end
+    'MSFT': 6,  # June FY end
+    # ... add more as needed
+}
+```
+
+### 4. `dashboard.py`
+
+**Purpose**: Streamlit interactive dashboard for financial analysis.
+
+**Features**:
+- Enter ANY ticker symbol to analyze
+- Dynamic SEC API lookup for ~10,000 companies
+- 24 interactive Plotly charts across 6 pillars
+- Automatic data caching (24 hours)
+
+**Usage**:
+```bash
+streamlit run dashboard.py
+```
+
 ## Data Flow
 
+### Via Dashboard (Recommended)
 ```
-1. User runs: python financial_analyzer.py
+1. User runs: streamlit run dashboard.py
    ↓
-2. SECDataFetcher.download_filings()
-   → Downloads 5 10-Ks + 12 10-Qs from SEC EDGAR
-   → Saves to data/Target 10Q/sec-edgar-filings/
+2. User enters ticker (e.g., "F" for Ford)
    ↓
-3. TargetFinancialAnalyzer.run_analysis()
-   → Processes each filing in chronological order
+3. get_company_info(ticker)
+   → Fetches SEC company_tickers.json (cached 24 hours)
+   → Returns {cik, name, fiscal_year_end_month}
+   ↓
+4. User clicks "Analyze Company"
+   ↓
+5. analyze_company(ticker)
+   → Downloads 10 10-Ks + 12 10-Qs from SEC EDGAR
+   → Analyzes all filings
+   → Exports to output/{ticker}_*.json
+   ↓
+6. Dashboard displays 24 interactive charts
+```
+
+### Via Command Line
+```
+1. User runs: python company_analyzer.py F
+   ↓
+2. fetch_sec_company_tickers()
+   → Fetches/caches SEC company list (~10,000 tickers)
+   ↓
+3. CompanyFinancialAnalyzer(ticker, cik, ...)
+   → Downloads SEC filings
+   → Analyzes each filing
    ↓
 4. For each 10-K:
    → _extract_vital_signs() using XBRL tags
    → _calculate_inventory_metrics()
    → _calculate_debt_metrics()
-   → Set as baseline if FY2024
    ↓
 5. For each 10-Q:
    → _extract_vital_signs() using XBRL tags
    → _calculate_inventory_metrics()
    → _calculate_debt_metrics()
    → _extract_risk_flags() + populate heatmap
-   → _compare_to_baseline()
-   → _compare_year_over_year() (Phase 2)
+   → _compare_year_over_year()
    ↓
 6. Export results:
-   → export_json() → output/target_analysis.json
-   → export_summary_report() → output/target_summary.txt
+   → output/{ticker}_analysis.json
+   → output/{ticker}_timeseries.json
+   → output/{ticker}_summary.txt
 ```
 
 ## JSON Output Structure
