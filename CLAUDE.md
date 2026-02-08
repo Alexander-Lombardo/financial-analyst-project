@@ -1493,9 +1493,38 @@ for i, period in enumerate(data['periods']):
 - Enables proper YoY comparisons (Q4 2024 vs Q4 2023)
 - Prevents mixing annual and quarterly data in visualizations
 
+## Professional Dark Theme Styling
+
+All 24 charts use a consistent professional dark theme based on financial dashboard best practices (Bloomberg, Robinhood, PitchBook).
+
+### Color Constants (visualize_data.py lines 10-25)
+```python
+# Professional Dark Theme Color Constants
+DARK_BG = '#0E1117'           # Midnight background
+LIGHT_TEXT = '#E8EAED'        # Primary text (titles, labels)
+SECONDARY_TEXT = '#9AA0A6'    # Secondary text (subtitles, axis)
+GRID_LINE = 'rgba(255,255,255,0.08)'  # Subtle grid
+AXIS_LINE = 'rgba(255,255,255,0.15)'  # Axis lines
+FONT_FAMILY = 'Inter, Roboto, sans-serif'
+
+# Semantic colors for data
+COLOR_POSITIVE = '#27AE60'    # Green for growth/gains
+COLOR_NEGATIVE = '#E74C3C'    # Red for losses/declines
+COLOR_NEUTRAL = '#3498DB'     # Blue for neutral/totals
+COLOR_ACCENT = '#9B59B6'      # Purple for accents
+COLOR_WARNING = '#F39C12'     # Orange for warnings
+```
+
+### Design Principles
+1. **Dark "Midnight" background**: `#0E1117` (not transparent, not pure black)
+2. **Semantic colors**: Green = growth, Red = loss, Blue = neutral
+3. **Minimal gridlines**: Tufte's data-ink ratio principle
+4. **Clean typography**: Light text on dark, Inter/Roboto font family
+5. **Consistent styling**: All charts use module-level constants
+
 ## Complete Chart Catalog
 
-All 20 interactive Plotly charts created by `visualize_data.py`:
+All 24 interactive Plotly charts created by `visualize_data.py`:
 
 ### Chart 1: Revenue vs Inventory Growth (Phase 3)
 - **Type**: Dual-axis line chart
