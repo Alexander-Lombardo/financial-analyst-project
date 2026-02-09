@@ -133,14 +133,16 @@ target-financial-analyzer/
 │   ├── monte_carlo.py        # Monte Carlo simulation (GBM paths, exotic options)
 │   ├── option.py             # Option class wrapper for strategy building
 │   ├── iv_solver.py          # Newton-Raphson implied volatility solver
-│   └── payoffs.py            # Payoff functions for P&L diagrams
+│   ├── payoffs.py            # Payoff functions for P&L diagrams
+│   └── data_connector.py     # Market data connector (yfinance)
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
 │   ├── test_monte_carlo.py   # Monte Carlo simulation tests
 │   ├── test_option_class.py  # Option class tests
 │   ├── test_iv_solver.py     # IV solver tests
-│   └── test_payoffs.py       # Payoff function tests
+│   ├── test_payoffs.py       # Payoff function tests
+│   └── test_data_connector.py # Data connector tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -320,6 +322,53 @@ pnl = call.pnl_at(S_T)         # Payoff minus premium paid
 | `payoff_at(S_T)` | Payoff at expiration given terminal price(s) |
 | `pnl_at(S_T)` | P&L at expiration (payoff minus premium) |
 
+### Data Connector
+
+The `OptionsDataConnector` class fetches live market data from Yahoo Finance for pricing validation and analysis:
+
+```python
+from options_builder.data_connector import OptionsDataConnector, UnderlyingQuote, OptionQuote
+
+# Initialize connector
+connector = OptionsDataConnector()
+
+# Get current stock price
+quote = connector.get_underlying('AAPL')
+print(f"{quote.ticker}: ${quote.price:.2f}")  # AAPL: $185.50
+
+# Get available expiration dates
+expirations = connector.get_expirations('AAPL')
+print(expirations[:3])  # ['2026-02-14', '2026-02-21', '2026-02-28']
+
+# Fetch option chain for a specific expiration
+chain = connector.get_option_chain('AAPL', '2026-03-20')
+for opt in chain[:2]:
+    print(f"{opt.option_type.upper()} {opt.strike}: bid=${opt.bid}, ask=${opt.ask}, IV={opt.implied_volatility:.1%}")
+
+# Filter by option type
+calls_only = connector.get_option_chain('AAPL', '2026-03-20', option_type='call')
+
+# Get current risk-free rate (13-week T-bill)
+rate = connector.get_risk_free_rate()
+print(f"Risk-free rate: {rate:.2%}")  # Risk-free rate: 4.25%
+```
+
+**Dataclasses:**
+
+| Class | Fields |
+|-------|--------|
+| `UnderlyingQuote` | `ticker`, `price`, `timestamp` |
+| `OptionQuote` | `ticker`, `option_type`, `strike`, `expiration`, `bid`, `ask`, `last`, `volume`, `open_interest`, `implied_volatility` |
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `get_underlying(ticker)` | Fetch current price for underlying asset |
+| `get_expirations(ticker)` | Get available option expiration dates |
+| `get_option_chain(ticker, expiration, option_type=None)` | Fetch option chain for a specific expiration |
+| `get_risk_free_rate()` | Get current 13-week T-bill rate (defaults to 5% on error) |
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -485,6 +534,7 @@ pytest tests/test_monte_carlo.py -v  # Monte Carlo tests
 pytest tests/test_option_class.py -v # Option class tests
 pytest tests/test_iv_solver.py -v    # IV solver tests
 pytest tests/test_payoffs.py -v      # Payoff tests
+pytest tests/test_data_connector.py -v  # Data connector tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -497,6 +547,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_option_class.py` - Option class initialization, pricing, Greeks, payoffs, P&L
 - `test_iv_solver.py` - IV convergence, input validation, edge cases
 - `test_payoffs.py` - Call/put payoffs, array inputs, put-call parity
+- `test_data_connector.py` - Market data fetching, option chains, risk-free rate
 
 ## License
 

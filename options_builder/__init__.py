@@ -14,6 +14,11 @@ from options_builder.monte_carlo import (
 from options_builder.payoffs import call_payoff, put_payoff, payoff
 from options_builder.iv_solver import implied_volatility
 from options_builder.option import Option
+from options_builder.data_connector import (
+    OptionsDataConnector,
+    UnderlyingQuote,
+    OptionQuote,
+)
 
 __all__ = [
     # Pricing
@@ -31,4 +36,8 @@ __all__ = [
     "implied_volatility",
     # Option Class
     "Option",
+    # Data Connector
+    "OptionsDataConnector",
+    "UnderlyingQuote",
+    "OptionQuote",
 ]
