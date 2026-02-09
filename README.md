@@ -130,11 +130,17 @@ target-financial-analyzer/
 │   ├── constants.py          # Global pricing constants
 │   ├── pricing.py            # Black-Scholes-Merton model
 │   ├── greeks.py             # Option Greeks (delta, gamma, theta, vega)
-│   └── monte_carlo.py        # Monte Carlo simulation (GBM paths, exotic options)
+│   ├── monte_carlo.py        # Monte Carlo simulation (GBM paths, exotic options)
+│   ├── option.py             # Option class wrapper for strategy building
+│   ├── iv_solver.py          # Newton-Raphson implied volatility solver
+│   └── payoffs.py            # Payoff functions for P&L diagrams
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
-│   └── test_monte_carlo.py   # Monte Carlo simulation tests
+│   ├── test_monte_carlo.py   # Monte Carlo simulation tests
+│   ├── test_option_class.py  # Option class tests
+│   ├── test_iv_solver.py     # IV solver tests
+│   └── test_payoffs.py       # Payoff function tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -205,8 +211,10 @@ v = vega(S=100, K=100, T=1, r=0.05, sigma=0.2)
 strikes = np.array([90, 95, 100, 105, 110])
 call_deltas, put_deltas = delta(S=100, K=strikes, T=1, r=0.05, sigma=0.2)
 
-# All Greeks at once
+# All Greeks at once (returns flat dict)
 all_greeks = greeks(S=100, K=100, T=1, r=0.05, sigma=0.2)
+# Returns: {'call_delta': 0.637, 'put_delta': -0.363, 'gamma': 0.019,
+#           'call_theta': -6.41, 'put_theta': -1.58, 'vega': 37.52}
 ```
 
 | Greek | Description | Call | Put |
@@ -273,6 +281,128 @@ print(f"Up-and-Out Call: ${barrier['price']:.2f}")
 - Antithetic variates for variance reduction
 - Convergence rate: O(1/√n)
 - Reproducible results with optional seed
+
+### Option Class
+
+The `Option` class provides an OOP wrapper for clean strategy building with automatic pricing and Greeks calculation:
+
+```python
+from options_builder import Option
+import numpy as np
+
+# Create an option (automatically calculates price and Greeks)
+call = Option(S=100, K=100, T=1, r=0.05, sigma=0.2, option_type='call')
+print(f"Price: ${call.price:.2f}")      # $10.45
+print(f"Delta: {call.delta:.4f}")        # 0.6368
+print(f"Gamma: {call.gamma:.4f}")        # 0.0188
+print(f"Theta: {call.theta:.2f}")        # -6.41
+print(f"Vega: {call.vega:.2f}")          # 37.52
+
+# Short positions (position=-1)
+short_put = Option(S=100, K=95, T=0.5, r=0.05, sigma=0.2,
+                   option_type='put', position=-1)
+
+# Position-adjusted Greeks (for portfolio management)
+print(f"Net Delta: {short_put.net_delta:.4f}")  # Positive (short put)
+print(f"Net Theta: {short_put.net_theta:.4f}")  # Positive (benefits from decay)
+
+# Payoff and P&L at expiration
+S_T = np.linspace(80, 120, 50)
+payoffs = call.payoff_at(S_T)  # Position-adjusted payoff
+pnl = call.pnl_at(S_T)         # Payoff minus premium paid
+```
+
+| Attribute | Description |
+|-----------|-------------|
+| `price` | Theoretical option price |
+| `delta`, `gamma`, `theta`, `vega` | Option Greeks |
+| `net_delta`, `net_gamma`, `net_theta`, `net_vega` | Position-adjusted Greeks |
+| `payoff_at(S_T)` | Payoff at expiration given terminal price(s) |
+| `pnl_at(S_T)` | P&L at expiration (payoff minus premium) |
+
+### Implied Volatility Solver
+
+Calculate implied volatility from market prices using Newton-Raphson iteration:
+
+```python
+from options_builder import implied_volatility, black_scholes
+
+# Given a market price, solve for implied volatility
+market_price = 10.45  # Observed call price
+iv = implied_volatility(
+    market_price=market_price,
+    S=100, K=100, T=1, r=0.05,
+    option_type='call',
+    initial_guess=0.2  # Starting point (default: 20%)
+)
+print(f"Implied Volatility: {iv:.2%}")  # 20.00%
+
+# Verify by repricing
+call, put = black_scholes(S=100, K=100, T=1, r=0.05, sigma=iv)
+print(f"Repriced: ${call:.2f}")  # $10.45
+```
+
+**Solver Parameters:**
+- `MAX_ITERATIONS = 100` - Maximum Newton-Raphson iterations
+- `TOLERANCE = 1e-6` - Convergence threshold
+- `MIN_VOL = 0.0001` - Floor (0.01%)
+- `MAX_VOL = 5.0` - Cap (500%)
+
+### Payoff Functions
+
+Calculate option payoffs at expiration for P&L diagrams and strategy analysis:
+
+```python
+from options_builder import call_payoff, put_payoff, payoff
+import numpy as np
+
+# Single values
+print(call_payoff(S_T=110, K=100))  # 10 (ITM call)
+print(put_payoff(S_T=90, K=100))    # 10 (ITM put)
+
+# Arrays for P&L diagrams
+S_T = np.linspace(80, 120, 100)
+call_payoffs = call_payoff(S_T, K=100)
+put_payoffs = put_payoff(S_T, K=100)
+
+# Generic function with option_type parameter
+payoffs = payoff(S_T, K=100, option_type='call')
+```
+
+**Put-Call Parity at Expiration:**
+```python
+# Call payoff - Put payoff = S_T - K (always holds)
+assert np.allclose(call_payoff(S_T, K) - put_payoff(S_T, K), S_T - K)
+```
+
+### Input Validation & Boundary Handling
+
+All pricing and Greeks functions validate inputs and handle edge cases:
+
+```python
+from options_builder import black_scholes, delta
+
+# Input validation (raises ValueError)
+black_scholes(S=-100, K=100, T=1, r=0.05, sigma=0.2)  # S must be positive
+black_scholes(S=100, K=100, T=-1, r=0.05, sigma=0.2)  # T cannot be negative
+black_scholes(S=100, K=100, T=1, r=0.05, sigma=-0.2)  # sigma must be positive
+
+# T=0 boundary (at expiration) - returns intrinsic value
+call, put = black_scholes(S=110, K=100, T=0, r=0.05, sigma=0.2)
+print(f"Call at expiry: ${call:.2f}")  # $10.00 (intrinsic value)
+
+# Greeks at T=0
+call_delta, put_delta = delta(S=110, K=100, T=0, r=0.05, sigma=0.2)
+print(f"Delta at expiry: {call_delta:.1f}")  # 1.0 (ITM call)
+```
+
+| Edge Case | Behavior |
+|-----------|----------|
+| `T = 0` | Returns intrinsic value (payoff at expiration) |
+| `S ≤ 0` | Raises `ValueError` |
+| `K ≤ 0` | Raises `ValueError` |
+| `T < 0` | Raises `ValueError` |
+| `sigma ≤ 0` | Raises `ValueError` |
 
 ### Market Validation
 
@@ -352,6 +482,9 @@ pytest tests/ -v
 pytest tests/test_pricing.py -v      # Black-Scholes tests
 pytest tests/test_greeks.py -v       # Greeks tests
 pytest tests/test_monte_carlo.py -v  # Monte Carlo tests
+pytest tests/test_option_class.py -v # Option class tests
+pytest tests/test_iv_solver.py -v    # IV solver tests
+pytest tests/test_payoffs.py -v      # Payoff tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -361,6 +494,9 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_pricing.py` - Black-Scholes formula validation, put-call parity, edge cases
 - `test_greeks.py` - Delta, gamma, theta, vega calculations and bounds
 - `test_monte_carlo.py` - GBM paths, European/Asian/barrier options, convergence
+- `test_option_class.py` - Option class initialization, pricing, Greeks, payoffs, P&L
+- `test_iv_solver.py` - IV convergence, input validation, edge cases
+- `test_payoffs.py` - Call/put payoffs, array inputs, put-call parity
 
 ## License
 
