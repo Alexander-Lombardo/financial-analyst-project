@@ -279,15 +279,26 @@ print(f"Up-and-Out Call: ${barrier['price']:.2f}")
 Validate the pricing engine against live market data using the validation script:
 
 ```bash
+# From project root directory
+cd target-financial-analyzer
+
 # Validate SPY options (default)
-PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py
+python3 scripts/validate_with_market.py
 
 # Multiple tickers
-PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py --tickers AAPL MSFT SPY
+python3 scripts/validate_with_market.py --tickers AAPL MSFT SPY
 
 # Specific option type with minimum days to expiration
-PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py --tickers SPY --type call --min-dte 7
+python3 scripts/validate_with_market.py --tickers SPY --type call --min-dte 7
 ```
+
+**Command Line Arguments:**
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--tickers` | `SPY` | Space-separated list of ticker symbols |
+| `--type` | `both` | Option type: `call`, `put`, or `both` |
+| `--min-dte` | `1` | Minimum days to expiration |
 
 **Sample Output:**
 ```
@@ -321,6 +332,35 @@ Result: PASS - BSM price within bid/ask spread
 - BSM price falls within market bid/ask spread (PASS/FAIL)
 - MC price within 3 standard errors of BSM (confirms model consistency)
 - Reports tolerance when outside spread but within 5% of mid
+
+**How It Works:**
+1. Fetches live option chain data from Yahoo Finance (yfinance)
+2. Selects ATM (at-the-money) option for the nearest valid expiration
+3. Extracts market-implied volatility from the option quote
+4. Computes theoretical prices using Black-Scholes and Monte Carlo (100k paths)
+5. Compares against market bid/ask spread
+
+## Running Tests
+
+The options pricing engine includes a comprehensive test suite:
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test modules
+pytest tests/test_pricing.py -v      # Black-Scholes tests
+pytest tests/test_greeks.py -v       # Greeks tests
+pytest tests/test_monte_carlo.py -v  # Monte Carlo tests
+
+# Run with coverage
+pytest tests/ --cov=options_builder --cov-report=term-missing
+```
+
+**Test Coverage:**
+- `test_pricing.py` - Black-Scholes formula validation, put-call parity, edge cases
+- `test_greeks.py` - Delta, gamma, theta, vega calculations and bounds
+- `test_monte_carlo.py` - GBM paths, European/Asian/barrier options, convergence
 
 ## License
 
