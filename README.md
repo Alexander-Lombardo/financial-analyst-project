@@ -135,6 +135,8 @@ target-financial-analyzer/
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
 │   └── test_monte_carlo.py   # Monte Carlo simulation tests
+├── scripts/                  # Utility scripts
+│   └── validate_with_market.py  # Market data validation
 └── data/
     └── Target 10Q/           # Downloaded SEC filings
 ```
@@ -271,6 +273,54 @@ print(f"Up-and-Out Call: ${barrier['price']:.2f}")
 - Antithetic variates for variance reduction
 - Convergence rate: O(1/√n)
 - Reproducible results with optional seed
+
+### Market Validation
+
+Validate the pricing engine against live market data using the validation script:
+
+```bash
+# Validate SPY options (default)
+PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py
+
+# Multiple tickers
+PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py --tickers AAPL MSFT SPY
+
+# Specific option type with minimum days to expiration
+PYTHONPATH=/Users/alex python3 scripts/validate_with_market.py --tickers SPY --type call --min-dte 7
+```
+
+**Sample Output:**
+```
+============================================================
+Options Pricing Engine - Market Validation
+============================================================
+
+Ticker: SPY
+Type: call
+Underlying: $690.62
+Strike: $691.00
+Expiration: 2026-02-17 (T=0.025 years)
+Risk-free rate: 3.59%
+Implied Volatility: 14.8%
+
+Market Prices:
+  Bid: $6.16
+  Ask: $6.20
+  Mid: $6.18
+
+Theoretical Prices:
+  Black-Scholes: $6.50
+  Monte Carlo:   $6.51 +/- $0.03
+
+Result: PASS - BSM price within bid/ask spread
+        MC price within 3 std errors of BSM (models agree)
+============================================================
+```
+
+**Validation Criteria:**
+- BSM price falls within market bid/ask spread (PASS/FAIL)
+- MC price within 3 standard errors of BSM (confirms model consistency)
+- Reports tolerance when outside spread but within 5% of mid
 
 ## License
 
