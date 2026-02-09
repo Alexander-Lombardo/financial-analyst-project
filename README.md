@@ -125,6 +125,14 @@ target-financial-analyzer/
 ├── xbrl_parser.py            # XBRL tag extraction utilities
 ├── requirements.txt          # Python dependencies
 ├── .env.example              # SEC credentials template
+├── options_builder/          # Options pricing engine
+│   ├── __init__.py
+│   ├── constants.py          # Global pricing constants
+│   ├── pricing.py            # Black-Scholes-Merton model
+│   └── greeks.py             # Option Greeks (delta, gamma, theta, vega)
+├── tests/                    # Test suite
+│   ├── test_pricing.py       # Pricing function tests
+│   └── test_greeks.py        # Greeks function tests
 └── data/
     └── Target 10Q/           # Downloaded SEC filings
 ```
@@ -140,6 +148,69 @@ target-financial-analyzer/
 | Liquidity | Current Ratio, Quick Ratio |
 | Cash Flow | Free Cash Flow, FCF Margin |
 | Valuation | P/E Ratio, P/S Ratio |
+
+## Options Pricing Engine
+
+The `options_builder` module provides European option pricing using the Black-Scholes-Merton model.
+
+### Usage
+
+```python
+from options_builder import black_scholes
+
+# Price a European option
+call, put = black_scholes(
+    S=100,      # Current stock price
+    K=100,      # Strike price
+    T=1,        # Time to maturity (years)
+    r=0.05,     # Risk-free rate (annualized)
+    sigma=0.2   # Volatility (annualized)
+)
+
+print(f"Call: ${call:.2f}, Put: ${put:.2f}")
+# Output: Call: $10.45, Put: $5.57
+```
+
+### Formula
+
+The Black-Scholes-Merton model calculates option prices as:
+
+- **Call** = S·N(d₁) - K·e^(-rT)·N(d₂)
+- **Put** = K·e^(-rT)·N(-d₂) - S·N(-d₁)
+
+Where:
+- d₁ = (ln(S/K) + (r + σ²/2)T) / (σ√T)
+- d₂ = d₁ - σ√T
+- N() = cumulative normal distribution
+
+### Greeks
+
+Calculate option sensitivities using analytical derivatives of Black-Scholes:
+
+```python
+from options_builder import delta, gamma, theta, vega, greeks
+import numpy as np
+
+# Single option
+call_delta, put_delta = delta(S=100, K=100, T=1, r=0.05, sigma=0.2)
+g = gamma(S=100, K=100, T=1, r=0.05, sigma=0.2)
+call_theta, put_theta = theta(S=100, K=100, T=1, r=0.05, sigma=0.2)
+v = vega(S=100, K=100, T=1, r=0.05, sigma=0.2)
+
+# Vectorized for option chains
+strikes = np.array([90, 95, 100, 105, 110])
+call_deltas, put_deltas = delta(S=100, K=strikes, T=1, r=0.05, sigma=0.2)
+
+# All Greeks at once
+all_greeks = greeks(S=100, K=100, T=1, r=0.05, sigma=0.2)
+```
+
+| Greek | Description | Call | Put |
+|-------|-------------|------|-----|
+| **Delta (Δ)** | Price sensitivity to stock | N(d₁) | N(d₁) - 1 |
+| **Gamma (Γ)** | Delta sensitivity to stock | N'(d₁) / (Sσ√T) | Same |
+| **Theta (Θ)** | Price sensitivity to time | -SN'(d₁)σ/(2√T) - rKe^(-rT)N(d₂) | -SN'(d₁)σ/(2√T) + rKe^(-rT)N(-d₂) |
+| **Vega (ν)** | Price sensitivity to volatility | SN'(d₁)√T | Same |
 
 ## License
 
