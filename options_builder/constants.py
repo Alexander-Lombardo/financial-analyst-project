@@ -11,3 +11,9 @@ TRADING_DAYS_PER_YEAR = 252
 
 # Calendar days per year
 CALENDAR_DAYS_PER_YEAR = 365
+
+# Monte Carlo defaults
+DEFAULT_NUM_PATHS = 10_000        # Number of simulation paths
+DEFAULT_NUM_STEPS = 252           # Time steps (daily for 1 year)
+MC_SEED = None                    # Random seed (None = non-deterministic)
+MC_ANTITHETIC = True              # Use antithetic variates by default
