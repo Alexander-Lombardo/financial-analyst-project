@@ -129,10 +129,12 @@ target-financial-analyzer/
 │   ├── __init__.py
 │   ├── constants.py          # Global pricing constants
 │   ├── pricing.py            # Black-Scholes-Merton model
-│   └── greeks.py             # Option Greeks (delta, gamma, theta, vega)
+│   ├── greeks.py             # Option Greeks (delta, gamma, theta, vega)
+│   └── monte_carlo.py        # Monte Carlo simulation (GBM paths, exotic options)
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
-│   └── test_greeks.py        # Greeks function tests
+│   ├── test_greeks.py        # Greeks function tests
+│   └── test_monte_carlo.py   # Monte Carlo simulation tests
 └── data/
     └── Target 10Q/           # Downloaded SEC filings
 ```
@@ -211,6 +213,64 @@ all_greeks = greeks(S=100, K=100, T=1, r=0.05, sigma=0.2)
 | **Gamma (Γ)** | Delta sensitivity to stock | N'(d₁) / (Sσ√T) | Same |
 | **Theta (Θ)** | Price sensitivity to time | -SN'(d₁)σ/(2√T) - rKe^(-rT)N(d₂) | -SN'(d₁)σ/(2√T) + rKe^(-rT)N(-d₂) |
 | **Vega (ν)** | Price sensitivity to volatility | SN'(d₁)√T | Same |
+
+### Monte Carlo Simulation
+
+Price options using Monte Carlo simulation with Geometric Brownian Motion (GBM). Supports European, Asian, and barrier options.
+
+```python
+from options_builder import (
+    generate_paths,
+    mc_european,
+    mc_asian_call,
+    mc_barrier_call,
+    compare_mc_to_bsm,
+)
+
+# Generate GBM price paths
+paths = generate_paths(S=100, T=1, r=0.05, sigma=0.2,
+                       num_paths=10000, num_steps=252, seed=42)
+
+# Price European options with standard error
+result = mc_european(S=100, K=100, T=1, r=0.05, sigma=0.2,
+                     num_paths=100000, seed=42)
+print(f"Call: ${result['call']:.2f} ± ${result['call_std_error']:.4f}")
+# Output: Call: $10.47 ± $0.0339
+
+# Compare MC to analytical Black-Scholes
+comparison = compare_mc_to_bsm(S=100, K=100, T=1, r=0.05, sigma=0.2,
+                               num_paths_list=[1000, 10000, 100000], seed=42)
+print(f"BSM Call: ${comparison['bsm_call']:.4f}")
+for mc in comparison['mc_results']:
+    print(f"{mc['num_paths']:>7,} paths: ${mc['mc_call']:.4f} (error: {mc['call_error']:+.4f})")
+
+# Asian option (average price)
+asian = mc_asian_call(S=100, K=100, T=1, r=0.05, sigma=0.2,
+                      average_type='arithmetic', num_paths=50000, seed=42)
+print(f"Asian Call: ${asian['price']:.2f}")
+
+# Barrier option (knock-out)
+barrier = mc_barrier_call(S=100, K=100, T=1, r=0.05, sigma=0.2,
+                          barrier=120, barrier_type='up-and-out',
+                          num_paths=50000, seed=42)
+print(f"Up-and-Out Call: ${barrier['price']:.2f}")
+```
+
+| Function | Description |
+|----------|-------------|
+| `generate_paths()` | Simulate GBM asset paths with antithetic variates |
+| `mc_european()` | European call/put with price and standard error |
+| `mc_european_call()` | European call price only |
+| `mc_european_put()` | European put price only |
+| `compare_mc_to_bsm()` | Validate MC against analytical Black-Scholes |
+| `mc_asian_call()` | Asian option (arithmetic or geometric average) |
+| `mc_barrier_call()` | Barrier option (up/down, knock-in/out) |
+
+**Key Features:**
+- Exact GBM solution (not Euler discretization): S(t+dt) = S(t) × exp((r - σ²/2)dt + σ√dt × Z)
+- Antithetic variates for variance reduction
+- Convergence rate: O(1/√n)
+- Reproducible results with optional seed
 
 ## License
 
