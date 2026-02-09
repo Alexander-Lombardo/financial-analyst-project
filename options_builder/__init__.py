@@ -11,12 +11,24 @@ from options_builder.monte_carlo import (
     mc_asian_call,
     mc_barrier_call,
 )
+from options_builder.payoffs import call_payoff, put_payoff, payoff
+from options_builder.iv_solver import implied_volatility
+from options_builder.option import Option
 
 __all__ = [
+    # Pricing
     "black_scholes",
+    # Greeks
     "delta", "gamma", "theta", "vega", "greeks",
+    # Monte Carlo
     "generate_paths",
     "mc_european", "mc_european_call", "mc_european_put",
     "compare_mc_to_bsm",
     "mc_asian_call", "mc_barrier_call",
+    # Payoffs
+    "call_payoff", "put_payoff", "payoff",
+    # IV Solver
+    "implied_volatility",
+    # Option Class
+    "Option",
 ]

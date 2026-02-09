@@ -97,9 +97,11 @@ class TestGreeksFunction:
     def test_returns_all_greeks(self):
         """greeks() should return dict with all Greeks."""
         result = greeks(S=100, K=100, T=1, r=0.05, sigma=0.2)
-        assert 'delta' in result
+        assert 'call_delta' in result
+        assert 'put_delta' in result
         assert 'gamma' in result
-        assert 'theta' in result
+        assert 'call_theta' in result
+        assert 'put_theta' in result
         assert 'vega' in result
 
     def test_consistency_with_individual_functions(self):
@@ -112,11 +114,11 @@ class TestGreeksFunction:
         t = theta(S, K, T, r, sigma)
         v = vega(S, K, T, r, sigma)
 
-        assert np.isclose(result['delta'][0], d[0])
-        assert np.isclose(result['delta'][1], d[1])
+        assert np.isclose(result['call_delta'], d[0])
+        assert np.isclose(result['put_delta'], d[1])
         assert np.isclose(result['gamma'], g)
-        assert np.isclose(result['theta'][0], t[0])
-        assert np.isclose(result['theta'][1], t[1])
+        assert np.isclose(result['call_theta'], t[0])
+        assert np.isclose(result['put_theta'], t[1])
         assert np.isclose(result['vega'], v)
 
 
@@ -155,7 +157,7 @@ class TestVectorization:
         """greeks() should work with numpy arrays."""
         strikes = np.array([90, 95, 100, 105, 110])
         result = greeks(S=100, K=strikes, T=1, r=0.05, sigma=0.2)
-        assert len(result['delta'][0]) == 5
+        assert len(result['call_delta']) == 5
         assert len(result['gamma']) == 5
-        assert len(result['theta'][0]) == 5
+        assert len(result['call_theta']) == 5
         assert len(result['vega']) == 5
