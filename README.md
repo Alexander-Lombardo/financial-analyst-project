@@ -1091,6 +1091,23 @@ Open http://localhost:8501 in your browser.
 **Main Display:**
 - **Parameter Metrics** - Ticker, underlying price, expiration, risk-free rate
 - **Chain Data Debug** - Expandable section showing fetched option chain details
+- **P&L Chart** - Interactive Plotly chart showing strategy payoff at expiration
+- **Strategy Metrics** - Net premium, max profit/loss, breakeven points
+
+**P&L Chart Features:**
+- Total P&L curve with shaded profit/loss regions
+- Breakeven lines with price labels (green dashed)
+- Current underlying price marker (orange dotted)
+- Optional individual leg traces (dashed lines)
+- Interactive tooltips showing P&L at each price point
+- Configurable price range (10-50% around current price)
+
+**Chart Controls (in expander):**
+- **Show individual legs** - Toggle to display each leg's P&L separately
+- **Price range** - Select percentage range for x-axis (10%, 20%, 30%, 40%, 50%)
+
+**Demo Strategy:**
+In the Debug section, click "Load Demo Strategy" to create an ATM bull call spread for testing the P&L visualization.
 
 **Data Flow:**
 ```
@@ -1098,6 +1115,7 @@ Enter ticker → Fetch underlying price + expirations
     → Select expiration → Fetch option chain
     → Analyze with ChainAnalyzer (IV + Greeks)
     → Store in DataManager for strategy building
+    → Build strategy → Display P&L chart with metrics
 ```
 
 ### Error Handling
@@ -1122,6 +1140,9 @@ The dashboard uses Streamlit session state to persist:
 - `selected_expiration` - Currently selected expiration
 - `risk_free_rate` - Risk-free rate (percentage)
 - `chain_data` - PricedChain from ChainAnalyzer
+- `strategy` - Current OptionStrategy (or None)
+- `chart_show_legs` - Whether to show individual leg traces (default: False)
+- `chart_pct_range` - Price range percentage for chart (default: 0.20)
 
 ### Implied Volatility Solver
 
@@ -1311,7 +1332,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
 - `test_templates.py` - Strategy template factory functions, leg structure verification, directional bias validation, Greeks aggregation, quantity scaling
-- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization
+- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization, P&L chart rendering, strategy metrics display
 
 ## License
 
