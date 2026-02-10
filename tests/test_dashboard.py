@@ -624,6 +624,9 @@ class TestPnLChart:
         app.st.session_state = MagicMock()
         app.st.session_state.chart_show_legs = False
         app.st.session_state.chart_pct_range = 0.20
+        app.st.session_state.scenario_dte = None  # No scenario
+        app.st.session_state.scenario_iv_shift = 0
+        app.st.session_state.risk_free_rate = 5.0
 
         strategy = OptionStrategy(
             ticker="TEST",
@@ -1374,3 +1377,456 @@ class TestGreeksDashboard:
         assert "Net Gamma" in labels
         assert "Net Theta" in labels
         assert "Net Vega" in labels
+
+
+class TestSensitivityAnalysis:
+    """Test Phase 4.5 Sensitivity Analysis functionality."""
+
+    def test_session_state_includes_scenario_vars(self):
+        """Session state should include scenario_dte and scenario_iv_shift after init."""
+        import app
+
+        mock_state = {}
+
+        class MockSessionState:
+            def __contains__(self, key):
+                return key in mock_state
+
+            def __setattr__(self, key, value):
+                mock_state[key] = value
+
+            def __getattr__(self, key):
+                return mock_state.get(key)
+
+        app.st.session_state = MockSessionState()
+
+        app.init_session_state()
+
+        assert 'scenario_dte' in mock_state
+        assert mock_state['scenario_dte'] is None  # Default = at expiration
+        assert 'scenario_iv_shift' in mock_state
+        assert mock_state['scenario_iv_shift'] == 0.0
+
+    def test_calculate_scenario_pnl_at_expiration(self):
+        """Scenario P&L at T=0 should equal intrinsic value P&L."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        prices = np.array([80.0, 90.0, 100.0, 110.0, 120.0])
+
+        # Calculate scenario P&L at T=0
+        scenario_pnl = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=0,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        # Calculate expected expiration P&L
+        expiration_pnl = strategy.calculate_pnl(prices)
+
+        # Should match exactly at T=0
+        np.testing.assert_array_almost_equal(scenario_pnl, expiration_pnl, decimal=2)
+
+    def test_time_decay_towards_expiration(self):
+        """P&L curve should converge toward intrinsic value as DTE approaches 0."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Test at ATM point (100)
+        prices = np.array([100.0])
+
+        # At 30 DTE, option should have time value
+        pnl_30d = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        # At 1 DTE, option should have minimal time value
+        pnl_1d = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=1,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        # At 0 DTE (expiration), option has no time value
+        pnl_0d = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=0,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        # At ATM, more DTE = higher option value = better P&L for long position
+        # (because time value hasn't decayed yet)
+        assert pnl_30d[0] > pnl_1d[0], "30 DTE should have more value than 1 DTE"
+        assert pnl_1d[0] > pnl_0d[0], "1 DTE should have more value than expiration"
+
+    def test_volatility_increases_straddle_value(self):
+        """Increasing IV should increase value of long straddle."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Straddle"
+        )
+
+        # Long call
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Long put
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='put',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=-0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Test at ATM with 30 DTE
+        prices = np.array([100.0])
+
+        # Base case (no IV shift)
+        pnl_base = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        # IV increase by 25%
+        pnl_high_iv = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=25,
+            risk_free_rate=0.05
+        )
+
+        # IV decrease by 25%
+        pnl_low_iv = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=-25,
+            risk_free_rate=0.05
+        )
+
+        # Long vega position benefits from IV increase
+        assert pnl_high_iv[0] > pnl_base[0], "Higher IV should increase straddle value"
+        assert pnl_low_iv[0] < pnl_base[0], "Lower IV should decrease straddle value"
+
+    def test_short_vega_position_benefits_from_iv_drop(self):
+        """Short straddle should benefit from IV decrease."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Short Straddle"
+        )
+
+        # Short call
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=-1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Short put
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='put',
+            quantity=-1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=-0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        prices = np.array([100.0])
+
+        pnl_base = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=0,
+            risk_free_rate=0.05
+        )
+
+        pnl_low_iv = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=-25,
+            risk_free_rate=0.05
+        )
+
+        # Short vega position benefits from IV decrease
+        assert pnl_low_iv[0] > pnl_base[0], "Lower IV should benefit short straddle"
+
+    def test_get_actual_dte(self):
+        """get_actual_dte should calculate days from today to expiration."""
+        import app
+        from datetime import timedelta
+
+        app.st.session_state = MagicMock()
+
+        # Test with future expiration
+        future_date = (date.today() + timedelta(days=30)).strftime('%Y-%m-%d')
+        app.st.session_state.selected_expiration = future_date
+
+        dte = app.get_actual_dte()
+        assert dte == 30
+
+        # Test with no expiration selected
+        app.st.session_state.selected_expiration = None
+        dte = app.get_actual_dte()
+        assert dte == 30  # Default
+
+        # Test with today's date (0 DTE)
+        today_str = date.today().strftime('%Y-%m-%d')
+        app.st.session_state.selected_expiration = today_str
+        dte = app.get_actual_dte()
+        assert dte == 0
+
+    def test_sensitivity_sliders_empty_strategy(self):
+        """Sensitivity sliders should show info message when no legs exist."""
+        import app
+
+        app.st.session_state = MagicMock()
+        app.st.session_state.strategy = None
+
+        app.render_sensitivity_sliders()
+
+        app.st.info.assert_called_with("Add strategy legs to see sensitivity analysis")
+
+    def test_build_pnl_chart_includes_scenario_line(self):
+        """Chart should include scenario P&L line when sliders are active."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        app.st.session_state = MagicMock()
+        app.st.session_state.chart_show_legs = False
+        app.st.session_state.chart_pct_range = 0.20
+        app.st.session_state.scenario_dte = 15  # Active scenario
+        app.st.session_state.scenario_iv_shift = 10
+        app.st.session_state.risk_free_rate = 5.0
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Test Strategy"
+        )
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        fig = app.build_pnl_chart(strategy)
+
+        # Should have at least 2 traces (expiration + scenario)
+        assert len(fig.data) >= 2
+
+        # Check trace names
+        trace_names = [trace.name for trace in fig.data]
+        assert "P&L at Expiration" in trace_names
+        # Should have a scenario line
+        has_scenario = any("15d" in name or "IV" in name for name in trace_names)
+        assert has_scenario, f"Expected scenario trace, got: {trace_names}"
+
+    def test_build_pnl_chart_no_scenario(self):
+        """Chart should show single P&L line when no scenario is active."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        app.st.session_state = MagicMock()
+        app.st.session_state.chart_show_legs = False
+        app.st.session_state.chart_pct_range = 0.20
+        app.st.session_state.scenario_dte = None  # No scenario
+        app.st.session_state.scenario_iv_shift = 0
+        app.st.session_state.risk_free_rate = 5.0
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Test Strategy"
+        )
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        fig = app.build_pnl_chart(strategy)
+
+        # Should have just 1 main trace
+        assert len(fig.data) == 1
+        assert fig.data[0].name == "P&L at Expiration"
+
+    def test_iv_shift_floor(self):
+        """IV shift should not reduce IV below 1%."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+
+        # Option with very low IV (10%)
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=2.00,
+            ask=2.20,
+            mid=2.10,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.10,  # 10% IV
+            model_price=2.10
+        ))
+
+        prices = np.array([100.0])
+
+        # This should not raise an error even with extreme IV reduction
+        # -50% of 10% would be 5%, but we floor at 1%
+        pnl = app.calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=30,
+            iv_shift=-90,  # Extreme reduction
+            risk_free_rate=0.05
+        )
+
+        # Should complete without error
+        assert pnl is not None
+        assert len(pnl) == 1

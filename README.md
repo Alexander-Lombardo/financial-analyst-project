@@ -1098,6 +1098,7 @@ Open http://localhost:8501 in your browser.
 - **P&L Chart** - Interactive Plotly chart showing strategy payoff at expiration
 - **Strategy Metrics** - Net premium, max profit/loss, breakeven points
 - **Greeks Dashboard** - Real-time display of net Delta, Gamma, Theta, and Vega
+- **Sensitivity Analysis** - Interactive sliders for DTE and IV scenario analysis
 
 **P&L Chart Features:**
 - Total P&L curve with shaded profit/loss regions
@@ -1146,6 +1147,29 @@ Example interpretation:
 - **Short put**: Positive delta/theta, negative gamma/vega
 - **Iron condor**: Near-zero delta, positive theta, negative gamma/vega
 
+**Sensitivity Analysis:**
+
+Interactive sliders to visualize how P&L changes with time decay (theta) and volatility shifts (vega):
+
+| Control | Range | Description |
+|---------|-------|-------------|
+| **Days to Expiration** | 0 to actual DTE | Slide toward 0 to see time decay effect |
+| **IV Shift** | -50% to +50% | Shift all leg IVs to simulate volatility changes |
+
+When sliders are active, the chart shows two P&L curves:
+- **Solid pink line**: Scenario P&L (at specified DTE and IV shift)
+- **Dotted blue line**: P&L at expiration (for comparison)
+
+Key behaviors:
+- **Time Decay Test**: Sliding DTE toward 0 causes the P&L curve to converge toward intrinsic value ("hockey stick" shape)
+- **Volatility Test**: Increasing IV benefits long vega positions (straddles, strangles); decreasing IV benefits short vega positions (iron condors)
+- Uses Black-Scholes model to price options at mid-life scenarios
+
+Example scenarios:
+- View iron condor P&L after 10 days of time decay
+- See how a straddle profits from a 25% IV spike
+- Compare current value vs expiration value at different price points
+
 **Demo Strategy:**
 In the Debug section, click "Load Demo Strategy" to create an ATM bull call spread for testing the P&L visualization.
 
@@ -1184,6 +1208,8 @@ The dashboard uses Streamlit session state to persist:
 - `chart_show_legs` - Whether to show individual leg traces (default: False)
 - `chart_pct_range` - Price range percentage for chart (default: 0.20)
 - `leg_builder_key` - Widget key for forcing leg builder refresh (default: 0)
+- `scenario_dte` - Days to expiration for scenario analysis (default: None = at expiration)
+- `scenario_iv_shift` - IV shift percentage for scenario analysis (default: 0.0)
 
 ### Implied Volatility Solver
 
@@ -1373,7 +1399,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
 - `test_templates.py` - Strategy template factory functions, leg structure verification, directional bias validation, Greeks aggregation, quantity scaling
-- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization, P&L chart rendering, strategy metrics display, Greeks dashboard rendering and calculations
+- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization, P&L chart rendering, strategy metrics display, Greeks dashboard rendering and calculations, sensitivity analysis (DTE/IV scenario P&L)
 
 ## License
 

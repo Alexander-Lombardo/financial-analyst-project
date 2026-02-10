@@ -13,6 +13,7 @@ from options_builder import (
     StrategyLeg,
     bull_call_spread,
     payoff,
+    black_scholes,
 )
 
 
@@ -44,6 +45,10 @@ def init_session_state() -> None:
         st.session_state.chart_pct_range = 0.20
     if 'leg_builder_key' not in st.session_state:
         st.session_state.leg_builder_key = 0
+    if 'scenario_dte' not in st.session_state:
+        st.session_state.scenario_dte = None  # None = at expiration
+    if 'scenario_iv_shift' not in st.session_state:
+        st.session_state.scenario_iv_shift = 0.0  # Percentage shift (-50 to +50)
 
 
 def validate_and_fetch_ticker(ticker: str) -> bool:
@@ -351,6 +356,8 @@ def build_pnl_chart(strategy: OptionStrategy) -> go.Figure:
     """
     Create Plotly figure with P&L curve, breakeven lines, and annotations.
 
+    Includes scenario P&L line when DTE or IV shift is active.
+
     Args:
         strategy: OptionStrategy with legs
 
@@ -360,19 +367,68 @@ def build_pnl_chart(strategy: OptionStrategy) -> go.Figure:
     pct_range = st.session_state.chart_pct_range
     prices, pnl = strategy.pnl_data(pct_range=pct_range, num_points=200)
 
+    # Get scenario parameters
+    scenario_dte = st.session_state.scenario_dte
+    iv_shift = st.session_state.scenario_iv_shift
+    risk_free_rate = st.session_state.risk_free_rate / 100.0
+
+    # Determine if we need to show scenario line
+    show_scenario = scenario_dte is not None or iv_shift != 0
+
     fig = go.Figure()
 
-    # Total P&L line with fill to zero
-    fig.add_trace(go.Scatter(
-        x=prices,
-        y=pnl,
-        mode='lines',
-        name='Total P&L',
-        line=dict(color='#1f77b4', width=2),
-        fill='tozeroy',
-        fillcolor='rgba(31, 119, 180, 0.2)',
-        hovertemplate='Price: $%{x:.2f}<br>P&L: $%{y:.2f}<extra></extra>'
-    ))
+    # Expiration P&L line (always shown, but styled differently if scenario is active)
+    if show_scenario:
+        # Lighter style for expiration line when scenario is active
+        fig.add_trace(go.Scatter(
+            x=prices,
+            y=pnl,
+            mode='lines',
+            name='P&L at Expiration',
+            line=dict(color='#1f77b4', width=1, dash='dot'),
+            hovertemplate='Expiration<br>Price: $%{x:.2f}<br>P&L: $%{y:.2f}<extra></extra>'
+        ))
+
+        # Scenario P&L line (primary)
+        dte_for_calc = scenario_dte if scenario_dte is not None else 0
+        scenario_pnl = calculate_scenario_pnl(
+            strategy=strategy,
+            prices=prices,
+            dte=dte_for_calc,
+            iv_shift=iv_shift,
+            risk_free_rate=risk_free_rate
+        )
+
+        # Build scenario label
+        scenario_parts = []
+        if scenario_dte is not None:
+            scenario_parts.append(f"{scenario_dte}d")
+        if iv_shift != 0:
+            scenario_parts.append(f"IV {iv_shift:+d}%")
+        scenario_label = f"P&L ({', '.join(scenario_parts)})" if scenario_parts else "P&L (Scenario)"
+
+        fig.add_trace(go.Scatter(
+            x=prices,
+            y=scenario_pnl,
+            mode='lines',
+            name=scenario_label,
+            line=dict(color='#e377c2', width=2),
+            fill='tozeroy',
+            fillcolor='rgba(227, 119, 194, 0.2)',
+            hovertemplate=f'{scenario_label}<br>Price: $%{{x:.2f}}<br>P&L: $%{{y:.2f}}<extra></extra>'
+        ))
+    else:
+        # Standard expiration P&L (no scenario active)
+        fig.add_trace(go.Scatter(
+            x=prices,
+            y=pnl,
+            mode='lines',
+            name='P&L at Expiration',
+            line=dict(color='#1f77b4', width=2),
+            fill='tozeroy',
+            fillcolor='rgba(31, 119, 180, 0.2)',
+            hovertemplate='Price: $%{x:.2f}<br>P&L: $%{y:.2f}<extra></extra>'
+        ))
 
     # Individual leg traces (optional)
     if st.session_state.chart_show_legs:
@@ -414,10 +470,21 @@ def build_pnl_chart(strategy: OptionStrategy) -> go.Figure:
             annotation_position="bottom"
         )
 
+    # Build title
+    if show_scenario:
+        title_parts = [strategy.name or 'Strategy', 'P&L']
+        if scenario_dte is not None:
+            title_parts.append(f"at {scenario_dte}d DTE")
+        if iv_shift != 0:
+            title_parts.append(f"IV {iv_shift:+d}%")
+        title = ' '.join(title_parts)
+    else:
+        title = f"{strategy.name or 'Strategy'} P&L at Expiration"
+
     # Layout
     fig.update_layout(
-        title=f"{strategy.name or 'Strategy'} P&L at Expiration",
-        xaxis_title="Stock Price at Expiration ($)",
+        title=title,
+        xaxis_title="Stock Price ($)",
         yaxis_title="Profit/Loss ($)",
         hovermode='x unified',
         showlegend=True,
@@ -582,6 +649,144 @@ def render_greeks_dashboard() -> None:
             delta="per 1% IV" if vega != 0 else None,
             delta_color="normal" if vega >= 0 else "inverse"
         )
+
+
+def calculate_scenario_pnl(
+    strategy: OptionStrategy,
+    prices: 'np.ndarray',
+    dte: int,
+    iv_shift: float,
+    risk_free_rate: float
+) -> 'np.ndarray':
+    """
+    Calculate P&L at a specific DTE and IV scenario using Black-Scholes.
+
+    Args:
+        strategy: OptionStrategy with legs
+        prices: Array of underlying prices
+        dte: Days to expiration for scenario
+        iv_shift: Percentage shift to IV (-50 to +50)
+        risk_free_rate: Risk-free rate as decimal
+
+    Returns:
+        Array of P&L values at each price point
+    """
+    import numpy as np
+
+    # Convert DTE to years
+    T = dte / 365.0
+
+    total_pnl = np.zeros_like(prices, dtype=float)
+
+    for leg in strategy.legs:
+        # Adjust IV by shift percentage
+        adjusted_iv = leg.iv * (1 + iv_shift / 100.0)
+        adjusted_iv = max(0.01, adjusted_iv)  # Floor at 1% to avoid errors
+
+        if T == 0:
+            # At expiration - use intrinsic value
+            if leg.option_type == 'call':
+                option_values = np.maximum(prices - leg.strike, 0)
+            else:
+                option_values = np.maximum(leg.strike - prices, 0)
+        else:
+            # Use BSM for mid-life valuation
+            option_values = np.zeros_like(prices, dtype=float)
+            for i, S in enumerate(prices):
+                try:
+                    call_price, put_price = black_scholes(
+                        S=S,
+                        K=leg.strike,
+                        T=T,
+                        r=risk_free_rate,
+                        sigma=adjusted_iv
+                    )
+                    if leg.option_type == 'call':
+                        option_values[i] = call_price
+                    else:
+                        option_values[i] = put_price
+                except ValueError:
+                    # Handle edge cases
+                    if leg.option_type == 'call':
+                        option_values[i] = max(S - leg.strike, 0)
+                    else:
+                        option_values[i] = max(leg.strike - S, 0)
+
+        # P&L = (current value * quantity * 100) - entry cost
+        leg_pnl = option_values * leg.quantity * 100 - leg.cost
+        total_pnl += leg_pnl
+
+    return total_pnl
+
+
+def get_actual_dte() -> int:
+    """Get actual days to expiration from selected expiration."""
+    exp = st.session_state.selected_expiration
+    if not exp:
+        return 30  # Default
+
+    exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
+    return max(0, (exp_date - date.today()).days)
+
+
+def render_sensitivity_sliders() -> None:
+    """Render DTE and IV sensitivity sliders."""
+    st.subheader("Sensitivity Analysis")
+
+    strategy = st.session_state.strategy
+    if not strategy or len(strategy.legs) == 0:
+        st.info("Add strategy legs to see sensitivity analysis")
+        return
+
+    actual_dte = get_actual_dte()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**Days to Expiration**")
+
+        # Toggle for at-expiration vs custom DTE
+        use_expiration = st.checkbox(
+            "Show at expiration",
+            value=st.session_state.scenario_dte is None,
+            key="scenario_at_expiration"
+        )
+
+        if use_expiration:
+            st.session_state.scenario_dte = None
+            st.caption(f"Showing P&L at expiration (T=0)")
+        else:
+            # DTE slider
+            dte = st.slider(
+                "DTE",
+                min_value=0,
+                max_value=max(actual_dte, 1),
+                value=st.session_state.scenario_dte if st.session_state.scenario_dte is not None else actual_dte,
+                key="dte_slider"
+            )
+            st.session_state.scenario_dte = dte
+            st.caption(f"Showing P&L with {dte} days remaining")
+
+    with col2:
+        st.write("**Implied Volatility Shift**")
+
+        iv_shift = st.slider(
+            "IV Shift (%)",
+            min_value=-50,
+            max_value=50,
+            value=int(st.session_state.scenario_iv_shift),
+            step=5,
+            key="iv_shift_slider",
+            help="Shift all leg IVs by this percentage"
+        )
+        st.session_state.scenario_iv_shift = float(iv_shift)
+
+        if iv_shift == 0:
+            st.caption("Using current IV levels")
+        elif iv_shift > 0:
+            st.caption(f"IV increased by {iv_shift}%")
+        else:
+            st.caption(f"IV decreased by {abs(iv_shift)}%")
 
 
 def render_pnl_chart() -> None:
@@ -959,9 +1164,8 @@ def render_placeholders() -> None:
 
     st.divider()
 
-    # Phase 4.5 placeholder
-    st.subheader("Sensitivity Analysis")
-    st.info("Phase 4.5: DTE and IV sliders for sensitivity analysis will be added here")
+    # Phase 4.5 - Sensitivity Analysis (implemented)
+    render_sensitivity_sliders()
 
 
 def main():
