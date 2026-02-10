@@ -135,7 +135,8 @@ target-financial-analyzer/
 │   ├── iv_solver.py          # Newton-Raphson implied volatility solver
 │   ├── payoffs.py            # Payoff functions for P&L diagrams
 │   ├── data_connector.py     # Market data connector (yfinance)
-│   └── chain_analyzer.py     # Bridge: live data → IV/Greeks calculation
+│   ├── chain_analyzer.py     # Bridge: live data → IV/Greeks calculation
+│   └── data_manager.py       # Pandas-based option chain storage
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
@@ -144,7 +145,8 @@ target-financial-analyzer/
 │   ├── test_iv_solver.py     # IV solver tests
 │   ├── test_payoffs.py       # Payoff function tests
 │   ├── test_data_connector.py # Data connector tests
-│   └── test_chain_analyzer.py # Chain analyzer tests
+│   ├── test_chain_analyzer.py # Chain analyzer tests
+│   └── test_data_manager.py  # Data manager tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -532,6 +534,106 @@ priced = analyzer.analyze(grid)
 - Options where IV solver fails to converge are skipped
 - Model price is the BSM price using the calculated IV (should match mid_price)
 
+### Data Manager
+
+The `DataManager` stores priced option chains in Pandas DataFrames for fast lookups during strategy building:
+
+```python
+from options_builder import (
+    OptionsDataConnector,
+    ChainAnalyzer,
+    DataManager
+)
+
+# Fetch and analyze option chain
+conn = OptionsDataConnector()
+exps = conn.get_expirations('SPY')
+grid = conn.get_chain_grid('SPY', exps[2])
+liquid_grid = grid.filter_liquid(max_spread_pct=0.30)
+
+analyzer = ChainAnalyzer()
+priced = analyzer.analyze(liquid_grid)
+
+# Store in DataManager
+dm = DataManager()
+dm.add_chain(priced)
+
+# Quick lookups
+print(dm.get_cache_keys())  # [('SPY', datetime.date(2026, 3, 20))]
+print(dm.get_strikes('SPY', priced.expiration))  # [580.0, 585.0, ...]
+
+# Look up a specific option
+atm_call = dm.lookup_option('SPY', priced.expiration, priced.atm_strike(), 'call')
+if atm_call:
+    print(f"ATM Call: ${atm_call['mid']:.2f}, IV: {atm_call['iv']:.1%}, Δ: {atm_call['delta']:.3f}")
+
+# Get calls or puts only
+calls = dm.get_calls('SPY', priced.expiration)
+puts = dm.get_puts('SPY', priced.expiration)
+
+# Filter by delta (e.g., find 30-delta puts for selling)
+otm_puts = dm.filter_by_delta('SPY', priced.expiration, -0.35, -0.25, 'put')
+
+# Filter by liquidity
+liquid = dm.filter_by_liquidity('SPY', priced.expiration, min_oi=100, max_spread_pct=0.10)
+
+# Get full DataFrame for analysis
+df = dm.get_chain('SPY', priced.expiration)
+print(df[['strike', 'type', 'mid', 'iv', 'delta']].head())
+```
+
+**Cache Management:**
+
+```python
+# Check what's cached
+print(len(dm))  # Number of cached chains
+print(('SPY', priced.expiration) in dm)  # True
+
+# Clear specific ticker
+dm.clear_cache(ticker='SPY')
+
+# Clear all
+dm.clear_cache()
+```
+
+**DataFrame Schema:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `ticker` | str | Underlying symbol |
+| `expiration` | date | Expiration date |
+| `type` | str | 'call' or 'put' |
+| `strike` | float | Strike price |
+| `bid` | float | Bid price |
+| `ask` | float | Ask price |
+| `mid` | float | Mid price (mark) |
+| `iv` | float | Implied volatility |
+| `delta` | float | Delta Greek |
+| `gamma` | float | Gamma Greek |
+| `theta` | float | Theta Greek |
+| `vega` | float | Vega Greek |
+| `open_interest` | int | Open interest |
+| `volume` | int | Volume |
+| `model_price` | float | BSM model price |
+| `underlying_price` | float | Current stock price |
+| `time_to_maturity` | float | TTM in years |
+| `risk_free_rate` | float | Risk-free rate used |
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `add_chain(chain)` | Store a PricedChain (overwrites if same ticker/expiration) |
+| `get_chain(ticker, expiration)` | Get full DataFrame or None |
+| `get_calls(ticker, expiration)` | Get calls only |
+| `get_puts(ticker, expiration)` | Get puts only |
+| `lookup_option(ticker, expiration, strike, option_type)` | Get single option as dict |
+| `get_strikes(ticker, expiration)` | Get sorted list of strikes |
+| `filter_by_delta(ticker, expiration, min_delta, max_delta, option_type=None)` | Filter by delta range |
+| `filter_by_liquidity(ticker, expiration, min_oi=0, max_spread_pct=1.0)` | Filter by OI and spread |
+| `get_cache_keys()` | Get all cached (ticker, expiration) pairs |
+| `clear_cache(ticker=None)` | Clear all or ticker-specific data |
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -699,6 +801,7 @@ pytest tests/test_iv_solver.py -v    # IV solver tests
 pytest tests/test_payoffs.py -v      # Payoff tests
 pytest tests/test_data_connector.py -v  # Data connector tests
 pytest tests/test_chain_analyzer.py -v  # Chain analyzer tests
+pytest tests/test_data_manager.py -v   # Data manager tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -713,6 +816,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_payoffs.py` - Call/put payoffs, array inputs, put-call parity
 - `test_data_connector.py` - Market data fetching, option chains, risk-free rate
 - `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
+- `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 
 ## License
 
