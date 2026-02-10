@@ -600,3 +600,149 @@ class TestPhase3Validation:
 
         # Verify no P&L value is worse than -premium
         assert all(p >= -premium_paid for p in pnl), "P&L dropped below max loss bound"
+
+
+class TestOptionStrategyMetrics:
+    """Tests for key performance metrics."""
+
+    def test_long_call_max_profit_unlimited(self, sample_dm):
+        """Long call has unlimited profit potential."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+
+        assert strategy.max_profit is None  # Unlimited
+
+    def test_long_call_max_loss_bounded(self, sample_dm):
+        """Long call max loss = premium paid."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+
+        # Premium paid = ask * 100 = 5.20 * 100 = 520
+        assert strategy.max_loss == pytest.approx(520.0)
+
+    def test_bull_call_spread_bounded(self, sample_dm):
+        """Bull call spread has bounded profit and loss."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+        strategy.add_leg_from_lookup(sample_dm, 505.0, 'call', -1)
+
+        # Max profit = spread width - net debit = 500 - 290 = 210
+        assert strategy.max_profit == pytest.approx(210.0)
+
+        # Max loss = net debit = 290
+        assert strategy.max_loss == pytest.approx(290.0)
+
+    def test_short_call_max_loss_unlimited(self, sample_dm):
+        """Short call has unlimited loss potential."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', -1)
+
+        assert strategy.max_loss is None  # Unlimited
+
+    def test_short_call_max_profit_bounded(self, sample_dm):
+        """Short call max profit = premium received."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', -1)
+
+        # Premium received = bid * 100 = 4.80 * 100 = 480
+        assert strategy.max_profit == pytest.approx(480.0)
+
+    def test_long_call_breakeven(self, sample_dm):
+        """Long call breakeven = strike + premium per share."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+
+        # Breakeven = 500 + 5.20 = 505.20
+        breakevens = strategy.breakeven_points
+        assert len(breakevens) == 1
+        assert breakevens[0] == pytest.approx(505.2, rel=0.01)
+
+    def test_bull_call_spread_breakeven(self, sample_dm):
+        """Bull call spread has one breakeven."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+        strategy.add_leg_from_lookup(sample_dm, 505.0, 'call', -1)
+
+        # Breakeven = lower strike + net debit per share = 500 + 2.90 = 502.90
+        breakevens = strategy.breakeven_points
+        assert len(breakevens) == 1
+        assert breakevens[0] == pytest.approx(502.9, rel=0.01)
+
+    def test_short_put_breakeven(self, sample_dm):
+        """Short put breakeven = strike - premium per share."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'put', -1)
+
+        # Breakeven = 500 - 4.80 = 495.20
+        breakevens = strategy.breakeven_points
+        assert len(breakevens) == 1
+        assert breakevens[0] == pytest.approx(495.2, rel=0.01)
+
+    def test_risk_reward_ratio_bounded(self, sample_dm):
+        """Risk/reward ratio for bounded strategy."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+        strategy.add_leg_from_lookup(sample_dm, 505.0, 'call', -1)
+
+        # R/R = 210 / 290 ≈ 0.724
+        assert strategy.risk_reward_ratio == pytest.approx(210.0 / 290.0, rel=0.01)
+
+    def test_risk_reward_ratio_unlimited(self, sample_dm):
+        """Risk/reward is None when profit or loss is unlimited."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+        strategy.add_leg_from_lookup(sample_dm, 500.0, 'call', 1)
+
+        # Long call: unlimited profit
+        assert strategy.risk_reward_ratio is None
+
+    def test_empty_strategy_metrics(self):
+        """Empty strategy has zero metrics."""
+        strategy = OptionStrategy(
+            ticker='SPY',
+            expiration=date(2026, 3, 20),
+            underlying_price=500.0
+        )
+
+        assert strategy.max_profit == 0.0
+        assert strategy.max_loss == 0.0
+        assert strategy.breakeven_points == []

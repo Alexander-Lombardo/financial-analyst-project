@@ -327,3 +327,90 @@ class OptionStrategy:
         prices = self.generate_price_range(pct_range, num_points)
         pnl = self.calculate_pnl(prices)
         return prices, pnl
+
+    @property
+    def max_profit(self) -> Optional[float]:
+        """
+        Maximum profit potential.
+
+        Returns:
+            Max profit in dollars, or None if unlimited
+        """
+        if not self.legs:
+            return 0.0
+
+        prices, pnl = self.pnl_data(pct_range=0.5, num_points=500)
+        max_pnl = float(pnl.max())
+
+        # Check if profit is still increasing at upper boundary
+        if pnl[-1] > pnl[-2] and pnl[-1] == max_pnl:
+            return None  # Unlimited profit potential
+
+        return max_pnl if max_pnl > 0 else 0.0
+
+    @property
+    def max_loss(self) -> Optional[float]:
+        """
+        Maximum loss potential (as positive number).
+
+        Returns:
+            Max loss in dollars (positive), or None if unlimited
+        """
+        if not self.legs:
+            return 0.0
+
+        prices, pnl = self.pnl_data(pct_range=0.5, num_points=500)
+        min_pnl = float(pnl.min())
+
+        # Check if loss is still increasing at either boundary
+        # Lower boundary: loss increases as price drops (e.g., short put)
+        # Upper boundary: loss increases as price rises (e.g., short call)
+        if pnl[0] < pnl[1] and pnl[0] == min_pnl:
+            return None  # Unlimited loss at lower boundary
+        if pnl[-1] < pnl[-2] and pnl[-1] == min_pnl:
+            return None  # Unlimited loss at upper boundary
+
+        return -min_pnl if min_pnl < 0 else 0.0
+
+    @property
+    def breakeven_points(self) -> list[float]:
+        """
+        Stock prices where P&L equals zero.
+
+        Returns:
+            List of breakeven prices, sorted ascending
+        """
+        if not self.legs:
+            return []
+
+        prices, pnl = self.pnl_data(pct_range=0.5, num_points=500)
+        breakevens = []
+
+        # Find zero crossings
+        for i in range(len(pnl) - 1):
+            if pnl[i] == 0:
+                breakevens.append(float(prices[i]))
+            elif pnl[i] * pnl[i + 1] < 0:  # Sign change
+                # Linear interpolation
+                price = prices[i] + (prices[i + 1] - prices[i]) * (-pnl[i]) / (pnl[i + 1] - pnl[i])
+                breakevens.append(float(price))
+
+        return sorted(set(round(b, 2) for b in breakevens))
+
+    @property
+    def risk_reward_ratio(self) -> Optional[float]:
+        """
+        Risk/Reward ratio (max profit / max loss).
+
+        Returns:
+            Ratio as float, or None if either is unlimited or zero
+        """
+        profit = self.max_profit
+        loss = self.max_loss
+
+        if profit is None or loss is None:
+            return None
+        if loss == 0:
+            return float('inf') if profit > 0 else None
+
+        return profit / loss
