@@ -8,9 +8,6 @@ lxml==5.1.0
 pandas==2.2.0
 numpy>=1.24.0
 
-# Scientific Computing (Options Pricing Engine)
-scipy>=1.10.0
-
 # JSON handling (built-in, listed for reference)
 # json - standard library
 
