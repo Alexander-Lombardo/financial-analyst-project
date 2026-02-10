@@ -825,6 +825,9 @@ print(summary)
 | `add_leg(leg)` | Add a StrategyLeg object |
 | `add_leg_from_lookup(dm, strike, option_type, quantity)` | Add leg from DataManager lookup |
 | `get_leg(strike, option_type)` | Find leg by strike and type |
+| `remove_leg(index)` | Remove leg at given index (returns True if removed) |
+| `remove_leg_by_key(strike, option_type)` | Remove first leg matching strike and type |
+| `clear_legs()` | Remove all legs from the strategy |
 | `summary()` | Return dict with key metrics |
 | `generate_price_range(pct_range, num_points)` | Generate price array for P&L calculation |
 | `calculate_pnl(prices)` | Calculate total P&L at each price point |
@@ -1091,6 +1094,7 @@ Open http://localhost:8501 in your browser.
 **Main Display:**
 - **Parameter Metrics** - Ticker, underlying price, expiration, risk-free rate
 - **Chain Data Debug** - Expandable section showing fetched option chain details
+- **Strategy Builder** - Add/remove legs to build custom multi-leg strategies
 - **P&L Chart** - Interactive Plotly chart showing strategy payoff at expiration
 - **Strategy Metrics** - Net premium, max profit/loss, breakeven points
 
@@ -1101,6 +1105,23 @@ Open http://localhost:8501 in your browser.
 - Optional individual leg traces (dashed lines)
 - Interactive tooltips showing P&L at each price point
 - Configurable price range (10-50% around current price)
+
+**Strategy Builder:**
+- **Strike Selection** - Dropdown with all available strikes, showing moneyness labels (ITM/ATM/OTM)
+- **Type** - Radio buttons to select Call or Put
+- **Action** - Radio buttons for Buy (long) or Sell (short)
+- **Quantity** - Number input (1-100 contracts)
+- **Add Button** - Adds the leg to the current strategy
+- **Current Legs List** - Shows all legs with position details and cost
+- **Remove Button** - Delete individual legs from the strategy
+- **Clear All** - Remove all legs and reset the strategy
+- **Net Premium** - Displays total debit or credit for the strategy
+
+**Leg Builder Behavior:**
+- Automatically clears strategy when ticker changes (prevents mixing underlyings)
+- Automatically clears strategy when expiration changes (legs for old expiration invalid)
+- Duplicate handling: Adding same strike/type sums quantities (or cancels if opposite actions)
+- P&L chart updates automatically when legs are added or removed
 
 **Chart Controls (in expander):**
 - **Show individual legs** - Toggle to display each leg's P&L separately
@@ -1143,6 +1164,7 @@ The dashboard uses Streamlit session state to persist:
 - `strategy` - Current OptionStrategy (or None)
 - `chart_show_legs` - Whether to show individual leg traces (default: False)
 - `chart_pct_range` - Price range percentage for chart (default: 0.20)
+- `leg_builder_key` - Widget key for forcing leg builder refresh (default: 0)
 
 ### Implied Volatility Solver
 
