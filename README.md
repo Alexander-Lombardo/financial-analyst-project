@@ -136,7 +136,8 @@ target-financial-analyzer/
 │   ├── payoffs.py            # Payoff functions for P&L diagrams
 │   ├── data_connector.py     # Market data connector (yfinance)
 │   ├── chain_analyzer.py     # Bridge: live data → IV/Greeks calculation
-│   └── data_manager.py       # Pandas-based option chain storage
+│   ├── data_manager.py       # Pandas-based option chain storage
+│   └── strategy.py           # Multi-leg option strategy classes
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
@@ -146,7 +147,8 @@ target-financial-analyzer/
 │   ├── test_payoffs.py       # Payoff function tests
 │   ├── test_data_connector.py # Data connector tests
 │   ├── test_chain_analyzer.py # Chain analyzer tests
-│   └── test_data_manager.py  # Data manager tests
+│   ├── test_data_manager.py  # Data manager tests
+│   └── test_strategy.py      # Strategy classes tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -634,6 +636,189 @@ dm.clear_cache()
 | `get_cache_keys()` | Get all cached (ticker, expiration) pairs |
 | `clear_cache(ticker=None)` | Clear all or ticker-specific data |
 
+### Option Strategy Builder
+
+The `StrategyLeg` and `OptionStrategy` classes enable building and analyzing multi-leg option strategies with aggregated Greeks and cost calculations:
+
+```python
+from datetime import date
+from options_builder import (
+    OptionsDataConnector,
+    ChainAnalyzer,
+    DataManager,
+    OptionStrategy,
+    StrategyLeg
+)
+
+# Set up data pipeline
+conn = OptionsDataConnector()
+exps = conn.get_expirations('SPY')
+grid = conn.get_chain_grid('SPY', exps[2])
+liquid_grid = grid.filter_liquid(max_spread_pct=0.30)
+
+analyzer = ChainAnalyzer()
+priced = analyzer.analyze(liquid_grid)
+
+dm = DataManager()
+dm.add_chain(priced)
+
+# Build a Bull Call Spread
+strategy = OptionStrategy(
+    ticker='SPY',
+    expiration=priced.expiration,
+    underlying_price=priced.underlying_price,
+    name='Bull Call Spread'
+)
+
+# Add legs: Long lower strike, Short higher strike
+atm = priced.atm_strike()
+strategy.add_leg_from_lookup(dm, atm, 'call', 1)       # Long ATM call
+strategy.add_leg_from_lookup(dm, atm + 5, 'call', -1)  # Short OTM call
+
+# View aggregated Greeks
+print(f"Strategy: {strategy.name}")
+print(f"Net Premium: ${strategy.net_premium:.2f}")
+print(f"Is Debit: {strategy.is_debit}")
+print(f"Total Delta: {strategy.total_delta:.1f}")
+print(f"Total Gamma: {strategy.total_gamma:.2f}")
+print(f"Total Theta: {strategy.total_theta:.2f}")
+print(f"Total Vega: {strategy.total_vega:.2f}")
+```
+
+**Position Convention:**
+- `quantity > 0` = Long (buy)
+- `quantity < 0` = Short (sell)
+- Example: `quantity=-2` means "short 2 contracts"
+
+**Building Legs Manually:**
+
+```python
+# Create leg from DataManager lookup result
+opt_data = dm.lookup_option('SPY', priced.expiration, 500.0, 'call')
+leg = StrategyLeg.from_lookup(opt_data, quantity=1)
+
+# Access leg properties
+print(f"Strike: {leg.strike}, Type: {leg.option_type}")
+print(f"Is Long: {leg.is_long}, Is Call: {leg.is_call}")
+print(f"Delta: {leg.delta}, Net Delta: {leg.net_delta}")
+print(f"Cost: ${leg.cost:.2f}")  # Positive=debit, Negative=credit
+```
+
+**Common Strategy Examples:**
+
+```python
+# Iron Condor (4-leg credit spread)
+iron_condor = OptionStrategy(
+    ticker='SPY',
+    expiration=priced.expiration,
+    underlying_price=priced.underlying_price,
+    name='Iron Condor'
+)
+iron_condor.add_leg_from_lookup(dm, 480.0, 'put', 1)   # Long OTM put (protection)
+iron_condor.add_leg_from_lookup(dm, 490.0, 'put', -1)  # Short put (collect premium)
+iron_condor.add_leg_from_lookup(dm, 510.0, 'call', -1) # Short call (collect premium)
+iron_condor.add_leg_from_lookup(dm, 520.0, 'call', 1)  # Long OTM call (protection)
+
+print(f"Credit Received: ${-iron_condor.net_premium:.2f}")
+print(f"Total Delta: {iron_condor.total_delta:.1f}")  # Near zero (neutral)
+
+# Synthetic Long (Long Call + Short Put at same strike)
+synthetic = OptionStrategy(
+    ticker='SPY',
+    expiration=priced.expiration,
+    underlying_price=priced.underlying_price,
+    name='Synthetic Long'
+)
+synthetic.add_leg_from_lookup(dm, 500.0, 'call', 1)
+synthetic.add_leg_from_lookup(dm, 500.0, 'put', -1)
+
+print(f"Total Delta: {synthetic.total_delta:.1f}")  # ~100 (like 100 shares)
+```
+
+**Helper Methods:**
+
+```python
+# Filter legs by type
+calls = strategy.calls          # All call legs
+puts = strategy.puts            # All put legs
+long_legs = strategy.long_legs  # All long positions
+short_legs = strategy.short_legs  # All short positions
+
+# Get unique strikes
+strikes = strategy.strikes  # Sorted list of strikes
+
+# Find specific leg
+leg = strategy.get_leg(500.0, 'call')  # By strike and type
+
+# Strategy summary
+summary = strategy.summary()
+print(summary)
+# {'name': 'Bull Call Spread', 'ticker': 'SPY', 'expiration': ...,
+#  'num_legs': 2, 'net_premium': 290.0, 'is_debit': True,
+#  'total_delta': 15.0, 'total_gamma': 1.0, ...}
+```
+
+**StrategyLeg Attributes:**
+
+| Attribute | Description |
+|-----------|-------------|
+| `strike` | Strike price |
+| `option_type` | 'call' or 'put' |
+| `quantity` | Number of contracts (negative = short) |
+| `bid`, `ask`, `mid` | Market prices |
+| `delta`, `gamma`, `theta`, `vega` | Per-contract Greeks |
+| `iv` | Implied volatility |
+| `model_price` | BSM theoretical price |
+| `open_interest`, `volume` | Liquidity metrics |
+
+**StrategyLeg Properties:**
+
+| Property | Description |
+|----------|-------------|
+| `is_long` / `is_short` | Position direction |
+| `is_call` / `is_put` | Option type |
+| `net_delta` | Position-adjusted delta (delta × quantity × 100) |
+| `net_gamma` | Position-adjusted gamma |
+| `net_theta` | Position-adjusted theta |
+| `net_vega` | Position-adjusted vega |
+| `cost` | Cost to enter (ask × qty × 100 for long, bid × qty × 100 for short) |
+| `mid_cost` | Cost using mid price |
+
+**OptionStrategy Attributes:**
+
+| Attribute | Description |
+|-----------|-------------|
+| `ticker` | Underlying symbol |
+| `expiration` | Expiration date |
+| `underlying_price` | Current stock price |
+| `legs` | List of StrategyLeg objects |
+| `name` | Strategy name (optional) |
+
+**OptionStrategy Properties:**
+
+| Property | Description |
+|----------|-------------|
+| `total_delta` | Sum of all net deltas |
+| `total_gamma` | Sum of all net gammas |
+| `total_theta` | Sum of all net thetas |
+| `total_vega` | Sum of all net vegas |
+| `net_premium` | Total cost (positive = debit, negative = credit) |
+| `net_premium_mid` | Total cost using mid prices |
+| `is_debit` | True if strategy costs money |
+| `is_credit` | True if strategy receives premium |
+| `calls` / `puts` | Filter legs by type |
+| `long_legs` / `short_legs` | Filter legs by direction |
+| `strikes` | Sorted unique strikes |
+
+**OptionStrategy Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `add_leg(leg)` | Add a StrategyLeg object |
+| `add_leg_from_lookup(dm, strike, option_type, quantity)` | Add leg from DataManager lookup |
+| `get_leg(strike, option_type)` | Find leg by strike and type |
+| `summary()` | Return dict with key metrics |
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -802,6 +987,7 @@ pytest tests/test_payoffs.py -v      # Payoff tests
 pytest tests/test_data_connector.py -v  # Data connector tests
 pytest tests/test_chain_analyzer.py -v  # Chain analyzer tests
 pytest tests/test_data_manager.py -v   # Data manager tests
+pytest tests/test_strategy.py -v       # Strategy classes tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -817,6 +1003,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_connector.py` - Market data fetching, option chains, risk-free rate
 - `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
+- `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, helper methods
 
 ## License
 
