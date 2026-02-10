@@ -7,6 +7,9 @@ from options_builder.data_connector import (
     OptionsDataConnector,
     UnderlyingQuote,
     OptionQuote,
+    OptionLeg,
+    OptionChainRow,
+    OptionChainGrid,
 )
 
 
@@ -95,3 +98,204 @@ class TestRiskFreeRate:
 
         assert rate > 0
         assert rate < 0.20  # Sanity check: less than 20%
+
+
+class TestOptionLeg:
+    """Tests for OptionLeg dataclass."""
+
+    def test_option_leg_creation(self):
+        """Should create OptionLeg with all fields."""
+        leg = OptionLeg(
+            strike=100.0,
+            last=5.50,
+            bid=5.40,
+            ask=5.60,
+            open_interest=1000,
+            volume=500,
+            implied_volatility=0.25
+        )
+
+        assert leg.strike == 100.0
+        assert leg.last == 5.50
+        assert leg.bid == 5.40
+        assert leg.ask == 5.60
+        assert leg.open_interest == 1000
+        assert leg.volume == 500
+        assert leg.implied_volatility == 0.25
+
+    def test_option_leg_defaults(self):
+        """Should have defaults for optional fields."""
+        leg = OptionLeg(
+            strike=100.0,
+            last=5.50,
+            bid=5.40,
+            ask=5.60,
+            open_interest=1000
+        )
+
+        assert leg.volume == 0
+        assert leg.implied_volatility == 0.0
+
+
+class TestOptionChainRow:
+    """Tests for OptionChainRow dataclass."""
+
+    def test_row_with_both_legs(self):
+        """Should create row with call and put legs."""
+        call = OptionLeg(strike=100, last=5.0, bid=4.9, ask=5.1, open_interest=100)
+        put = OptionLeg(strike=100, last=3.0, bid=2.9, ask=3.1, open_interest=200)
+
+        row = OptionChainRow(strike=100.0, call=call, put=put)
+
+        assert row.strike == 100.0
+        assert row.call is not None
+        assert row.put is not None
+        assert row.call.last == 5.0
+        assert row.put.last == 3.0
+
+    def test_row_with_missing_leg(self):
+        """Should allow None for missing legs."""
+        row = OptionChainRow(strike=100.0, call=None, put=None)
+
+        assert row.call is None
+        assert row.put is None
+
+
+class TestOptionChainGrid:
+    """Tests for OptionChainGrid dataclass."""
+
+    @pytest.fixture
+    def sample_grid(self):
+        """Create a sample grid for testing."""
+        rows = []
+        for strike in [95, 100, 105]:
+            call = OptionLeg(strike=strike, last=10-strike/20, bid=9.5-strike/20,
+                           ask=10.5-strike/20, open_interest=100)
+            put = OptionLeg(strike=strike, last=strike/20-2, bid=strike/20-2.5,
+                          ask=strike/20-1.5, open_interest=150)
+            rows.append(OptionChainRow(strike=float(strike), call=call, put=put))
+
+        return OptionChainGrid(
+            ticker='TEST',
+            expiration=date(2026, 3, 20),
+            underlying_price=100.0,
+            rows=rows
+        )
+
+    def test_grid_len(self, sample_grid):
+        """Should return number of rows."""
+        assert len(sample_grid) == 3
+
+    def test_grid_strikes(self, sample_grid):
+        """Should return list of strikes."""
+        strikes = sample_grid.strikes()
+        assert strikes == [95.0, 100.0, 105.0]
+
+    def test_grid_calls(self, sample_grid):
+        """Should return all call legs."""
+        calls = sample_grid.calls()
+        assert len(calls) == 3
+        assert all(isinstance(c, OptionLeg) for c in calls)
+
+    def test_grid_puts(self, sample_grid):
+        """Should return all put legs."""
+        puts = sample_grid.puts()
+        assert len(puts) == 3
+        assert all(isinstance(p, OptionLeg) for p in puts)
+
+    def test_get_strike(self, sample_grid):
+        """Should get row by strike price."""
+        row = sample_grid.get_strike(100.0)
+        assert row is not None
+        assert row.strike == 100.0
+
+    def test_get_strike_not_found(self, sample_grid):
+        """Should return None for non-existent strike."""
+        row = sample_grid.get_strike(999.0)
+        assert row is None
+
+    def test_atm_strike(self, sample_grid):
+        """Should find closest strike to underlying."""
+        # Underlying is 100, so ATM strike should be 100
+        assert sample_grid.atm_strike() == 100.0
+
+    def test_atm_strike_between(self):
+        """Should find closest strike when underlying is between strikes."""
+        rows = [
+            OptionChainRow(strike=95.0),
+            OptionChainRow(strike=100.0),
+            OptionChainRow(strike=105.0),
+        ]
+        grid = OptionChainGrid(
+            ticker='TEST',
+            expiration=date(2026, 3, 20),
+            underlying_price=102.0,  # Closer to 100 than 105
+            rows=rows
+        )
+        assert grid.atm_strike() == 100.0
+
+    def test_display(self, sample_grid):
+        """Should return formatted display string."""
+        display = sample_grid.display()
+        assert 'TEST' in display
+        assert '100.0' in display or '100.00' in display
+        assert 'CALLS' in display
+        assert 'PUTS' in display
+
+    def test_display_with_limit(self, sample_grid):
+        """Should limit number of strikes displayed."""
+        display = sample_grid.display(num_strikes=2)
+        # Should still work with limited strikes
+        assert 'TEST' in display
+
+
+class TestGetChainGrid:
+    """Tests for get_chain_grid method (integration tests with live data)."""
+
+    def test_returns_grid(self):
+        """Should return OptionChainGrid object."""
+        connector = OptionsDataConnector()
+        expirations = connector.get_expirations('SPY')
+        grid = connector.get_chain_grid('SPY', expirations[0])
+
+        assert isinstance(grid, OptionChainGrid)
+        assert grid.ticker == 'SPY'
+        assert isinstance(grid.expiration, date)
+        assert grid.underlying_price > 0
+
+    def test_grid_has_rows(self):
+        """Should have multiple rows with strikes."""
+        connector = OptionsDataConnector()
+        expirations = connector.get_expirations('SPY')
+        grid = connector.get_chain_grid('SPY', expirations[0])
+
+        assert len(grid) > 0
+        assert len(grid.strikes()) > 0
+
+    def test_grid_rows_have_legs(self):
+        """Should have call and put legs for most strikes."""
+        connector = OptionsDataConnector()
+        expirations = connector.get_expirations('SPY')
+        grid = connector.get_chain_grid('SPY', expirations[0])
+
+        # At least some rows should have both legs
+        rows_with_both = [r for r in grid.rows if r.call and r.put]
+        assert len(rows_with_both) > 0
+
+    def test_leg_data_populated(self):
+        """Should populate leg data correctly."""
+        connector = OptionsDataConnector()
+        expirations = connector.get_expirations('SPY')
+        grid = connector.get_chain_grid('SPY', expirations[0])
+
+        # Find ATM row
+        atm_row = grid.get_strike(grid.atm_strike())
+        assert atm_row is not None
+
+        if atm_row.call:
+            assert atm_row.call.strike > 0
+            assert atm_row.call.open_interest >= 0
+
+        if atm_row.put:
+            assert atm_row.put.strike > 0
+            assert atm_row.put.open_interest >= 0

@@ -18,6 +18,9 @@ from options_builder.data_connector import (
     OptionsDataConnector,
     UnderlyingQuote,
     OptionQuote,
+    OptionLeg,
+    OptionChainRow,
+    OptionChainGrid,
 )
 
 __all__ = [
@@ -40,4 +43,7 @@ __all__ = [
     "OptionsDataConnector",
     "UnderlyingQuote",
     "OptionQuote",
+    "OptionLeg",
+    "OptionChainRow",
+    "OptionChainGrid",
 ]
