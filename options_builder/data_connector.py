@@ -19,6 +19,28 @@ class OptionLeg:
     volume: int = 0
     implied_volatility: float = 0.0
 
+    @property
+    def mid_price(self) -> float:
+        """Calculate mid-price (mark) as average of bid and ask."""
+        return (self.bid + self.ask) / 2
+
+    @property
+    def spread(self) -> float:
+        """Calculate bid-ask spread."""
+        return self.ask - self.bid
+
+    @property
+    def spread_pct(self) -> float:
+        """Calculate spread as percentage of mid-price."""
+        mid = self.mid_price
+        if mid <= 0:
+            return float('inf')
+        return self.spread / mid
+
+    def is_liquid(self, max_spread_pct: float = 0.50) -> bool:
+        """Check if option meets liquidity criteria."""
+        return self.bid > 0 and self.spread_pct <= max_spread_pct
+
 
 @dataclass
 class OptionChainRow:
@@ -71,6 +93,55 @@ class OptionChainGrid:
         if not self.rows:
             raise ValueError("No strikes available")
         return min(self.strikes(), key=lambda s: abs(s - self.underlying_price))
+
+    def time_to_maturity(self, from_date: Optional[date] = None) -> float:
+        """
+        Calculate time to maturity in years.
+
+        Args:
+            from_date: Reference date (defaults to today)
+
+        Returns:
+            Time to expiration in years (assumes 365 days/year)
+        """
+        if from_date is None:
+            from_date = date.today()
+        days = (self.expiration - from_date).days
+        return max(0, days / 365.0)
+
+    def filter_liquid(self, max_spread_pct: float = 0.50) -> 'OptionChainGrid':
+        """
+        Return a new grid with only liquid options.
+
+        Removes:
+        - Options with bid = 0
+        - Options with spread > max_spread_pct of mid-price
+
+        Args:
+            max_spread_pct: Maximum spread as fraction of mid (default 50%)
+
+        Returns:
+            New OptionChainGrid with filtered rows
+        """
+        filtered_rows = []
+        for row in self.rows:
+            call = row.call if row.call and row.call.is_liquid(max_spread_pct) else None
+            put = row.put if row.put and row.put.is_liquid(max_spread_pct) else None
+
+            # Keep row if at least one leg is liquid
+            if call or put:
+                filtered_rows.append(OptionChainRow(
+                    strike=row.strike,
+                    call=call,
+                    put=put
+                ))
+
+        return OptionChainGrid(
+            ticker=self.ticker,
+            expiration=self.expiration,
+            underlying_price=self.underlying_price,
+            rows=filtered_rows
+        )
 
     def display(self, num_strikes: Optional[int] = None) -> str:
         """

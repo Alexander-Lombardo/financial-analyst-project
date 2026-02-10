@@ -100,6 +100,35 @@ class TestRiskFreeRate:
         assert rate < 0.20  # Sanity check: less than 20%
 
 
+class TestOptionLegProperties:
+    """Tests for OptionLeg computed properties."""
+
+    def test_mid_price(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=4.8, ask=5.2, open_interest=100)
+        assert leg.mid_price == 5.0
+
+    def test_spread(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=4.8, ask=5.2, open_interest=100)
+        assert leg.spread == pytest.approx(0.4)
+
+    def test_spread_pct(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=4.8, ask=5.2, open_interest=100)
+        assert leg.spread_pct == pytest.approx(0.08)  # 0.4 / 5.0
+
+    def test_is_liquid_true(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=4.8, ask=5.2, open_interest=100)
+        assert leg.is_liquid(max_spread_pct=0.50) is True
+
+    def test_is_liquid_zero_bid(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=0, ask=5.2, open_interest=100)
+        assert leg.is_liquid() is False
+
+    def test_is_liquid_wide_spread(self):
+        leg = OptionLeg(strike=100, last=5.0, bid=1.0, ask=9.0, open_interest=100)
+        # spread = 8, mid = 5, spread_pct = 1.6 > 0.50
+        assert leg.is_liquid(max_spread_pct=0.50) is False
+
+
 class TestOptionLeg:
     """Tests for OptionLeg dataclass."""
 
@@ -299,3 +328,76 @@ class TestGetChainGrid:
         if atm_row.put:
             assert atm_row.put.strike > 0
             assert atm_row.put.open_interest >= 0
+
+
+class TestTimeToMaturity:
+    """Tests for time to maturity calculation."""
+
+    def test_time_to_maturity_future(self):
+        grid = OptionChainGrid(
+            ticker='TEST',
+            expiration=date(2026, 3, 20),
+            underlying_price=100.0,
+            rows=[]
+        )
+        # Calculate from a fixed reference date
+        ttm = grid.time_to_maturity(from_date=date(2026, 2, 10))
+        assert ttm == pytest.approx(38 / 365.0)
+
+    def test_time_to_maturity_expired(self):
+        grid = OptionChainGrid(
+            ticker='TEST',
+            expiration=date(2026, 1, 1),
+            underlying_price=100.0,
+            rows=[]
+        )
+        ttm = grid.time_to_maturity(from_date=date(2026, 2, 10))
+        assert ttm == 0  # Expired, should be 0
+
+
+class TestFilterLiquid:
+    """Tests for liquidity filtering."""
+
+    def test_filter_removes_zero_bid(self):
+        rows = [
+            OptionChainRow(
+                strike=100.0,
+                call=OptionLeg(strike=100, last=5, bid=0, ask=5.2, open_interest=100),
+                put=OptionLeg(strike=100, last=3, bid=2.8, ask=3.2, open_interest=100)
+            )
+        ]
+        grid = OptionChainGrid(ticker='TEST', expiration=date(2026, 3, 20),
+                               underlying_price=100.0, rows=rows)
+
+        filtered = grid.filter_liquid()
+        assert filtered.rows[0].call is None  # Removed
+        assert filtered.rows[0].put is not None  # Kept
+
+    def test_filter_removes_wide_spread(self):
+        rows = [
+            OptionChainRow(
+                strike=100.0,
+                call=OptionLeg(strike=100, last=5, bid=1, ask=9, open_interest=100),
+                put=OptionLeg(strike=100, last=3, bid=2.8, ask=3.2, open_interest=100)
+            )
+        ]
+        grid = OptionChainGrid(ticker='TEST', expiration=date(2026, 3, 20),
+                               underlying_price=100.0, rows=rows)
+
+        filtered = grid.filter_liquid(max_spread_pct=0.50)
+        assert filtered.rows[0].call is None  # Wide spread removed
+        assert filtered.rows[0].put is not None
+
+    def test_filter_removes_empty_rows(self):
+        rows = [
+            OptionChainRow(
+                strike=100.0,
+                call=OptionLeg(strike=100, last=5, bid=0, ask=5, open_interest=100),
+                put=OptionLeg(strike=100, last=3, bid=0, ask=3, open_interest=100)
+            )
+        ]
+        grid = OptionChainGrid(ticker='TEST', expiration=date(2026, 3, 20),
+                               underlying_price=100.0, rows=rows)
+
+        filtered = grid.filter_liquid()
+        assert len(filtered) == 0  # Both legs illiquid, row removed
