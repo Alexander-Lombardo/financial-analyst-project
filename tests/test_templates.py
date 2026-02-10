@@ -813,6 +813,224 @@ class TestIronButterfly:
             )
 
 
+class TestTemplateStructureVerification:
+    """
+    Verification Test 1: Template "Structure" Tests
+    Ensure correct legs are created with proper long/short positions.
+    """
+
+    def test_bull_call_spread_structure(self, sample_dm):
+        """Bull Call Spread: exactly 1 long call + 1 short call, short strike > long strike."""
+        strategy = bull_call_spread(
+            sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0
+        )
+
+        # Exactly 2 legs
+        assert len(strategy) == 2
+
+        # Both are calls
+        assert len(strategy.calls) == 2
+        assert len(strategy.puts) == 0
+
+        # One long, one short
+        assert len(strategy.long_legs) == 1
+        assert len(strategy.short_legs) == 1
+
+        # Long leg at lower strike, short leg at higher strike
+        long_leg = strategy.long_legs[0]
+        short_leg = strategy.short_legs[0]
+        assert long_leg.strike < short_leg.strike
+
+        # Same expiration (both from same chain)
+        assert strategy.expiration == date(2026, 3, 20)
+
+    def test_iron_condor_structure(self, sample_dm):
+        """Iron Condor: exactly 4 legs - 2 puts (Long/Short) + 2 calls (Long/Short)."""
+        strategy = iron_condor(
+            sample_dm, 'SPY', date(2026, 3, 20),
+            put_long_strike=490.0,
+            put_short_strike=495.0,
+            call_short_strike=505.0,
+            call_long_strike=510.0
+        )
+
+        # Exactly 4 legs
+        assert len(strategy) == 4
+
+        # 2 puts and 2 calls
+        assert len(strategy.puts) == 2
+        assert len(strategy.calls) == 2
+
+        # 2 long and 2 short
+        assert len(strategy.long_legs) == 2
+        assert len(strategy.short_legs) == 2
+
+        # Put spread: long lower, short higher
+        put_long = strategy.get_leg(490.0, 'put')
+        put_short = strategy.get_leg(495.0, 'put')
+        assert put_long.is_long
+        assert put_short.is_short
+        assert put_long.strike < put_short.strike
+
+        # Call spread: short lower, long higher
+        call_short = strategy.get_leg(505.0, 'call')
+        call_long = strategy.get_leg(510.0, 'call')
+        assert call_short.is_short
+        assert call_long.is_long
+        assert call_short.strike < call_long.strike
+
+    def test_straddle_structure(self, sample_dm):
+        """Straddle: 1 call + 1 put at same strike."""
+        strategy = long_straddle(
+            sample_dm, 'SPY', date(2026, 3, 20), 500.0
+        )
+
+        assert len(strategy) == 2
+        assert len(strategy.calls) == 1
+        assert len(strategy.puts) == 1
+
+        # Same strike
+        call_leg = strategy.calls[0]
+        put_leg = strategy.puts[0]
+        assert call_leg.strike == put_leg.strike == 500.0
+
+
+class TestDirectionalBiasVerification:
+    """
+    Verification Test 2: "Directional Bias" Tests
+    Ensure Net Delta matches strategy intent (Bullish/Bearish/Neutral).
+    """
+
+    def test_bullish_strategies_positive_delta(self, sample_dm):
+        """Bullish templates must have positive Net Delta."""
+        # Bull Call Spread
+        bcs = bull_call_spread(sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0)
+        assert bcs.total_delta > 0, "Bull Call Spread should have positive delta"
+
+        # Bull Put Spread
+        bps = bull_put_spread(sample_dm, 'SPY', date(2026, 3, 20), 495.0, 500.0)
+        assert bps.total_delta > 0, "Bull Put Spread should have positive delta"
+
+    def test_bearish_strategies_negative_delta(self, sample_dm):
+        """Bearish templates must have negative Net Delta."""
+        # Bear Call Spread
+        bearcs = bear_call_spread(sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0)
+        assert bearcs.total_delta < 0, "Bear Call Spread should have negative delta"
+
+        # Bear Put Spread
+        bearps = bear_put_spread(sample_dm, 'SPY', date(2026, 3, 20), 495.0, 500.0)
+        assert bearps.total_delta < 0, "Bear Put Spread should have negative delta"
+
+    def test_neutral_strategies_near_zero_delta(self, sample_dm):
+        """Neutral templates must have near-zero Net Delta."""
+        # Long Straddle (ATM)
+        ls = long_straddle(sample_dm, 'SPY', date(2026, 3, 20), 500.0)
+        assert abs(ls.total_delta) < 5.0, "Long Straddle should be delta neutral"
+
+        # Short Straddle (ATM)
+        ss = short_straddle(sample_dm, 'SPY', date(2026, 3, 20), 500.0)
+        assert abs(ss.total_delta) < 5.0, "Short Straddle should be delta neutral"
+
+        # Long Strangle (symmetric)
+        lstr = long_strangle(sample_dm, 'SPY', date(2026, 3, 20), 495.0, 505.0)
+        assert abs(lstr.total_delta) < 5.0, "Long Strangle should be delta neutral"
+
+        # Short Strangle (symmetric)
+        sstr = short_strangle(sample_dm, 'SPY', date(2026, 3, 20), 495.0, 505.0)
+        assert abs(sstr.total_delta) < 5.0, "Short Strangle should be delta neutral"
+
+        # Iron Condor
+        ic = iron_condor(
+            sample_dm, 'SPY', date(2026, 3, 20),
+            put_long_strike=490.0,
+            put_short_strike=495.0,
+            call_short_strike=505.0,
+            call_long_strike=510.0
+        )
+        assert abs(ic.total_delta) < 20.0, "Iron Condor should be roughly delta neutral"
+
+        # Iron Butterfly
+        ib = iron_butterfly(
+            sample_dm, 'SPY', date(2026, 3, 20),
+            put_long_strike=495.0,
+            middle_strike=500.0,
+            call_long_strike=505.0
+        )
+        assert abs(ib.total_delta) < 10.0, "Iron Butterfly should be delta neutral"
+
+
+class TestRatioAndQuantityVerification:
+    """
+    Verification Test 3: Ratio and Quantity Tests
+    Ensure Net Greeks reflect the sum of exactly the specified legs.
+    """
+
+    def test_straddle_greeks_sum_of_two_legs(self, sample_dm):
+        """Straddle Net Greeks = sum of exactly 1 call + 1 put."""
+        strategy = long_straddle(sample_dm, 'SPY', date(2026, 3, 20), 500.0)
+
+        call_leg = strategy.get_leg(500.0, 'call')
+        put_leg = strategy.get_leg(500.0, 'put')
+
+        # Greeks should be sum of exactly these two legs
+        assert strategy.total_delta == pytest.approx(call_leg.net_delta + put_leg.net_delta)
+        assert strategy.total_gamma == pytest.approx(call_leg.net_gamma + put_leg.net_gamma)
+        assert strategy.total_theta == pytest.approx(call_leg.net_theta + put_leg.net_theta)
+        assert strategy.total_vega == pytest.approx(call_leg.net_vega + put_leg.net_vega)
+
+    def test_straddle_net_cost_equals_both_premiums(self, sample_dm):
+        """Straddle Net Cost = call premium + put premium."""
+        strategy = long_straddle(sample_dm, 'SPY', date(2026, 3, 20), 500.0)
+
+        call_leg = strategy.get_leg(500.0, 'call')
+        put_leg = strategy.get_leg(500.0, 'put')
+
+        # Net premium = sum of both leg costs
+        expected_cost = call_leg.cost + put_leg.cost
+        assert strategy.net_premium == pytest.approx(expected_cost)
+
+    def test_quantity_scales_greeks_linearly(self, sample_dm):
+        """Quantity multiplier should scale all Greeks linearly."""
+        single = bull_call_spread(sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0, quantity=1)
+        double = bull_call_spread(sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0, quantity=2)
+        triple = bull_call_spread(sample_dm, 'SPY', date(2026, 3, 20), 500.0, 505.0, quantity=3)
+
+        # Delta scales linearly
+        assert double.total_delta == pytest.approx(2 * single.total_delta)
+        assert triple.total_delta == pytest.approx(3 * single.total_delta)
+
+        # Gamma scales linearly
+        assert double.total_gamma == pytest.approx(2 * single.total_gamma)
+        assert triple.total_gamma == pytest.approx(3 * single.total_gamma)
+
+        # Net premium scales linearly
+        assert double.net_premium == pytest.approx(2 * single.net_premium)
+        assert triple.net_premium == pytest.approx(3 * single.net_premium)
+
+    def test_iron_condor_greeks_sum_of_four_legs(self, sample_dm):
+        """Iron Condor Net Greeks = sum of all 4 legs."""
+        strategy = iron_condor(
+            sample_dm, 'SPY', date(2026, 3, 20),
+            put_long_strike=490.0,
+            put_short_strike=495.0,
+            call_short_strike=505.0,
+            call_long_strike=510.0
+        )
+
+        # Manually sum all 4 legs
+        manual_delta = sum(leg.net_delta for leg in strategy.legs)
+        manual_gamma = sum(leg.net_gamma for leg in strategy.legs)
+        manual_theta = sum(leg.net_theta for leg in strategy.legs)
+        manual_vega = sum(leg.net_vega for leg in strategy.legs)
+        manual_cost = sum(leg.cost for leg in strategy.legs)
+
+        assert strategy.total_delta == pytest.approx(manual_delta)
+        assert strategy.total_gamma == pytest.approx(manual_gamma)
+        assert strategy.total_theta == pytest.approx(manual_theta)
+        assert strategy.total_vega == pytest.approx(manual_vega)
+        assert strategy.net_premium == pytest.approx(manual_cost)
+
+
 class TestTemplateIntegration:
     """Integration tests for template functions."""
 
