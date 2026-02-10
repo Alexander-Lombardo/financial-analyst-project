@@ -392,13 +392,40 @@ all_calls = grid.calls()          # All call legs
 all_puts = grid.puts()            # All put legs
 ```
 
+**Data Cleaning & Normalization:**
+
+```python
+from options_builder import OptionsDataConnector
+
+connector = OptionsDataConnector()
+expirations = connector.get_expirations('SPY')
+grid = connector.get_chain_grid('SPY', expirations[0])
+
+# Mid-price calculation
+row = grid.get_strike(grid.atm_strike())
+print(f"Call mid-price: ${row.call.mid_price:.2f}")
+print(f"Call spread: ${row.call.spread:.2f} ({row.call.spread_pct:.1%})")
+
+# Check liquidity
+if row.call.is_liquid(max_spread_pct=0.50):
+    print("Call is liquid (bid > 0 and spread < 50% of mid)")
+
+# Time to maturity for pricing models
+ttm = grid.time_to_maturity()  # From today
+print(f"Time to maturity: {ttm:.4f} years ({ttm * 365:.0f} days)")
+
+# Filter illiquid options (removes zero-bid and wide-spread options)
+filtered = grid.filter_liquid(max_spread_pct=0.50)
+print(f"Before: {len(grid)} rows, After: {len(filtered)} rows")
+```
+
 **Dataclasses:**
 
 | Class | Fields |
 |-------|--------|
 | `UnderlyingQuote` | `ticker`, `price`, `timestamp` |
 | `OptionQuote` | `ticker`, `option_type`, `strike`, `expiration`, `bid`, `ask`, `last`, `volume`, `open_interest`, `implied_volatility` |
-| `OptionLeg` | `strike`, `last`, `bid`, `ask`, `open_interest`, `volume`, `implied_volatility` |
+| `OptionLeg` | `strike`, `last`, `bid`, `ask`, `open_interest`, `volume`, `implied_volatility` + properties below |
 | `OptionChainRow` | `strike`, `call` (OptionLeg), `put` (OptionLeg) |
 | `OptionChainGrid` | `ticker`, `expiration`, `underlying_price`, `rows` (list of OptionChainRow) |
 
@@ -412,6 +439,15 @@ all_puts = grid.puts()            # All put legs
 | `get_chain_grid(ticker, expiration)` | Fetch option chain as grid with calls/puts side-by-side |
 | `get_risk_free_rate()` | Get current 13-week T-bill rate (defaults to 5% on error) |
 
+**OptionLeg Properties (Data Cleaning):**
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `mid_price` | Mid-price (mark) as average of bid and ask |
+| `spread` | Bid-ask spread (ask - bid) |
+| `spread_pct` | Spread as percentage of mid-price (returns `inf` if mid ≤ 0) |
+| `is_liquid(max_spread_pct=0.50)` | Returns `True` if bid > 0 and spread_pct ≤ threshold |
+
 **OptionChainGrid Methods:**
 
 | Method | Description |
@@ -420,6 +456,8 @@ all_puts = grid.puts()            # All put legs
 | `calls()` / `puts()` | Return all call/put OptionLeg objects |
 | `get_strike(price)` | Get OptionChainRow for a specific strike |
 | `atm_strike()` | Return strike closest to underlying price |
+| `time_to_maturity(from_date=None)` | Time to expiration in years (365 days/year) |
+| `filter_liquid(max_spread_pct=0.50)` | Return new grid with only liquid options |
 | `display(num_strikes=None)` | Return formatted table string |
 
 ### Implied Volatility Solver
