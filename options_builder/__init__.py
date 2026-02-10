@@ -29,6 +29,7 @@ from options_builder.chain_analyzer import (
     PricedChain,
 )
 from options_builder.data_manager import DataManager
+from options_builder.strategy import StrategyLeg, OptionStrategy
 
 __all__ = [
     # Pricing
@@ -60,4 +61,7 @@ __all__ = [
     "PricedChain",
     # Data Manager
     "DataManager",
+    # Strategy
+    "StrategyLeg",
+    "OptionStrategy",
 ]
