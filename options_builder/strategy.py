@@ -414,3 +414,39 @@ class OptionStrategy:
             return float('inf') if profit > 0 else None
 
         return profit / loss
+
+    def remove_leg(self, index: int) -> bool:
+        """
+        Remove leg at given index.
+
+        Args:
+            index: Index of leg to remove (0-based)
+
+        Returns:
+            True if leg was removed, False if index out of bounds
+        """
+        if 0 <= index < len(self.legs):
+            self.legs.pop(index)
+            return True
+        return False
+
+    def remove_leg_by_key(self, strike: float, option_type: str) -> bool:
+        """
+        Remove first leg matching strike and option_type.
+
+        Args:
+            strike: Strike price to match
+            option_type: 'call' or 'put'
+
+        Returns:
+            True if leg was found and removed, False otherwise
+        """
+        for i, leg in enumerate(self.legs):
+            if leg.strike == strike and leg.option_type == option_type:
+                self.legs.pop(i)
+                return True
+        return False
+
+    def clear_legs(self) -> None:
+        """Remove all legs from the strategy."""
+        self.legs.clear()

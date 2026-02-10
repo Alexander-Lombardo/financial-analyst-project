@@ -42,6 +42,8 @@ def init_session_state() -> None:
         st.session_state.chart_show_legs = False
     if 'chart_pct_range' not in st.session_state:
         st.session_state.chart_pct_range = 0.20
+    if 'leg_builder_key' not in st.session_state:
+        st.session_state.leg_builder_key = 0
 
 
 def validate_and_fetch_ticker(ticker: str) -> bool:
@@ -85,6 +87,7 @@ def validate_and_fetch_ticker(ticker: str) -> bool:
         st.session_state.error_message = None
         st.session_state.selected_expiration = None
         st.session_state.chain_data = None
+        st.session_state.strategy = None  # Clear strategy on ticker change
 
         return True
 
@@ -95,6 +98,7 @@ def validate_and_fetch_ticker(ticker: str) -> bool:
         st.session_state.expirations = []
         st.session_state.selected_expiration = None
         st.session_state.chain_data = None
+        st.session_state.strategy = None
         return False
     except Exception:
         st.session_state.error_message = "Unable to fetch data. Please try again."
@@ -103,6 +107,7 @@ def validate_and_fetch_ticker(ticker: str) -> bool:
         st.session_state.expirations = []
         st.session_state.selected_expiration = None
         st.session_state.chain_data = None
+        st.session_state.strategy = None
         return False
 
 
@@ -138,6 +143,7 @@ def fetch_chain_data(expiration: str) -> bool:
         st.session_state.chain_data = priced_chain
         st.session_state.selected_expiration = expiration
         st.session_state.error_message = None
+        st.session_state.strategy = None  # Clear strategy on expiration change
 
         return True
 
@@ -628,18 +634,276 @@ def load_demo_strategy() -> bool:
     return False
 
 
+def get_atm_strike_index(strikes: list[float], underlying_price: float) -> int:
+    """Find index of ATM strike (closest to underlying price)."""
+    if not strikes:
+        return 0
+    min_diff = float('inf')
+    atm_idx = 0
+    for i, strike in enumerate(strikes):
+        diff = abs(strike - underlying_price)
+        if diff < min_diff:
+            min_diff = diff
+            atm_idx = i
+    return atm_idx
+
+
+def get_moneyness_label(strike: float, underlying_price: float, option_type: str) -> str:
+    """Get moneyness indicator (ITM/ATM/OTM) for a strike."""
+    diff = abs(strike - underlying_price)
+    threshold = underlying_price * 0.01  # 1% threshold for ATM
+
+    if diff < threshold:
+        return "ATM"
+
+    if option_type == 'call':
+        return "ITM" if strike < underlying_price else "OTM"
+    else:  # put
+        return "ITM" if strike > underlying_price else "OTM"
+
+
+def add_leg_to_strategy(strike: float, option_type: str, action: str, quantity: int) -> bool:
+    """
+    Add a leg to the current strategy.
+
+    If strategy doesn't exist, creates one first.
+    If duplicate leg exists (same strike/type), updates quantity instead.
+
+    Args:
+        strike: Strike price
+        option_type: 'call' or 'put'
+        action: 'Buy' or 'Sell'
+        quantity: Number of contracts (always positive)
+
+    Returns:
+        True if leg was added/updated successfully
+    """
+    chain_data = st.session_state.chain_data
+    data_manager = st.session_state.data_manager
+
+    if not chain_data:
+        return False
+
+    # Convert action to signed quantity
+    signed_quantity = quantity if action == "Buy" else -quantity
+
+    # Create strategy if needed
+    if st.session_state.strategy is None:
+        st.session_state.strategy = OptionStrategy(
+            ticker=chain_data.ticker,
+            expiration=chain_data.expiration,
+            underlying_price=chain_data.underlying_price,
+            name="Custom Strategy"
+        )
+
+    strategy = st.session_state.strategy
+
+    # Check for duplicate leg (same strike and type)
+    existing_leg = strategy.get_leg(strike, option_type.lower())
+    if existing_leg:
+        # Sum quantities - if opposite signs cancel out, remove the leg
+        new_quantity = existing_leg.quantity + signed_quantity
+        if new_quantity == 0:
+            # Cancel out - remove the leg
+            strategy.remove_leg_by_key(strike, option_type.lower())
+        else:
+            # Update by removing old and adding new with combined quantity
+            strategy.remove_leg_by_key(strike, option_type.lower())
+            return strategy.add_leg_from_lookup(
+                dm=data_manager,
+                strike=strike,
+                option_type=option_type.lower(),
+                quantity=new_quantity
+            )
+        return True
+
+    # Add new leg
+    return strategy.add_leg_from_lookup(
+        dm=data_manager,
+        strike=strike,
+        option_type=option_type.lower(),
+        quantity=signed_quantity
+    )
+
+
+def remove_leg_from_strategy(index: int) -> bool:
+    """
+    Remove a leg from the strategy by index.
+
+    Args:
+        index: Index of leg to remove
+
+    Returns:
+        True if leg was removed
+    """
+    strategy = st.session_state.strategy
+    if strategy is None:
+        return False
+
+    result = strategy.remove_leg(index)
+
+    # Clear strategy if no legs remain
+    if len(strategy.legs) == 0:
+        st.session_state.strategy = None
+
+    return result
+
+
+def clear_strategy() -> None:
+    """Remove all legs and reset strategy."""
+    st.session_state.strategy = None
+    st.session_state.leg_builder_key += 1  # Force widget refresh
+
+
+def render_leg_row(index: int, leg: StrategyLeg) -> None:
+    """
+    Render a single leg display row with remove button.
+
+    Args:
+        index: Leg index in strategy
+        leg: StrategyLeg to display
+    """
+    col1, col2, col3 = st.columns([4, 2, 1])
+
+    direction = "Long" if leg.quantity > 0 else "Short"
+    qty = abs(leg.quantity)
+    cost = leg.cost
+    cost_label = "debit" if cost > 0 else "credit"
+
+    with col1:
+        st.write(f"**{index + 1}.** {direction} {qty}x ${leg.strike:.0f} {leg.option_type.title()}")
+
+    with col2:
+        st.write(f"${abs(cost):.2f} {cost_label}")
+
+    with col3:
+        if st.button("Remove", key=f"remove_leg_{index}_{st.session_state.leg_builder_key}"):
+            remove_leg_from_strategy(index)
+            st.rerun()
+
+
+def render_leg_builder() -> None:
+    """Render the strategy leg builder UI."""
+    st.subheader("Strategy Builder")
+
+    chain_data = st.session_state.chain_data
+    data_manager = st.session_state.data_manager
+    underlying_price = st.session_state.underlying_price
+
+    # Check if we have the required data
+    if not chain_data:
+        st.info("Select an expiration date to build a strategy")
+        return
+
+    # Get available strikes
+    strikes = data_manager.get_strikes(chain_data.ticker, chain_data.expiration)
+    if not strikes:
+        st.warning("No strikes available for selected expiration")
+        return
+
+    # Add new leg section
+    st.write("**Add New Leg:**")
+
+    col1, col2, col3, col4, col5 = st.columns([2, 1.5, 1.5, 1, 1])
+
+    with col1:
+        # Strike selectbox with moneyness indicators
+        atm_idx = get_atm_strike_index(strikes, underlying_price)
+
+        # Default to Call for moneyness calculation
+        strike_options = [
+            f"${s:.0f} ({get_moneyness_label(s, underlying_price, 'call')})"
+            for s in strikes
+        ]
+
+        selected_strike_option = st.selectbox(
+            "Strike",
+            options=strike_options,
+            index=atm_idx,
+            key=f"leg_strike_{st.session_state.leg_builder_key}"
+        )
+        # Extract strike value from the formatted string
+        selected_strike = strikes[strike_options.index(selected_strike_option)]
+
+    with col2:
+        option_type = st.radio(
+            "Type",
+            options=["Call", "Put"],
+            horizontal=True,
+            key=f"leg_type_{st.session_state.leg_builder_key}"
+        )
+
+    with col3:
+        action = st.radio(
+            "Action",
+            options=["Buy", "Sell"],
+            horizontal=True,
+            key=f"leg_action_{st.session_state.leg_builder_key}"
+        )
+
+    with col4:
+        quantity = st.number_input(
+            "Qty",
+            min_value=1,
+            max_value=100,
+            value=1,
+            key=f"leg_qty_{st.session_state.leg_builder_key}"
+        )
+
+    with col5:
+        st.write("")  # Spacer for alignment
+        st.write("")
+        if st.button("Add", key=f"add_leg_{st.session_state.leg_builder_key}"):
+            if add_leg_to_strategy(selected_strike, option_type, action, quantity):
+                st.rerun()
+            else:
+                st.error("Could not add leg. Please try again.")
+
+    st.divider()
+
+    # Current legs section
+    strategy = st.session_state.strategy
+
+    header_col1, header_col2 = st.columns([4, 1])
+    with header_col1:
+        st.write("**Current Legs:**")
+    with header_col2:
+        if strategy and len(strategy.legs) > 0:
+            if st.button("Clear All", key=f"clear_all_{st.session_state.leg_builder_key}"):
+                clear_strategy()
+                st.rerun()
+
+    if strategy and len(strategy.legs) > 0:
+        for i, leg in enumerate(strategy.legs):
+            render_leg_row(i, leg)
+
+        st.divider()
+
+        # Net cost summary
+        premium = strategy.net_premium
+        if premium > 0:
+            st.write(f"**Net: ${premium:.2f} Debit**")
+        elif premium < 0:
+            st.write(f"**Net: ${abs(premium):.2f} Credit**")
+        else:
+            st.write("**Net: $0.00**")
+    else:
+        st.info("No legs added yet")
+
+
 def render_placeholders() -> None:
     """Render placeholder sections for future phases."""
+    st.divider()
+
+    # Phase 4.3 - Strategy Leg Builder
+    render_leg_builder()
+
     st.divider()
 
     # Phase 4.2 - P&L Chart (implemented)
     render_pnl_chart()
 
     st.divider()
-
-    # Phase 4.3 placeholder
-    st.subheader("Strategy Builder")
-    st.info("Phase 4.3: Strategy leg builder will be added here")
 
     # Phase 4.4 placeholder
     st.subheader("Greeks Dashboard")

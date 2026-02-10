@@ -754,3 +754,354 @@ class TestPnLChart:
         assert mock_state['chart_show_legs'] is False
         assert 'chart_pct_range' in mock_state
         assert mock_state['chart_pct_range'] == 0.20
+
+
+class TestLegBuilder:
+    """Test Phase 4.3 strategy leg builder functionality."""
+
+    def test_remove_leg_updates_strategy(self):
+        """Removing a leg should update Greeks and P&L."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Test Strategy"
+        )
+
+        # Add two legs
+        leg1 = StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        )
+        leg2 = StrategyLeg(
+            strike=110.0,
+            option_type='call',
+            quantity=-1,
+            bid=2.00,
+            ask=2.20,
+            mid=2.10,
+            delta=0.3,
+            gamma=0.015,
+            theta=-0.03,
+            vega=0.12,
+            iv=0.25,
+            model_price=2.10
+        )
+        strategy.add_leg(leg1)
+        strategy.add_leg(leg2)
+
+        assert len(strategy.legs) == 2
+        initial_delta = strategy.total_delta
+
+        # Remove second leg
+        result = strategy.remove_leg(1)
+
+        assert result is True
+        assert len(strategy.legs) == 1
+        # Delta should now only be from the long call
+        assert strategy.total_delta == leg1.net_delta
+        assert strategy.total_delta != initial_delta
+
+    def test_remove_leg_by_key(self):
+        """Remove leg by strike and option type."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80, ask=5.00, mid=4.90,
+            delta=0.5, gamma=0.02, theta=-0.05, vega=0.15,
+            iv=0.25, model_price=4.90
+        ))
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='put',
+            quantity=1,
+            bid=3.80, ask=4.00, mid=3.90,
+            delta=-0.5, gamma=0.02, theta=-0.05, vega=0.15,
+            iv=0.25, model_price=3.90
+        ))
+
+        assert len(strategy.legs) == 2
+
+        # Remove the call
+        result = strategy.remove_leg_by_key(100.0, 'call')
+
+        assert result is True
+        assert len(strategy.legs) == 1
+        assert strategy.legs[0].option_type == 'put'
+
+    def test_remove_leg_invalid_index(self):
+        """Removing leg with invalid index returns False."""
+        from options_builder import OptionStrategy
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+
+        # Empty strategy
+        assert strategy.remove_leg(0) is False
+        assert strategy.remove_leg(-1) is False
+        assert strategy.remove_leg(10) is False
+
+    def test_clear_legs(self):
+        """clear_legs should remove all legs."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0, option_type='call', quantity=1,
+            bid=4.80, ask=5.00, mid=4.90,
+            delta=0.5, gamma=0.02, theta=-0.05, vega=0.15,
+            iv=0.25, model_price=4.90
+        ))
+        strategy.add_leg(StrategyLeg(
+            strike=110.0, option_type='call', quantity=-1,
+            bid=2.00, ask=2.20, mid=2.10,
+            delta=0.3, gamma=0.015, theta=-0.03, vega=0.12,
+            iv=0.25, model_price=2.10
+        ))
+
+        assert len(strategy.legs) == 2
+
+        strategy.clear_legs()
+
+        assert len(strategy.legs) == 0
+
+    def test_short_action_flips_pnl_sign(self):
+        """Short positions should have inverted P&L vs long."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        # Long call
+        long_strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+        long_strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Short call at same strike (use bid for credit)
+        short_strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+        short_strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=-1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        prices = np.array([80.0, 100.0, 120.0])
+
+        long_pnl = long_strategy.calculate_pnl(prices)
+        short_pnl = short_strategy.calculate_pnl(prices)
+
+        # At price 120 (ITM): long profits, short loses
+        # Long P&L: (120-100)*100 - 500 = 1500
+        # Short P&L: -(120-100)*100 + 480 = -1520 (receives bid price)
+        assert long_pnl[2] > 0  # Long profits above strike
+        assert short_pnl[2] < 0  # Short loses above strike
+
+        # At price 80 (OTM): long loses premium, short keeps premium
+        # Long P&L: 0 - 500 = -500
+        # Short P&L: 0 + 480 = 480
+        assert long_pnl[0] < 0  # Long loses below strike
+        assert short_pnl[0] > 0  # Short profits below strike
+
+    def test_ticker_change_clears_strategy(self):
+        """If user changes ticker, strategy should be cleared."""
+        import app
+        from datetime import datetime, timedelta
+        from options_builder import OptionStrategy
+
+        app.st.session_state = MagicMock()
+
+        # Set up existing strategy
+        existing_strategy = Mock(spec=OptionStrategy)
+        existing_strategy.legs = [Mock(), Mock(), Mock()]
+        app.st.session_state.strategy = existing_strategy
+        app.st.session_state.selected_expiration = "2026-03-20"
+        app.st.session_state.chain_data = Mock()
+
+        mock_connector = Mock(spec=OptionsDataConnector)
+        tomorrow = (date.today() + timedelta(days=1)).strftime('%Y-%m-%d')
+
+        mock_connector.get_underlying.return_value = UnderlyingQuote(
+            ticker="MSFT",
+            price=380.00,
+            timestamp=datetime.now()
+        )
+        mock_connector.get_expirations.return_value = [tomorrow]
+        app.st.session_state.connector = mock_connector
+
+        # Change ticker
+        app.validate_and_fetch_ticker("MSFT")
+
+        # Strategy should be cleared
+        assert app.st.session_state.strategy is None
+        assert app.st.session_state.current_ticker == "MSFT"
+
+    def test_expiration_change_clears_strategy(self):
+        """If user changes expiration, strategy should be cleared."""
+        import app
+        from datetime import timedelta
+        from options_builder import OptionStrategy
+
+        app.st.session_state = MagicMock()
+        app.st.session_state.current_ticker = "AAPL"
+        app.st.session_state.risk_free_rate = 5.0
+
+        # Set up existing strategy
+        existing_strategy = Mock(spec=OptionStrategy)
+        existing_strategy.legs = [Mock(), Mock()]
+        app.st.session_state.strategy = existing_strategy
+
+        mock_connector = Mock(spec=OptionsDataConnector)
+        mock_data_manager = Mock(spec=DataManager)
+
+        mock_grid = Mock(spec=OptionChainGrid)
+        mock_grid.ticker = "AAPL"
+        mock_grid.expiration = date.today() + timedelta(days=30)
+        mock_grid.underlying_price = 150.00
+        mock_grid.time_to_maturity.return_value = 30/365
+        mock_grid.rows = []
+
+        mock_connector.get_chain_grid.return_value = mock_grid
+        app.st.session_state.connector = mock_connector
+        app.st.session_state.data_manager = mock_data_manager
+
+        mock_priced_chain = Mock(spec=PricedChain)
+        mock_priced_chain.rows = []
+
+        with patch.object(ChainAnalyzer, 'analyze', return_value=mock_priced_chain):
+            new_expiration = (date.today() + timedelta(days=30)).strftime('%Y-%m-%d')
+            app.fetch_chain_data(new_expiration)
+
+        # Strategy should be cleared
+        assert app.st.session_state.strategy is None
+
+    def test_session_state_includes_leg_builder_key(self):
+        """Session state should include leg_builder_key after init."""
+        import app
+
+        mock_state = {}
+
+        class MockSessionState:
+            def __contains__(self, key):
+                return key in mock_state
+
+            def __setattr__(self, key, value):
+                mock_state[key] = value
+
+            def __getattr__(self, key):
+                return mock_state.get(key)
+
+        app.st.session_state = MockSessionState()
+
+        app.init_session_state()
+
+        assert 'leg_builder_key' in mock_state
+        assert mock_state['leg_builder_key'] == 0
+
+    def test_get_atm_strike_index(self):
+        """get_atm_strike_index should return closest strike to underlying."""
+        import app
+
+        strikes = [90.0, 95.0, 100.0, 105.0, 110.0]
+
+        # Exact match
+        assert app.get_atm_strike_index(strikes, 100.0) == 2
+
+        # Slightly above
+        assert app.get_atm_strike_index(strikes, 101.0) == 2
+
+        # Slightly below
+        assert app.get_atm_strike_index(strikes, 99.0) == 2
+
+        # Closer to 105
+        assert app.get_atm_strike_index(strikes, 103.0) == 3
+
+        # Empty list
+        assert app.get_atm_strike_index([], 100.0) == 0
+
+    def test_get_moneyness_label_call(self):
+        """Test moneyness labels for calls."""
+        import app
+
+        # ATM (within 1%)
+        assert app.get_moneyness_label(100.0, 100.0, 'call') == "ATM"
+        assert app.get_moneyness_label(100.5, 100.0, 'call') == "ATM"
+
+        # ITM call (strike < underlying)
+        assert app.get_moneyness_label(95.0, 100.0, 'call') == "ITM"
+
+        # OTM call (strike > underlying)
+        assert app.get_moneyness_label(105.0, 100.0, 'call') == "OTM"
+
+    def test_get_moneyness_label_put(self):
+        """Test moneyness labels for puts."""
+        import app
+
+        # ATM (within 1%)
+        assert app.get_moneyness_label(100.0, 100.0, 'put') == "ATM"
+
+        # ITM put (strike > underlying)
+        assert app.get_moneyness_label(105.0, 100.0, 'put') == "ITM"
+
+        # OTM put (strike < underlying)
+        assert app.get_moneyness_label(95.0, 100.0, 'put') == "OTM"
