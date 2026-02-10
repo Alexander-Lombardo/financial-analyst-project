@@ -134,7 +134,8 @@ target-financial-analyzer/
 │   ├── option.py             # Option class wrapper for strategy building
 │   ├── iv_solver.py          # Newton-Raphson implied volatility solver
 │   ├── payoffs.py            # Payoff functions for P&L diagrams
-│   └── data_connector.py     # Market data connector (yfinance)
+│   ├── data_connector.py     # Market data connector (yfinance)
+│   └── chain_analyzer.py     # Bridge: live data → IV/Greeks calculation
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
@@ -142,7 +143,8 @@ target-financial-analyzer/
 │   ├── test_option_class.py  # Option class tests
 │   ├── test_iv_solver.py     # IV solver tests
 │   ├── test_payoffs.py       # Payoff function tests
-│   └── test_data_connector.py # Data connector tests
+│   ├── test_data_connector.py # Data connector tests
+│   └── test_chain_analyzer.py # Chain analyzer tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -460,6 +462,76 @@ print(f"Before: {len(grid)} rows, After: {len(filtered)} rows")
 | `filter_liquid(max_spread_pct=0.50)` | Return new grid with only liquid options |
 | `display(num_strikes=None)` | Return formatted table string |
 
+### Chain Analyzer
+
+The `ChainAnalyzer` bridges live market data with the pricing engine, calculating implied volatility and Greeks for every option in a chain:
+
+```python
+from options_builder import OptionsDataConnector, ChainAnalyzer
+
+# Fetch live option chain
+conn = OptionsDataConnector()
+exps = conn.get_expirations('SPY')
+grid = conn.get_chain_grid('SPY', exps[1])  # Use expiration with T > 0
+
+# Filter to liquid options
+liquid_grid = grid.filter_liquid(max_spread_pct=0.30)
+
+# Analyze chain (calculates IV and Greeks for each option)
+analyzer = ChainAnalyzer()  # Fetches risk-free rate automatically
+priced = analyzer.analyze(liquid_grid)
+
+print(f"Analyzed {len(priced)} strikes")
+print(f"TTM: {priced.time_to_maturity:.4f} years")
+print(f"Risk-free rate: {priced.risk_free_rate:.2%}")
+
+# Access ATM options
+atm = priced.get_strike(priced.atm_strike())
+if atm.call:
+    c = atm.call
+    print(f"ATM Call (K={c.strike}):")
+    print(f"  Mid: ${c.mid_price:.2f}, IV: {c.implied_volatility:.1%}")
+    print(f"  Delta: {c.delta:.3f}, Gamma: {c.gamma:.4f}")
+    print(f"  Theta: {c.theta:.4f}, Vega: {c.vega:.4f}")
+
+# Iterate through all priced options
+for row in priced.rows:
+    if row.call:
+        print(f"K={row.strike} Call: IV={row.call.implied_volatility:.1%}, Δ={row.call.delta:+.3f}")
+    if row.put:
+        print(f"K={row.strike} Put:  IV={row.put.implied_volatility:.1%}, Δ={row.put.delta:+.3f}")
+```
+
+**Override Risk-Free Rate:**
+
+```python
+# Use custom risk-free rate instead of fetching from T-bills
+analyzer = ChainAnalyzer(risk_free_rate=0.05)
+priced = analyzer.analyze(grid)
+```
+
+**Dataclasses:**
+
+| Class | Fields |
+|-------|--------|
+| `PricedOption` | `strike`, `option_type`, `bid`, `ask`, `mid_price`, `open_interest`, `volume`, `implied_volatility`, `delta`, `gamma`, `theta`, `vega`, `model_price` |
+| `PricedChainRow` | `strike`, `call` (PricedOption), `put` (PricedOption) |
+| `PricedChain` | `ticker`, `expiration`, `underlying_price`, `time_to_maturity`, `risk_free_rate`, `rows` |
+
+**PricedChain Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `strikes()` | Return all strike prices |
+| `calls()` / `puts()` | Return all PricedOption objects |
+| `get_strike(price)` | Get PricedChainRow for a specific strike |
+| `atm_strike()` | Return strike closest to underlying price |
+
+**Notes:**
+- Options with zero or invalid mid_price are skipped
+- Options where IV solver fails to converge are skipped
+- Model price is the BSM price using the calculated IV (should match mid_price)
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -626,6 +698,7 @@ pytest tests/test_option_class.py -v # Option class tests
 pytest tests/test_iv_solver.py -v    # IV solver tests
 pytest tests/test_payoffs.py -v      # Payoff tests
 pytest tests/test_data_connector.py -v  # Data connector tests
+pytest tests/test_chain_analyzer.py -v  # Chain analyzer tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -639,6 +712,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_iv_solver.py` - IV convergence, input validation, edge cases
 - `test_payoffs.py` - Call/put payoffs, array inputs, put-call parity
 - `test_data_connector.py` - Market data fetching, option chains, risk-free rate
+- `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
 
 ## License
 
