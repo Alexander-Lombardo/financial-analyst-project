@@ -353,12 +353,54 @@ rate = connector.get_risk_free_rate()
 print(f"Risk-free rate: {rate:.2%}")  # Risk-free rate: 4.25%
 ```
 
+**Option Chain Grid (for multi-leg strategies):**
+
+```python
+from options_builder import OptionsDataConnector, OptionChainGrid
+
+connector = OptionsDataConnector()
+expirations = connector.get_expirations('SPY')
+
+# Fetch grid with calls/puts side-by-side by strike
+grid = connector.get_chain_grid('SPY', expirations[0])
+
+# Display formatted table (10 strikes around ATM)
+print(grid.display(num_strikes=10))
+# Output:
+# Option Chain: SPY | Exp: 2026-02-14 | Underlying: $693.95
+# ------------------------------------------------------------------------------------------
+#                  CALLS                   |  STRIKE  |                   PUTS
+#       OI      Bid      Ask     Last |          | Last     Bid      Ask      OI
+# ------------------------------------------------------------------------------------------
+#     6858     2.50     2.55     2.70 | 693.00   | 1.14     1.10     1.15     9258
+#     7299     2.00     2.05     2.00 | 694.00 * | 1.45     1.40     1.50     8873
+# ...
+
+# Access key data points
+for row in grid.rows:
+    print(f"Strike: {row.strike}")
+    if row.call:
+        print(f"  Call - Bid: {row.call.bid}, Ask: {row.call.ask}, Last: {row.call.last}, OI: {row.call.open_interest}")
+    if row.put:
+        print(f"  Put  - Bid: {row.put.bid}, Ask: {row.put.ask}, Last: {row.put.last}, OI: {row.put.open_interest}")
+
+# Helper methods
+atm = grid.atm_strike()           # Closest strike to underlying
+strikes = grid.strikes()          # All strike prices
+row = grid.get_strike(695.0)      # Get specific strike row
+all_calls = grid.calls()          # All call legs
+all_puts = grid.puts()            # All put legs
+```
+
 **Dataclasses:**
 
 | Class | Fields |
 |-------|--------|
 | `UnderlyingQuote` | `ticker`, `price`, `timestamp` |
 | `OptionQuote` | `ticker`, `option_type`, `strike`, `expiration`, `bid`, `ask`, `last`, `volume`, `open_interest`, `implied_volatility` |
+| `OptionLeg` | `strike`, `last`, `bid`, `ask`, `open_interest`, `volume`, `implied_volatility` |
+| `OptionChainRow` | `strike`, `call` (OptionLeg), `put` (OptionLeg) |
+| `OptionChainGrid` | `ticker`, `expiration`, `underlying_price`, `rows` (list of OptionChainRow) |
 
 **Methods:**
 
@@ -366,8 +408,19 @@ print(f"Risk-free rate: {rate:.2%}")  # Risk-free rate: 4.25%
 |--------|-------------|
 | `get_underlying(ticker)` | Fetch current price for underlying asset |
 | `get_expirations(ticker)` | Get available option expiration dates |
-| `get_option_chain(ticker, expiration, option_type=None)` | Fetch option chain for a specific expiration |
+| `get_option_chain(ticker, expiration, option_type=None)` | Fetch option chain as list of OptionQuote |
+| `get_chain_grid(ticker, expiration)` | Fetch option chain as grid with calls/puts side-by-side |
 | `get_risk_free_rate()` | Get current 13-week T-bill rate (defaults to 5% on error) |
+
+**OptionChainGrid Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `strikes()` | Return all strike prices |
+| `calls()` / `puts()` | Return all call/put OptionLeg objects |
+| `get_strike(price)` | Get OptionChainRow for a specific strike |
+| `atm_strike()` | Return strike closest to underlying price |
+| `display(num_strikes=None)` | Return formatted table string |
 
 ### Implied Volatility Solver
 
