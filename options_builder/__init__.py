@@ -22,6 +22,12 @@ from options_builder.data_connector import (
     OptionChainRow,
     OptionChainGrid,
 )
+from options_builder.chain_analyzer import (
+    ChainAnalyzer,
+    PricedOption,
+    PricedChainRow,
+    PricedChain,
+)
 
 __all__ = [
     # Pricing
@@ -46,4 +52,9 @@ __all__ = [
     "OptionLeg",
     "OptionChainRow",
     "OptionChainGrid",
+    # Chain Analyzer
+    "ChainAnalyzer",
+    "PricedOption",
+    "PricedChainRow",
+    "PricedChain",
 ]
