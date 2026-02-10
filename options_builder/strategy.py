@@ -4,7 +4,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional, Literal
 
+import numpy as np
+
 from options_builder.data_manager import DataManager
+from options_builder.payoffs import payoff
 
 
 @dataclass
@@ -267,3 +270,60 @@ class OptionStrategy:
             'total_theta': self.total_theta,
             'total_vega': self.total_vega,
         }
+
+    def generate_price_range(
+        self,
+        pct_range: float = 0.2,
+        num_points: int = 100
+    ) -> np.ndarray:
+        """
+        Generate array of prices for P&L calculation.
+
+        Args:
+            pct_range: Percentage above/below current price (0.2 = 80% to 120%)
+            num_points: Number of price points
+
+        Returns:
+            NumPy array of prices from (1-pct_range) to (1+pct_range) of underlying
+        """
+        low = self.underlying_price * (1 - pct_range)
+        high = self.underlying_price * (1 + pct_range)
+        return np.linspace(low, high, num_points)
+
+    def calculate_pnl(self, prices: np.ndarray) -> np.ndarray:
+        """
+        Calculate total P&L at each price point.
+
+        For each leg: P&L = (intrinsic_value × quantity × 100) - cost
+
+        Args:
+            prices: Array of terminal stock prices
+
+        Returns:
+            Array of P&L values (in dollars)
+        """
+        total_pnl = np.zeros_like(prices)
+        for leg in self.legs:
+            intrinsic = payoff(prices, leg.strike, leg.option_type)
+            leg_pnl = intrinsic * leg.quantity * 100 - leg.cost
+            total_pnl += leg_pnl
+        return total_pnl
+
+    def pnl_data(
+        self,
+        pct_range: float = 0.2,
+        num_points: int = 100
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Convenience method returning price range and P&L for plotting.
+
+        Args:
+            pct_range: Percentage above/below current price
+            num_points: Number of price points
+
+        Returns:
+            Tuple of (prices, pnl) arrays for matplotlib
+        """
+        prices = self.generate_price_range(pct_range, num_points)
+        pnl = self.calculate_pnl(prices)
+        return prices, pnl
