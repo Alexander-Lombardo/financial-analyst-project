@@ -1105,3 +1105,272 @@ class TestLegBuilder:
 
         # OTM put (strike < underlying)
         assert app.get_moneyness_label(95.0, 100.0, 'put') == "OTM"
+
+
+class TestGreeksDashboard:
+    """Test Phase 4.4 Greeks Dashboard functionality."""
+
+    def test_greeks_dashboard_matches_strategy_calculations(self):
+        """Dashboard values must match OptionStrategy Greek calculations."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        # Create a bull call spread
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Bull Call Spread"
+        )
+
+        # Long 100 call
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Short 110 call
+        strategy.add_leg(StrategyLeg(
+            strike=110.0,
+            option_type='call',
+            quantity=-1,
+            bid=2.00,
+            ask=2.20,
+            mid=2.10,
+            delta=0.30,
+            gamma=0.015,
+            theta=-0.03,
+            vega=0.12,
+            iv=0.25,
+            model_price=2.10
+        ))
+
+        # Verify total Greeks match expectations
+        # Greeks are position-adjusted and multiplied by 100 (contract multiplier)
+        # Long call: delta=0.50*1*100=50, gamma=0.02*1*100=2, theta=-0.05*1*100=-5, vega=0.15*1*100=15
+        # Short call: delta=0.30*-1*100=-30, gamma=0.015*-1*100=-1.5, theta=-0.03*-1*100=3, vega=0.12*-1*100=-12
+        # Net: delta=20, gamma=0.5, theta=-2, vega=3
+
+        assert abs(strategy.total_delta - 20.0) < 0.1
+        assert abs(strategy.total_gamma - 0.5) < 0.01
+        assert abs(strategy.total_theta - (-2.0)) < 0.1
+        assert abs(strategy.total_vega - 3.0) < 0.1
+
+    def test_greeks_dashboard_empty_strategy(self):
+        """Dashboard shows info message when no legs exist."""
+        import app
+
+        app.st.session_state = MagicMock()
+        app.st.session_state.strategy = None
+
+        # Call the function - it should call st.info with appropriate message
+        app.render_greeks_dashboard()
+
+        # Verify st.info was called
+        app.st.info.assert_called_with("Add strategy legs to see Greeks")
+
+    def test_greeks_dashboard_empty_legs(self):
+        """Dashboard shows info message when strategy has no legs."""
+        import app
+        from options_builder import OptionStrategy
+        from datetime import date
+
+        app.st.session_state = MagicMock()
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+        app.st.session_state.strategy = strategy
+
+        app.render_greeks_dashboard()
+
+        app.st.info.assert_called_with("Add strategy legs to see Greeks")
+
+    def test_long_call_greeks_signs(self):
+        """Long call should have positive delta, gamma, vega; negative theta."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.50,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Long call Greek signs
+        assert strategy.total_delta > 0, "Long call should have positive delta"
+        assert strategy.total_gamma > 0, "Long call should have positive gamma"
+        assert strategy.total_theta < 0, "Long call should have negative theta"
+        assert strategy.total_vega > 0, "Long call should have positive vega"
+
+    def test_short_put_greeks_signs(self):
+        """Short put should have positive delta, theta; negative gamma, vega."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Short Put"
+        )
+
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='put',
+            quantity=-1,
+            bid=4.50,
+            ask=4.70,
+            mid=4.60,
+            delta=-0.50,  # Put delta is negative
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.60
+        ))
+
+        # Short put Greek signs (signs flip for short position)
+        # Short put: delta = -(-0.50) = +0.50 (positive)
+        # Short put: gamma = -0.02 (negative)
+        # Short put: theta = -(-0.05) = +0.05 (positive - time decay benefits seller)
+        # Short put: vega = -0.15 (negative)
+        assert strategy.total_delta > 0, "Short put should have positive delta"
+        assert strategy.total_gamma < 0, "Short put should have negative gamma"
+        assert strategy.total_theta > 0, "Short put should have positive theta"
+        assert strategy.total_vega < 0, "Short put should have negative vega"
+
+    def test_iron_condor_greeks(self):
+        """Iron condor should have near-zero delta and positive theta."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Iron Condor"
+        )
+
+        # Sell put spread (bull put spread)
+        # Short 95 put
+        strategy.add_leg(StrategyLeg(
+            strike=95.0,
+            option_type='put',
+            quantity=-1,
+            bid=1.50, ask=1.70, mid=1.60,
+            delta=-0.25, gamma=0.015, theta=-0.03, vega=0.10,
+            iv=0.25, model_price=1.60
+        ))
+        # Long 90 put
+        strategy.add_leg(StrategyLeg(
+            strike=90.0,
+            option_type='put',
+            quantity=1,
+            bid=0.70, ask=0.90, mid=0.80,
+            delta=-0.15, gamma=0.010, theta=-0.02, vega=0.08,
+            iv=0.25, model_price=0.80
+        ))
+
+        # Sell call spread (bear call spread)
+        # Short 105 call
+        strategy.add_leg(StrategyLeg(
+            strike=105.0,
+            option_type='call',
+            quantity=-1,
+            bid=1.50, ask=1.70, mid=1.60,
+            delta=0.25, gamma=0.015, theta=-0.03, vega=0.10,
+            iv=0.25, model_price=1.60
+        ))
+        # Long 110 call
+        strategy.add_leg(StrategyLeg(
+            strike=110.0,
+            option_type='call',
+            quantity=1,
+            bid=0.70, ask=0.90, mid=0.80,
+            delta=0.15, gamma=0.010, theta=-0.02, vega=0.08,
+            iv=0.25, model_price=0.80
+        ))
+
+        # Iron condor characteristics
+        # Delta should be near zero (balanced structure)
+        assert abs(strategy.total_delta) < 0.15, "Iron condor should have near-zero delta"
+
+        # Theta should be positive (credit strategy benefits from time decay)
+        assert strategy.total_theta > 0, "Iron condor should have positive theta"
+
+        # Gamma should be negative (short gamma position)
+        assert strategy.total_gamma < 0, "Iron condor should have negative gamma"
+
+        # Vega should be negative (short volatility position)
+        assert strategy.total_vega < 0, "Iron condor should have negative vega"
+
+    def test_greeks_dashboard_renders_metrics(self):
+        """Dashboard should call st.metric for each Greek."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        app.st.session_state = MagicMock()
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0
+        )
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80, ask=5.00, mid=4.90,
+            delta=0.50, gamma=0.02, theta=-0.05, vega=0.15,
+            iv=0.25, model_price=4.90
+        ))
+
+        app.st.session_state.strategy = strategy
+
+        # Mock the columns context manager
+        mock_col = MagicMock()
+        mock_col.__enter__ = MagicMock(return_value=mock_col)
+        mock_col.__exit__ = MagicMock(return_value=False)
+        app.st.columns.return_value = [mock_col, mock_col, mock_col, mock_col]
+
+        app.render_greeks_dashboard()
+
+        # Verify st.metric was called for each Greek (4 times)
+        assert app.st.metric.call_count == 4
+
+        # Verify the labels
+        metric_calls = app.st.metric.call_args_list
+        labels = [call.kwargs['label'] for call in metric_calls]
+        assert "Net Delta" in labels
+        assert "Net Gamma" in labels
+        assert "Net Theta" in labels
+        assert "Net Vega" in labels

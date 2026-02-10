@@ -535,6 +535,55 @@ def render_strategy_metrics(strategy: OptionStrategy) -> None:
             st.metric(label="Breakeven(s)", value="N/A")
 
 
+def render_greeks_dashboard() -> None:
+    """Render the Greeks dashboard with net Greek values."""
+    st.subheader("Greeks Dashboard")
+
+    strategy = st.session_state.strategy
+
+    if not strategy or len(strategy.legs) == 0:
+        st.info("Add strategy legs to see Greeks")
+        return
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        delta = strategy.total_delta
+        st.metric(
+            label="Net Delta",
+            value=f"{delta:+.2f}",
+            delta="per 100 shares" if delta != 0 else None,
+            delta_color="normal" if delta >= 0 else "inverse"
+        )
+
+    with col2:
+        gamma = strategy.total_gamma
+        st.metric(
+            label="Net Gamma",
+            value=f"{gamma:+.4f}",
+            delta="per $1 move" if gamma != 0 else None,
+            delta_color="normal" if gamma >= 0 else "inverse"
+        )
+
+    with col3:
+        theta = strategy.total_theta
+        st.metric(
+            label="Net Theta",
+            value=f"{theta:+.2f}",
+            delta="per day" if theta != 0 else None,
+            delta_color="inverse" if theta >= 0 else "normal"  # Positive theta is good (seller)
+        )
+
+    with col4:
+        vega = strategy.total_vega
+        st.metric(
+            label="Net Vega",
+            value=f"{vega:+.2f}",
+            delta="per 1% IV" if vega != 0 else None,
+            delta_color="normal" if vega >= 0 else "inverse"
+        )
+
+
 def render_pnl_chart() -> None:
     """Main render function for P&L chart with options expander."""
     st.subheader("P&L Chart")
@@ -905,9 +954,10 @@ def render_placeholders() -> None:
 
     st.divider()
 
-    # Phase 4.4 placeholder
-    st.subheader("Greeks Dashboard")
-    st.info("Phase 4.4: Greek metrics dashboard will be added here")
+    # Phase 4.4 - Greeks Dashboard (implemented)
+    render_greeks_dashboard()
+
+    st.divider()
 
     # Phase 4.5 placeholder
     st.subheader("Sensitivity Analysis")

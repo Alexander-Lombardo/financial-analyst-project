@@ -1097,6 +1097,7 @@ Open http://localhost:8501 in your browser.
 - **Strategy Builder** - Add/remove legs to build custom multi-leg strategies
 - **P&L Chart** - Interactive Plotly chart showing strategy payoff at expiration
 - **Strategy Metrics** - Net premium, max profit/loss, breakeven points
+- **Greeks Dashboard** - Real-time display of net Delta, Gamma, Theta, and Vega
 
 **P&L Chart Features:**
 - Total P&L curve with shaded profit/loss regions
@@ -1126,6 +1127,24 @@ Open http://localhost:8501 in your browser.
 **Chart Controls (in expander):**
 - **Show individual legs** - Toggle to display each leg's P&L separately
 - **Price range** - Select percentage range for x-axis (10%, 20%, 30%, 40%, 50%)
+
+**Greeks Dashboard:**
+
+Real-time display of aggregated Greeks for the entire strategy using `st.metric` widgets:
+
+| Greek | Description | Color Logic |
+|-------|-------------|-------------|
+| **Net Delta** | Directional exposure (per 100 shares) | Green = bullish, Red = bearish |
+| **Net Gamma** | Delta sensitivity (per $1 move) | Green = positive convexity |
+| **Net Theta** | Time decay (per day) | Green = benefits from decay (sellers) |
+| **Net Vega** | Volatility exposure (per 1% IV) | Green = long volatility |
+
+The dashboard shows "Add strategy legs to see Greeks" when no legs exist. Greeks are position-adjusted and multiplied by 100 (contract multiplier).
+
+Example interpretation:
+- **Long call**: Positive delta/gamma/vega, negative theta
+- **Short put**: Positive delta/theta, negative gamma/vega
+- **Iron condor**: Near-zero delta, positive theta, negative gamma/vega
 
 **Demo Strategy:**
 In the Debug section, click "Load Demo Strategy" to create an ATM bull call spread for testing the P&L visualization.
@@ -1354,7 +1373,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
 - `test_templates.py` - Strategy template factory functions, leg structure verification, directional bias validation, Greeks aggregation, quantity scaling
-- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization, P&L chart rendering, strategy metrics display
+- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization, P&L chart rendering, strategy metrics display, Greeks dashboard rendering and calculations
 
 ## License
 
