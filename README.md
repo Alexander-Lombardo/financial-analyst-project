@@ -125,6 +125,7 @@ target-financial-analyzer/
 ├── xbrl_parser.py            # XBRL tag extraction utilities
 ├── requirements.txt          # Python dependencies
 ├── .env.example              # SEC credentials template
+├── app.py                    # Streamlit dashboard application
 ├── options_builder/          # Options pricing engine
 │   ├── __init__.py
 │   ├── constants.py          # Global pricing constants
@@ -150,7 +151,8 @@ target-financial-analyzer/
 │   ├── test_chain_analyzer.py # Chain analyzer tests
 │   ├── test_data_manager.py  # Data manager tests
 │   ├── test_strategy.py      # Strategy classes tests
-│   └── test_templates.py     # Strategy template tests
+│   ├── test_templates.py     # Strategy template tests
+│   └── test_dashboard.py     # Dashboard tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -1066,6 +1068,61 @@ plt.ylabel('P&L ($)')
 plt.show()
 ```
 
+## Options Trading Dashboard
+
+Interactive Streamlit dashboard for analyzing options strategies with real-time market data.
+
+### Quick Start
+
+```bash
+# Run the dashboard
+streamlit run app.py
+```
+
+Open http://localhost:8501 in your browser.
+
+### Features
+
+**Sidebar Controls:**
+- **Ticker Input** - Enter any optionable stock symbol (e.g., AAPL, SPY, MSFT)
+- **Risk-Free Rate** - Manual input (0-20%) or auto-fetch from 13-week T-bill
+- **Expiration Selector** - Dropdown with days to expiration (e.g., "2026-03-20 (38d)")
+
+**Main Display:**
+- **Parameter Metrics** - Ticker, underlying price, expiration, risk-free rate
+- **Chain Data Debug** - Expandable section showing fetched option chain details
+
+**Data Flow:**
+```
+Enter ticker → Fetch underlying price + expirations
+    → Select expiration → Fetch option chain
+    → Analyze with ChainAnalyzer (IV + Greeks)
+    → Store in DataManager for strategy building
+```
+
+### Error Handling
+
+The dashboard displays clean, user-friendly error messages:
+
+| Scenario | Message |
+|----------|---------|
+| Invalid ticker | "Could not get price for {ticker}" |
+| No options available | "No options available for {ticker}" |
+| Network error | "Unable to fetch data. Please try again." |
+| All expirations past | "No future expiration dates available for {ticker}" |
+
+### Session State
+
+The dashboard uses Streamlit session state to persist:
+- `data_manager` - DataManager instance for chain storage
+- `connector` - OptionsDataConnector for market data
+- `current_ticker` - Currently selected ticker
+- `underlying_price` - Current stock price
+- `expirations` - Available expiration dates
+- `selected_expiration` - Currently selected expiration
+- `risk_free_rate` - Risk-free rate (percentage)
+- `chain_data` - PricedChain from ChainAnalyzer
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -1236,6 +1293,7 @@ pytest tests/test_chain_analyzer.py -v  # Chain analyzer tests
 pytest tests/test_data_manager.py -v   # Data manager tests
 pytest tests/test_strategy.py -v       # Strategy classes tests
 pytest tests/test_templates.py -v      # Strategy template tests
+pytest tests/test_dashboard.py -v      # Dashboard tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -1253,6 +1311,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
 - `test_templates.py` - Strategy template factory functions, leg structure verification, directional bias validation, Greeks aggregation, quantity scaling
+- `test_dashboard.py` - Input validation, date filtering, data fetching, session state initialization
 
 ## License
 
