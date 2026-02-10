@@ -1252,7 +1252,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
-- `test_templates.py` - Strategy template factory functions, leg structure, Greeks aggregation, P&L profiles
+- `test_templates.py` - Strategy template factory functions, leg structure verification, directional bias validation, Greeks aggregation, quantity scaling
 
 ## License
 
