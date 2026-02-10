@@ -1,12 +1,18 @@
 """Options Trading Dashboard - Streamlit Application."""
 
 import streamlit as st
+import plotly.graph_objects as go
 from datetime import date, datetime
+from typing import Optional
 
 from options_builder import (
     DataManager,
     OptionsDataConnector,
     ChainAnalyzer,
+    OptionStrategy,
+    StrategyLeg,
+    bull_call_spread,
+    payoff,
 )
 
 
@@ -30,6 +36,12 @@ def init_session_state() -> None:
         st.session_state.error_message = None
     if 'chain_data' not in st.session_state:
         st.session_state.chain_data = None
+    if 'strategy' not in st.session_state:
+        st.session_state.strategy = None
+    if 'chart_show_legs' not in st.session_state:
+        st.session_state.chart_show_legs = False
+    if 'chart_pct_range' not in st.session_state:
+        st.session_state.chart_pct_range = 0.20
 
 
 def validate_and_fetch_ticker(ticker: str) -> bool:
@@ -274,7 +286,7 @@ def render_header() -> None:
 
 
 def render_debug_section() -> None:
-    """Render debug expander showing chain data (placeholder for Phase 4.2)."""
+    """Render debug expander showing chain data and demo strategy loader."""
     if st.session_state.chain_data:
         with st.expander("Debug: Chain Data", expanded=False):
             chain = st.session_state.chain_data
@@ -310,14 +322,320 @@ def render_debug_section() -> None:
                     st.write(f"  Put: IV={row.put.implied_volatility:.2%}, "
                             f"Delta={row.put.delta:.3f}, Mid=${row.put.mid_price:.2f}")
 
+            # Demo strategy loader
+            st.write("---")
+            st.write("**Demo Strategy:**")
+            if st.button("Load Demo Strategy", key="load_demo_btn"):
+                if load_demo_strategy():
+                    st.success("Loaded ATM Bull Call Spread")
+                    st.rerun()
+                else:
+                    st.error("Could not create demo strategy")
+
+            # Show current strategy info
+            if st.session_state.strategy:
+                strategy = st.session_state.strategy
+                st.write(f"Current: {strategy.name} ({len(strategy.legs)} legs)")
+                if st.button("Clear Strategy", key="clear_strategy_btn"):
+                    st.session_state.strategy = None
+                    st.rerun()
+
+
+def build_pnl_chart(strategy: OptionStrategy) -> go.Figure:
+    """
+    Create Plotly figure with P&L curve, breakeven lines, and annotations.
+
+    Args:
+        strategy: OptionStrategy with legs
+
+    Returns:
+        Plotly Figure object
+    """
+    pct_range = st.session_state.chart_pct_range
+    prices, pnl = strategy.pnl_data(pct_range=pct_range, num_points=200)
+
+    fig = go.Figure()
+
+    # Total P&L line with fill to zero
+    fig.add_trace(go.Scatter(
+        x=prices,
+        y=pnl,
+        mode='lines',
+        name='Total P&L',
+        line=dict(color='#1f77b4', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(31, 119, 180, 0.2)',
+        hovertemplate='Price: $%{x:.2f}<br>P&L: $%{y:.2f}<extra></extra>'
+    ))
+
+    # Individual leg traces (optional)
+    if st.session_state.chart_show_legs:
+        colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+        for i, leg in enumerate(strategy.legs):
+            leg_prices, leg_pnl = _calculate_leg_pnl(leg, prices)
+            direction = "Long" if leg.quantity > 0 else "Short"
+            leg_name = f"{direction} {leg.option_type.title()} ${leg.strike:.0f}"
+            fig.add_trace(go.Scatter(
+                x=leg_prices,
+                y=leg_pnl,
+                mode='lines',
+                name=leg_name,
+                line=dict(color=colors[i % len(colors)], width=1, dash='dash'),
+                hovertemplate=f'{leg_name}<br>Price: $%{{x:.2f}}<br>P&L: $%{{y:.2f}}<extra></extra>'
+            ))
+
+    # Horizontal line at y=0 (breakeven reference)
+    fig.add_hline(y=0, line_dash="solid", line_color="gray", line_width=1)
+
+    # Vertical line at current underlying price
+    fig.add_vline(
+        x=strategy.underlying_price,
+        line_dash="dot",
+        line_color="orange",
+        line_width=2,
+        annotation_text=f"Current: ${strategy.underlying_price:.2f}",
+        annotation_position="top"
+    )
+
+    # Breakeven points marked with vertical dashed green lines
+    for be in strategy.breakeven_points:
+        fig.add_vline(
+            x=be,
+            line_dash="dash",
+            line_color="green",
+            line_width=1,
+            annotation_text=f"BE: ${be:.2f}",
+            annotation_position="bottom"
+        )
+
+    # Layout
+    fig.update_layout(
+        title=f"{strategy.name or 'Strategy'} P&L at Expiration",
+        xaxis_title="Stock Price at Expiration ($)",
+        yaxis_title="Profit/Loss ($)",
+        hovermode='x unified',
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        ),
+        margin=dict(l=50, r=50, t=50, b=50),
+        height=400
+    )
+
+    return fig
+
+
+def _calculate_leg_pnl(leg: StrategyLeg, prices) -> tuple:
+    """Calculate P&L for a single leg across price range."""
+    import numpy as np
+    intrinsic = payoff(prices, leg.strike, leg.option_type)
+    leg_pnl = intrinsic * leg.quantity * 100 - leg.cost
+    return prices, leg_pnl
+
+
+def build_empty_chart(underlying_price: Optional[float] = None) -> go.Figure:
+    """
+    Placeholder chart when no legs exist.
+
+    Args:
+        underlying_price: Current underlying price (optional)
+
+    Returns:
+        Plotly Figure with placeholder message
+    """
+    fig = go.Figure()
+
+    # Add a horizontal line at zero
+    fig.add_hline(y=0, line_dash="solid", line_color="gray", line_width=1)
+
+    # Add current price line if available
+    if underlying_price:
+        fig.add_vline(
+            x=underlying_price,
+            line_dash="dot",
+            line_color="orange",
+            line_width=2,
+            annotation_text=f"Current: ${underlying_price:.2f}",
+            annotation_position="top"
+        )
+        # Set reasonable x-axis range
+        low = underlying_price * 0.8
+        high = underlying_price * 1.2
+        fig.update_xaxes(range=[low, high])
+
+    fig.update_layout(
+        title="P&L at Expiration",
+        xaxis_title="Stock Price at Expiration ($)",
+        yaxis_title="Profit/Loss ($)",
+        showlegend=False,
+        margin=dict(l=50, r=50, t=50, b=50),
+        height=400,
+        annotations=[
+            dict(
+                text="Add strategy legs to see P&L chart",
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16, color="gray")
+            )
+        ]
+    )
+
+    return fig
+
+
+def render_strategy_metrics(strategy: OptionStrategy) -> None:
+    """
+    Display net premium, max profit/loss, breakevens below chart.
+
+    Args:
+        strategy: OptionStrategy with calculated metrics
+    """
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        premium = strategy.net_premium
+        premium_label = "Net Debit" if premium > 0 else "Net Credit"
+        st.metric(
+            label=premium_label,
+            value=f"${abs(premium):,.2f}"
+        )
+
+    with col2:
+        max_profit = strategy.max_profit
+        if max_profit is None:
+            st.metric(label="Max Profit", value="Unlimited")
+        else:
+            st.metric(label="Max Profit", value=f"${max_profit:,.2f}")
+
+    with col3:
+        max_loss = strategy.max_loss
+        if max_loss is None:
+            st.metric(label="Max Loss", value="Unlimited")
+        else:
+            st.metric(label="Max Loss", value=f"${max_loss:,.2f}")
+
+    with col4:
+        breakevens = strategy.breakeven_points
+        if breakevens:
+            be_str = ", ".join(f"${be:.2f}" for be in breakevens)
+            st.metric(label="Breakeven(s)", value=be_str)
+        else:
+            st.metric(label="Breakeven(s)", value="N/A")
+
+
+def render_pnl_chart() -> None:
+    """Main render function for P&L chart with options expander."""
+    st.subheader("P&L Chart")
+
+    strategy = st.session_state.strategy
+
+    # Chart options expander
+    with st.expander("Chart Options", expanded=False):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            show_legs = st.checkbox(
+                "Show individual leg traces",
+                value=st.session_state.chart_show_legs,
+                key="chart_show_legs_input"
+            )
+            st.session_state.chart_show_legs = show_legs
+
+        with col2:
+            pct_options = {
+                "10%": 0.10,
+                "20%": 0.20,
+                "30%": 0.30,
+                "40%": 0.40,
+                "50%": 0.50
+            }
+            current_pct = st.session_state.chart_pct_range
+            # Find current selection
+            current_label = "20%"
+            for label, val in pct_options.items():
+                if abs(val - current_pct) < 0.001:
+                    current_label = label
+                    break
+
+            selected_range = st.selectbox(
+                "Price range",
+                options=list(pct_options.keys()),
+                index=list(pct_options.keys()).index(current_label),
+                key="chart_pct_range_input"
+            )
+            st.session_state.chart_pct_range = pct_options[selected_range]
+
+    # Build and display chart
+    if strategy and len(strategy.legs) > 0:
+        fig = build_pnl_chart(strategy)
+        st.plotly_chart(fig, use_container_width=True)
+        render_strategy_metrics(strategy)
+    else:
+        underlying_price = st.session_state.underlying_price
+        fig = build_empty_chart(underlying_price)
+        st.plotly_chart(fig, use_container_width=True)
+        st.info("Add strategy legs to see P&L calculations")
+
+
+def load_demo_strategy() -> bool:
+    """
+    Create a sample bull call spread for testing.
+
+    Creates an ATM bull call spread using current chain data.
+
+    Returns:
+        True if demo strategy was created successfully
+    """
+    chain_data = st.session_state.chain_data
+    data_manager = st.session_state.data_manager
+
+    if not chain_data:
+        return False
+
+    ticker = chain_data.ticker
+    expiration = chain_data.expiration
+    atm_strike = chain_data.atm_strike()
+    strikes = chain_data.strikes()
+
+    # Find strikes for bull call spread (ATM and one strike above)
+    try:
+        atm_idx = strikes.index(atm_strike)
+        if atm_idx + 1 >= len(strikes):
+            return False
+        upper_strike = strikes[atm_idx + 1]
+    except (ValueError, IndexError):
+        return False
+
+    # Create bull call spread
+    strategy = bull_call_spread(
+        dm=data_manager,
+        ticker=ticker,
+        expiration=expiration,
+        lower_strike=atm_strike,
+        upper_strike=upper_strike,
+        quantity=1
+    )
+
+    if strategy:
+        st.session_state.strategy = strategy
+        return True
+    return False
+
 
 def render_placeholders() -> None:
     """Render placeholder sections for future phases."""
     st.divider()
 
-    # Phase 4.2 placeholder
-    st.subheader("P&L Chart")
-    st.info("Phase 4.2: Plotly P&L chart will be added here")
+    # Phase 4.2 - P&L Chart (implemented)
+    render_pnl_chart()
+
+    st.divider()
 
     # Phase 4.3 placeholder
     st.subheader("Strategy Builder")

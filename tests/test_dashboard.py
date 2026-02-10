@@ -433,3 +433,324 @@ class TestSessionStateInit:
 
         # Should keep the existing data manager
         assert mock_state['data_manager'] is existing_dm
+
+
+class TestPnLChart:
+    """Test Phase 4.2 P&L chart functionality."""
+
+    def test_long_call_breakeven_visual_anchor(self):
+        """Long call at K=$100 with $5 premium should have breakeven at $105."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        # Create a simple long call strategy
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+
+        # Add a long call at strike 100 with $5 premium (ask price)
+        leg = StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        )
+        strategy.add_leg(leg)
+
+        # Breakeven should be strike + premium paid = 100 + 5 = 105
+        breakevens = strategy.breakeven_points
+        assert len(breakevens) == 1
+        assert abs(breakevens[0] - 105.0) < 0.5  # Allow small tolerance due to interpolation
+
+    def test_chart_trace_consistency_after_add_leg(self):
+        """Adding leg recalculates total P&L correctly - spread caps upside."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        # Create a single long call
+        single_call = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+        single_call.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Create a bull call spread (long 100 call, short 110 call)
+        spread = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Bull Call Spread"
+        )
+        spread.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+        spread.add_leg(StrategyLeg(
+            strike=110.0,
+            option_type='call',
+            quantity=-1,
+            bid=2.00,
+            ask=2.20,
+            mid=2.10,
+            delta=0.3,
+            gamma=0.015,
+            theta=-0.03,
+            vega=0.12,
+            iv=0.25,
+            model_price=2.10
+        ))
+
+        # Get P&L data
+        prices_single, pnl_single = single_call.pnl_data(pct_range=0.3)
+        prices_spread, pnl_spread = spread.pnl_data(pct_range=0.3)
+
+        # At high prices (e.g., 130), spread should have capped profit
+        high_price_idx = -1  # Last price point (highest)
+
+        # Single call P&L at 130 should be higher than spread P&L (unlimited vs capped)
+        single_pnl_at_high = pnl_single[high_price_idx]
+        spread_pnl_at_high = pnl_spread[high_price_idx]
+
+        # Single call has unlimited upside, spread is capped
+        assert single_pnl_at_high > spread_pnl_at_high
+
+        # Spread max profit should be capped at (strike diff - net debit) * 100
+        # Strike diff = 110 - 100 = 10
+        # Net debit = 5.00 - 2.00 = 3.00 (paid 5, received 2)
+        # Max profit = (10 - 3) * 100 = $700
+        spread_max = float(pnl_spread.max())
+        assert abs(spread_max - 700.0) < 50  # Allow tolerance for bid/ask spread
+
+    def test_hover_tooltip_pnl_accuracy(self):
+        """P&L calculation matches expected values at specific prices."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+        import numpy as np
+
+        # Create a long call
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Long Call"
+        )
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        # Calculate P&L at price 110
+        # Long call at strike 100, paid $5 premium (ask)
+        # At price 110: intrinsic = 110 - 100 = 10
+        # P&L = intrinsic * 100 - cost = 10 * 100 - 500 = $500
+        prices = np.array([110.0])
+        pnl = strategy.calculate_pnl(prices)
+
+        expected_pnl = 500.0  # (110-100)*100 - 500
+        assert abs(pnl[0] - expected_pnl) < 1.0  # Allow $1 tolerance
+
+    def test_empty_strategy_returns_zero_pnl(self):
+        """Strategy with no legs should have zero P&L everywhere."""
+        from options_builder import OptionStrategy
+        from datetime import date
+        import numpy as np
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Empty"
+        )
+
+        prices = np.array([80.0, 90.0, 100.0, 110.0, 120.0])
+        pnl = strategy.calculate_pnl(prices)
+
+        assert np.all(pnl == 0)
+
+    def test_build_pnl_chart_returns_figure(self):
+        """build_pnl_chart should return a Plotly Figure object."""
+        import app
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        # Setup mock session state
+        app.st.session_state = MagicMock()
+        app.st.session_state.chart_show_legs = False
+        app.st.session_state.chart_pct_range = 0.20
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Test Strategy"
+        )
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+
+        fig = app.build_pnl_chart(strategy)
+
+        # Check that it's a Plotly Figure
+        assert fig is not None
+        assert hasattr(fig, 'data')
+        assert hasattr(fig, 'layout')
+        # Should have at least the main P&L trace
+        assert len(fig.data) >= 1
+
+    def test_build_empty_chart_returns_figure(self):
+        """build_empty_chart should return a valid Plotly Figure."""
+        import app
+
+        app.st.session_state = MagicMock()
+
+        # Without underlying price
+        fig = app.build_empty_chart()
+        assert fig is not None
+        assert hasattr(fig, 'layout')
+
+        # With underlying price
+        fig_with_price = app.build_empty_chart(underlying_price=150.0)
+        assert fig_with_price is not None
+
+    def test_strategy_metrics_display(self):
+        """render_strategy_metrics should display correct values."""
+        from options_builder import OptionStrategy, StrategyLeg
+        from datetime import date
+
+        strategy = OptionStrategy(
+            ticker="TEST",
+            expiration=date.today(),
+            underlying_price=100.0,
+            name="Bull Call Spread"
+        )
+        # Long 100 call
+        strategy.add_leg(StrategyLeg(
+            strike=100.0,
+            option_type='call',
+            quantity=1,
+            bid=4.80,
+            ask=5.00,
+            mid=4.90,
+            delta=0.5,
+            gamma=0.02,
+            theta=-0.05,
+            vega=0.15,
+            iv=0.25,
+            model_price=4.90
+        ))
+        # Short 110 call
+        strategy.add_leg(StrategyLeg(
+            strike=110.0,
+            option_type='call',
+            quantity=-1,
+            bid=2.00,
+            ask=2.20,
+            mid=2.10,
+            delta=0.3,
+            gamma=0.015,
+            theta=-0.03,
+            vega=0.12,
+            iv=0.25,
+            model_price=2.10
+        ))
+
+        # Check net premium (debit spread)
+        # Pay $5.00 for long, receive $2.00 for short = $3.00 net debit = $300
+        net_premium = strategy.net_premium
+        assert net_premium > 0  # Debit
+        assert abs(net_premium - 300.0) < 1.0
+
+        # Max profit = (110 - 100) * 100 - 300 = $700
+        max_profit = strategy.max_profit
+        assert max_profit is not None
+        assert abs(max_profit - 700.0) < 50
+
+        # Max loss = net debit = $300
+        max_loss = strategy.max_loss
+        assert max_loss is not None
+        assert abs(max_loss - 300.0) < 1.0
+
+    def test_session_state_chart_options(self):
+        """Session state should include chart options after init."""
+        import app
+
+        mock_state = {}
+
+        class MockSessionState:
+            def __contains__(self, key):
+                return key in mock_state
+
+            def __setattr__(self, key, value):
+                mock_state[key] = value
+
+            def __getattr__(self, key):
+                return mock_state.get(key)
+
+        app.st.session_state = MockSessionState()
+
+        app.init_session_state()
+
+        assert 'strategy' in mock_state
+        assert mock_state['strategy'] is None
+        assert 'chart_show_legs' in mock_state
+        assert mock_state['chart_show_legs'] is False
+        assert 'chart_pct_range' in mock_state
+        assert mock_state['chart_pct_range'] == 0.20
