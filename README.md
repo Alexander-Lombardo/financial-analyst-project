@@ -809,6 +809,10 @@ print(summary)
 | `calls` / `puts` | Filter legs by type |
 | `long_legs` / `short_legs` | Filter legs by direction |
 | `strikes` | Sorted unique strikes |
+| `max_profit` | Maximum profit in dollars, or None if unlimited |
+| `max_loss` | Maximum loss in dollars (positive), or None if unlimited |
+| `breakeven_points` | List of breakeven prices (sorted ascending) |
+| `risk_reward_ratio` | Ratio of max profit to max loss, or None if either is unlimited |
 
 **OptionStrategy Methods:**
 
@@ -887,13 +891,43 @@ for price, pl in zip(prices, pnl):
 # At $505: P&L = $210   (max profit reached)
 # At $510: P&L = $210   (max profit capped)
 
-# Key metrics
-max_profit = pnl.max()
-max_loss = -pnl.min()
-breakeven = prices[np.argmin(np.abs(pnl))]
-print(f"Max Profit: ${max_profit:.0f}")
-print(f"Max Loss: ${max_loss:.0f}")
-print(f"Breakeven: ~${breakeven:.0f}")
+# Key metrics (built-in properties)
+print(f"Max Profit: ${strategy.max_profit:.0f}")
+print(f"Max Loss: ${strategy.max_loss:.0f}")
+print(f"Breakeven: ${strategy.breakeven_points[0]:.2f}")
+print(f"Risk/Reward: {strategy.risk_reward_ratio:.2f}")
+```
+
+**Strategy Metrics:**
+
+The built-in metric properties handle bounded and unbounded strategies:
+
+```python
+# Bounded strategy: Bull Call Spread (defined max profit/loss)
+spread = OptionStrategy(ticker='SPY', expiration=exp, underlying_price=500.0)
+spread.add_leg_from_lookup(dm, 500.0, 'call', 1)   # Long 500C
+spread.add_leg_from_lookup(dm, 505.0, 'call', -1)  # Short 505C
+
+print(f"Max Profit: ${spread.max_profit:.0f}")      # e.g., $210
+print(f"Max Loss: ${spread.max_loss:.0f}")          # e.g., $290
+print(f"Breakevens: {spread.breakeven_points}")     # e.g., [502.90]
+print(f"Risk/Reward: {spread.risk_reward_ratio:.2f}") # e.g., 0.72
+
+# Unbounded strategy: Long Call (unlimited profit potential)
+long_call = OptionStrategy(ticker='SPY', expiration=exp, underlying_price=500.0)
+long_call.add_leg_from_lookup(dm, 500.0, 'call', 1)
+
+print(f"Max Profit: {long_call.max_profit}")        # None (unlimited)
+print(f"Max Loss: ${long_call.max_loss:.0f}")       # Premium paid
+print(f"Risk/Reward: {long_call.risk_reward_ratio}") # None
+
+# Naked position: Short Call (unlimited loss potential)
+short_call = OptionStrategy(ticker='SPY', expiration=exp, underlying_price=500.0)
+short_call.add_leg_from_lookup(dm, 500.0, 'call', -1)
+
+print(f"Max Profit: ${short_call.max_profit:.0f}")  # Premium received
+print(f"Max Loss: {short_call.max_loss}")           # None (unlimited)
+print(f"Risk/Reward: {short_call.risk_reward_ratio}") # None
 ```
 
 ### Implied Volatility Solver
