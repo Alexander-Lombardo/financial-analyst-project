@@ -28,6 +28,7 @@ from options_builder.chain_analyzer import (
     PricedChainRow,
     PricedChain,
 )
+from options_builder.data_manager import DataManager
 
 __all__ = [
     # Pricing
@@ -57,4 +58,6 @@ __all__ = [
     "PricedOption",
     "PricedChainRow",
     "PricedChain",
+    # Data Manager
+    "DataManager",
 ]
