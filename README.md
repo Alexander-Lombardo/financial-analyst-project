@@ -818,6 +818,83 @@ print(summary)
 | `add_leg_from_lookup(dm, strike, option_type, quantity)` | Add leg from DataManager lookup |
 | `get_leg(strike, option_type)` | Find leg by strike and type |
 | `summary()` | Return dict with key metrics |
+| `generate_price_range(pct_range, num_points)` | Generate price array for P&L calculation |
+| `calculate_pnl(prices)` | Calculate total P&L at each price point |
+| `pnl_data(pct_range, num_points)` | Return (prices, pnl) tuple for plotting |
+
+**P&L Calculation (Payoff Diagrams):**
+
+Generate the "hockey stick" payoff diagram data for any multi-leg strategy:
+
+```python
+import matplotlib.pyplot as plt
+from options_builder import OptionStrategy
+
+# Build a bull call spread
+strategy = OptionStrategy(
+    ticker='SPY',
+    expiration=priced.expiration,
+    underlying_price=500.0,
+    name='Bull Call Spread'
+)
+strategy.add_leg_from_lookup(dm, 500.0, 'call', 1)   # Long 500C
+strategy.add_leg_from_lookup(dm, 505.0, 'call', -1)  # Short 505C
+
+# Generate P&L data (prices from 80% to 120% of underlying)
+prices, pnl = strategy.pnl_data(pct_range=0.2, num_points=100)
+
+# Plot payoff diagram
+plt.figure(figsize=(10, 6))
+plt.plot(prices, pnl, 'b-', linewidth=2)
+plt.axhline(y=0, color='gray', linestyle='--')
+plt.axvline(x=strategy.underlying_price, color='gray', linestyle=':')
+plt.fill_between(prices, pnl, 0, where=(pnl > 0), alpha=0.3, color='green')
+plt.fill_between(prices, pnl, 0, where=(pnl < 0), alpha=0.3, color='red')
+plt.xlabel('Stock Price at Expiration')
+plt.ylabel('P&L ($)')
+plt.title(f'{strategy.name} Payoff Diagram')
+plt.grid(True, alpha=0.3)
+plt.show()
+```
+
+**P&L Formula:**
+
+For each leg at terminal price S_T:
+```
+Leg P&L = payoff(S_T, K, type) × quantity × 100 - cost
+```
+
+Where:
+- `payoff(S_T, K, type)` = intrinsic value at expiration (max(S_T - K, 0) for calls)
+- `quantity` = number of contracts (negative for short positions)
+- `cost` = premium paid/received to enter the position
+
+**Example: Analyzing Bull Call Spread P&L:**
+
+```python
+import numpy as np
+
+# Test specific price points
+prices = np.array([490.0, 500.0, 502.5, 505.0, 510.0])
+pnl = strategy.calculate_pnl(prices)
+
+for price, pl in zip(prices, pnl):
+    print(f"At ${price:.0f}: P&L = ${pl:.0f}")
+# Output:
+# At $490: P&L = $-290  (max loss - both expire worthless)
+# At $500: P&L = $-290  (at lower strike)
+# At $502: P&L = $-40   (partial profit)
+# At $505: P&L = $210   (max profit reached)
+# At $510: P&L = $210   (max profit capped)
+
+# Key metrics
+max_profit = pnl.max()
+max_loss = -pnl.min()
+breakeven = prices[np.argmin(np.abs(pnl))]
+print(f"Max Profit: ${max_profit:.0f}")
+print(f"Max Loss: ${max_loss:.0f}")
+print(f"Breakeven: ~${breakeven:.0f}")
+```
 
 ### Implied Volatility Solver
 
@@ -1003,7 +1080,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_data_connector.py` - Market data fetching, option chains, risk-free rate
 - `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
-- `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, helper methods
+- `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
 
 ## License
 
