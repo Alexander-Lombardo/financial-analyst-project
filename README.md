@@ -137,7 +137,8 @@ target-financial-analyzer/
 │   ├── data_connector.py     # Market data connector (yfinance)
 │   ├── chain_analyzer.py     # Bridge: live data → IV/Greeks calculation
 │   ├── data_manager.py       # Pandas-based option chain storage
-│   └── strategy.py           # Multi-leg option strategy classes
+│   ├── strategy.py           # Multi-leg option strategy classes
+│   └── templates.py          # Strategy template factory functions
 ├── tests/                    # Test suite
 │   ├── test_pricing.py       # Pricing function tests
 │   ├── test_greeks.py        # Greeks function tests
@@ -148,7 +149,8 @@ target-financial-analyzer/
 │   ├── test_data_connector.py # Data connector tests
 │   ├── test_chain_analyzer.py # Chain analyzer tests
 │   ├── test_data_manager.py  # Data manager tests
-│   └── test_strategy.py      # Strategy classes tests
+│   ├── test_strategy.py      # Strategy classes tests
+│   └── test_templates.py     # Strategy template tests
 ├── scripts/                  # Utility scripts
 │   └── validate_with_market.py  # Market data validation
 └── data/
@@ -930,6 +932,140 @@ print(f"Max Loss: {short_call.max_loss}")           # None (unlimited)
 print(f"Risk/Reward: {short_call.risk_reward_ratio}") # None
 ```
 
+### Strategy Templates (Quick-Builder)
+
+Factory functions to create common multi-leg option strategies with a single call. Instead of manually adding each leg, use these "recipes" for standard strategies:
+
+```python
+from options_builder import (
+    bull_call_spread,
+    bear_call_spread,
+    bull_put_spread,
+    bear_put_spread,
+    long_straddle,
+    short_straddle,
+    long_strangle,
+    short_strangle,
+    iron_condor,
+    iron_butterfly,
+)
+
+# Bull Call Spread (debit spread, bullish)
+strategy = bull_call_spread(dm, 'SPY', expiration, lower_strike=500.0, upper_strike=505.0)
+print(f"Net Debit: ${strategy.net_premium:.0f}")  # e.g., $290
+print(f"Max Profit: ${strategy.max_profit:.0f}")  # e.g., $210
+print(f"Max Loss: ${strategy.max_loss:.0f}")      # e.g., $290
+
+# Iron Condor (credit spread, neutral)
+ic = iron_condor(
+    dm, 'SPY', expiration,
+    put_long_strike=490.0,
+    put_short_strike=495.0,
+    call_short_strike=505.0,
+    call_long_strike=510.0
+)
+print(f"Credit Received: ${-ic.net_premium:.0f}")
+print(f"Max Profit: ${ic.max_profit:.0f}")
+print(f"Total Delta: {ic.total_delta:.1f}")  # Near zero (neutral)
+
+# Multiple contracts
+spread = bull_call_spread(dm, 'SPY', expiration, 500.0, 505.0, quantity=5)
+```
+
+**Available Templates:**
+
+| Template | Legs | Type | Outlook |
+|----------|------|------|---------|
+| `bull_call_spread` | 2 | Debit | Moderately bullish |
+| `bear_call_spread` | 2 | Credit | Moderately bearish/neutral |
+| `bull_put_spread` | 2 | Credit | Moderately bullish/neutral |
+| `bear_put_spread` | 2 | Debit | Moderately bearish |
+| `long_straddle` | 2 | Debit | High volatility (either direction) |
+| `short_straddle` | 2 | Credit | Low volatility |
+| `long_strangle` | 2 | Debit | High volatility (either direction) |
+| `short_strangle` | 2 | Credit | Low volatility |
+| `iron_condor` | 4 | Credit | Neutral, low volatility |
+| `iron_butterfly` | 4 | Credit | Neutral, very low volatility |
+
+**Template Function Signatures:**
+
+```python
+# Vertical Spreads (2-leg)
+bull_call_spread(dm, ticker, expiration, lower_strike, upper_strike, quantity=1)
+bear_call_spread(dm, ticker, expiration, lower_strike, upper_strike, quantity=1)
+bull_put_spread(dm, ticker, expiration, lower_strike, upper_strike, quantity=1)
+bear_put_spread(dm, ticker, expiration, lower_strike, upper_strike, quantity=1)
+
+# Neutral Strategies (2-leg)
+long_straddle(dm, ticker, expiration, strike, quantity=1)
+short_straddle(dm, ticker, expiration, strike, quantity=1)
+long_strangle(dm, ticker, expiration, put_strike, call_strike, quantity=1)
+short_strangle(dm, ticker, expiration, put_strike, call_strike, quantity=1)
+
+# Advanced Spreads (4-leg)
+iron_condor(dm, ticker, expiration, put_long, put_short, call_short, call_long, quantity=1)
+iron_butterfly(dm, ticker, expiration, put_long, middle, call_long, quantity=1)
+```
+
+**Return Values:**
+- Returns `OptionStrategy` object if all legs are found
+- Returns `None` if any required option is missing from the DataManager
+- Raises `ValueError` if strike prices are in invalid order
+
+**Example: Complete Workflow with Templates:**
+
+```python
+from datetime import date
+from options_builder import (
+    OptionsDataConnector,
+    ChainAnalyzer,
+    DataManager,
+    iron_condor,
+)
+import matplotlib.pyplot as plt
+
+# 1. Fetch and analyze option chain
+conn = OptionsDataConnector()
+exps = conn.get_expirations('SPY')
+grid = conn.get_chain_grid('SPY', exps[2])
+liquid_grid = grid.filter_liquid(max_spread_pct=0.30)
+
+analyzer = ChainAnalyzer()
+priced = analyzer.analyze(liquid_grid)
+
+dm = DataManager()
+dm.add_chain(priced)
+
+# 2. Build iron condor with template
+atm = priced.atm_strike()
+ic = iron_condor(
+    dm, 'SPY', priced.expiration,
+    put_long_strike=atm - 15,
+    put_short_strike=atm - 10,
+    call_short_strike=atm + 10,
+    call_long_strike=atm + 15,
+)
+
+# 3. Analyze strategy
+print(f"Strategy: {ic.name}")
+print(f"Credit Received: ${-ic.net_premium:.0f}")
+print(f"Max Profit: ${ic.max_profit:.0f}")
+print(f"Max Loss: ${ic.max_loss:.0f}")
+print(f"Breakevens: {ic.breakeven_points}")
+print(f"Risk/Reward: {ic.risk_reward_ratio:.2f}")
+print(f"Total Delta: {ic.total_delta:.1f}")
+print(f"Total Theta: {ic.total_theta:.2f}")
+
+# 4. Plot payoff diagram
+prices, pnl = ic.pnl_data(pct_range=0.1)
+plt.plot(prices, pnl)
+plt.axhline(y=0, color='gray', linestyle='--')
+plt.title('Iron Condor Payoff')
+plt.xlabel('Stock Price')
+plt.ylabel('P&L ($)')
+plt.show()
+```
+
 ### Implied Volatility Solver
 
 Calculate implied volatility from market prices using Newton-Raphson iteration:
@@ -1099,6 +1235,7 @@ pytest tests/test_data_connector.py -v  # Data connector tests
 pytest tests/test_chain_analyzer.py -v  # Chain analyzer tests
 pytest tests/test_data_manager.py -v   # Data manager tests
 pytest tests/test_strategy.py -v       # Strategy classes tests
+pytest tests/test_templates.py -v      # Strategy template tests
 
 # Run with coverage
 pytest tests/ --cov=options_builder --cov-report=term-missing
@@ -1115,6 +1252,7 @@ pytest tests/ --cov=options_builder --cov-report=term-missing
 - `test_chain_analyzer.py` - Chain analysis, IV/Greeks calculation, PricedChain methods
 - `test_data_manager.py` - DataFrame storage, lookups, filtering, cache management
 - `test_strategy.py` - Strategy building, aggregated Greeks, cost calculations, P&L diagrams, helper methods
+- `test_templates.py` - Strategy template factory functions, leg structure, Greeks aggregation, P&L profiles
 
 ## License
 

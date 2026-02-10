@@ -30,6 +30,18 @@ from options_builder.chain_analyzer import (
 )
 from options_builder.data_manager import DataManager
 from options_builder.strategy import StrategyLeg, OptionStrategy
+from options_builder.templates import (
+    bull_call_spread,
+    bear_call_spread,
+    bull_put_spread,
+    bear_put_spread,
+    long_straddle,
+    short_straddle,
+    long_strangle,
+    short_strangle,
+    iron_condor,
+    iron_butterfly,
+)
 
 __all__ = [
     # Pricing
@@ -64,4 +76,15 @@ __all__ = [
     # Strategy
     "StrategyLeg",
     "OptionStrategy",
+    # Strategy Templates
+    "bull_call_spread",
+    "bear_call_spread",
+    "bull_put_spread",
+    "bear_put_spread",
+    "long_straddle",
+    "short_straddle",
+    "long_strangle",
+    "short_strangle",
+    "iron_condor",
+    "iron_butterfly",
 ]
