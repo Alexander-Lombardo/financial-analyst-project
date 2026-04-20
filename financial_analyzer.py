@@ -1,12 +1,11 @@
 """
-Target Corporation Financial Analyzer
-=====================================
-A comprehensive tool to analyze Target's 10-K and 10-Q filings.
+Financial Analyzer
+==================
+Generic SEC 10-K / 10-Q analyzer. Parses XBRL tags for ~30 metrics, computes
+ratios with correct balance-sheet averaging and TTM annualization.
 
-Three-Phase Analysis:
-1. Phase 1: Extract baseline "Vital Signs" from 10-K
-2. Phase 2: Compare quarterly trends from 10-Qs against baseline
-3. Phase 3: Output structured JSON for each period
+Drives off a CompanyConfig (see config_loader.py) so the same code runs for any
+SEC-registered company.
 """
 
 import json
@@ -16,34 +15,40 @@ from typing import Dict, List, Optional
 from bs4 import BeautifulSoup
 from decimal import Decimal
 from sec_data_fetcher import SECDataFetcher
+from config_loader import CompanyConfig
 
 
-class TargetFinancialAnalyzer:
-    """Analyzes Target Corporation SEC filings for key financial metrics."""
+class FinancialAnalyzer:
+    """Analyzes SEC filings for key financial metrics."""
 
-    def __init__(self, data_dir: str, auto_download: bool = False,
+    # Balance-sheet metrics that should be time-averaged when used in ratios
+    # where they are paired with income-statement items (turnover, ROE, ROA).
+    AVERAGED_METRICS = (
+        'inventory_billion',
+        'stockholders_equity_billion',
+        'total_assets_billion',
+        'current_receivables_billion',
+        'current_payables_billion',
+    )
+
+    def __init__(self, config: CompanyConfig, auto_download: bool = False,
                  user_name: str = None, user_email: str = None):
         """
-        Initialize analyzer with data directory.
-
-        Args:
-            data_dir: Path to directory containing Target 10-Q/10-K files
-            auto_download: Enable automatic SEC EDGAR filing downloads
-            user_name: Your name (required if auto_download=True, for SEC User-Agent)
-            user_email: Your email (required if auto_download=True, for SEC User-Agent)
+        Initialize analyzer with a CompanyConfig.
         """
-        self.data_dir = Path(data_dir)
+        self.config = config
+        self.data_dir = Path(config.data_dir)
         self.baseline = None
         self.results = []
         self.auto_download = auto_download
         self.fetcher = None
 
-        # Phase 2: Track quarterly results by quarter number for YoY comparison
-        self.quarterly_history = {}  # {"Q1": [Q1 2024, Q1 2025], "Q2": [...], ...}
+        # Track quarterly results by quarter number for YoY comparison
+        self.quarterly_history = {}  # {"Q1": [Q1 2024, Q1 2025], ...}
 
-        # Phase 2: Risk heatmap - count mentions across all filings
+        # Risk heatmap - count mentions across all filings
         self.risk_heatmap = {
-            'shrink': [],      # [(period, mention_count), ...]
+            'shrink': [],
             'theft': [],
             'markdown': [],
             'margin_pressure': []
@@ -52,27 +57,23 @@ class TargetFinancialAnalyzer:
         if auto_download:
             if not user_name or not user_email:
                 raise ValueError("User name and email required for SEC downloads")
-            self.fetcher = SECDataFetcher(user_name, user_email, str(data_dir))
+            self.fetcher = SECDataFetcher(user_name, user_email, str(self.data_dir),
+                                          fiscal_calendar=config.fiscal_calendar)
 
-    def download_required_filings(self, ticker: str = "TGT",
-                                  cik: str = "0000027419") -> bool:
-        """
-        Download 5 years of 10-Ks and 12 quarters of 10-Qs from SEC EDGAR.
-
-        Args:
-            ticker: Stock ticker symbol (default: "TGT")
-            cik: Central Index Key (default: "0000027419")
-
-        Returns:
-            True if download successful, False otherwise
-        """
+    def download_required_filings(self) -> bool:
+        """Download 10-Ks and 10-Qs from SEC EDGAR using the configured ticker/CIK."""
         if not self.fetcher:
             print("⚠️  Auto-download not enabled. Skipping download.")
             return False
 
-        print("📥 Downloading filings from SEC EDGAR...")
+        cfg = self.config
+        print(f"📥 Downloading filings for {cfg.ticker} (CIK {cfg.cik})...")
         try:
-            metadata = self.fetcher.download_filings(ticker, cik, num_10k=10, num_10q=12)
+            metadata = self.fetcher.download_filings(
+                cfg.ticker, cfg.cik,
+                num_10k=cfg.download.num_10k,
+                num_10q=cfg.download.num_10q,
+            )
             print(f"✅ Downloaded {len(metadata.get('10-K', []))} 10-Ks")
             print(f"✅ Downloaded {len(metadata.get('10-Q', []))} 10-Qs")
             return True
@@ -80,33 +81,85 @@ class TargetFinancialAnalyzer:
             print(f"❌ Download failed: {e}")
             return False
 
+    # ------------------------------------------------------------------
+    # Averaging + TTM helpers
+    # ------------------------------------------------------------------
+
+    def _prior_balance(self, metric: str, current_filing_type: str) -> Optional[float]:
+        """
+        Return the balance-sheet value of `metric` from the conventionally-prior
+        period. For a 10-K, "prior" is the most recent prior 10-K (prior
+        year-end). For a 10-Q, "prior" is the most recent prior filing of any
+        type. Returns None if there is no qualifying prior.
+        """
+        if not self.results:
+            return None
+
+        if current_filing_type == "10-K":
+            candidates = [r for r in reversed(self.results) if r.get('filing_type') == '10-K']
+        else:
+            candidates = list(reversed(self.results))
+
+        for r in candidates:
+            val = r.get('vital_signs', {}).get(metric)
+            if val is not None:
+                return val
+        return None
+
+    def _avg_balance(self, metric: str, current: Optional[float],
+                     current_filing_type: str) -> tuple[Optional[float], bool]:
+        """
+        Two-period average of a balance-sheet item. Returns (value, is_averaged).
+        When no prior period is available, falls back to current value and
+        is_averaged=False so the output can flag the approximation.
+        """
+        if current is None:
+            return None, False
+        prior = self._prior_balance(metric, current_filing_type)
+        if prior is None:
+            return current, False
+        return (current + prior) / 2, True
+
+    def _ttm_sum(self, metric: str, current: Optional[float]) -> tuple[Optional[float], str]:
+        """
+        Trailing-twelve-months sum of a quarterly income-statement metric.
+        Sums the current value with the prior 3 quarterly periods from
+        self.results.
+
+        Returns (ttm_value, basis) where basis is:
+          - "ttm"          : 4 distinct quarters summed (current + 3 prior)
+          - "approximated" : fewer than 4 quarters available, multiplied by 4
+          - "unavailable"  : current is None
+        """
+        if current is None:
+            return None, "unavailable"
+
+        # Collect prior 3 quarterly filings (most recent 3)
+        prior_quarters = [
+            r for r in reversed(self.results)
+            if r.get('filing_type') == '10-Q' and
+               r.get('vital_signs', {}).get(metric) is not None
+        ][:3]
+
+        if len(prior_quarters) == 3:
+            total = current + sum(r['vital_signs'][metric] for r in prior_quarters)
+            return total, "ttm"
+        # Fall back to crude annualization
+        return current * 4, "approximated"
+
     def analyze_all_filings(self) -> List[Dict]:
         """
-        Process all filings in correct order:
-        1. 2024 10-K (Baseline)
-        2. Q1 2025 10-Q
-        3. Q2 2025 10-Q
-        4. Q3 2025 10-Q
-
-        Returns:
-            List of analysis results for each filing
+        Process all filings in chronological order and return analysis results.
         """
         # If auto-download enabled, fetch filings first
         if self.auto_download and self.fetcher:
             self.download_required_filings()
 
-        # Get filing list (from fetcher if available, else use hardcoded list)
-        if self.fetcher:
-            filings = self.fetcher.get_filing_list()
-            print(f"📁 Found {len(filings)} downloaded filings")
-        else:
-            # Fall back to original hardcoded list for backward compatibility
-            filings = [
-                ("10-K FY2024", "0000027419-25-000018-xbrl/tgt-20250201.htm"),
-                ("Q1 2025", "0000027419-25-000101-xbrl/tgt-20250503.htm"),
-                ("Q2 2025", "tgt-20250802.htm"),
-                ("Q3 2025", "tgt-20251101.htm"),
-            ]
+        if not self.fetcher:
+            raise RuntimeError("SEC fetcher not initialized; enable auto_download=True")
+
+        filings = self.fetcher.get_filing_list()
+        print(f"📁 Found {len(filings)} downloaded filings")
 
         for period, filename in filings:
             filepath = self.data_dir / filename
@@ -665,46 +718,39 @@ class TargetFinancialAnalyzer:
 
     def _calculate_inventory_metrics(self, vital_signs: Dict, period: str) -> Dict:
         """
-        Calculate inventory efficiency metrics (Phase 2 Enhancement).
+        Calculate inventory efficiency metrics.
 
-        CRITICAL: For quarterly periods, COGS must be annualized before calculating
-        turnover ratios, since inventory is a point-in-time snapshot but COGS is
-        cumulative over the period.
+        Ratios use time-averaged inventory and TTM COGS (for 10-Qs). On the first
+        filing or when fewer than 4 quarters of history exist, we fall back to
+        current values / ×4 annualization and flag the method in the output.
 
-        Metrics:
-        - Inventory Turnover Ratio = COGS / Average Inventory
+        - Inventory Turnover Ratio = TTM COGS / Avg Inventory
         - Days Sales of Inventory (DSI) = 365 / Inventory Turnover
-
-        Args:
-            vital_signs: Dictionary containing cost_of_sales_billion and inventory_billion
-            period: Period label for tracking
-
-        Returns:
-            Dictionary with inventory metrics
         """
         inventory_metrics = {}
 
-        # Need COGS and Inventory
         cogs = vital_signs.get('cost_of_sales_billion')
         inventory = vital_signs.get('inventory_billion')
         fiscal_quarter = vital_signs.get('fiscal_quarter')
 
         if cogs and inventory:
-            # CRITICAL: Annualize quarterly COGS to match point-in-time inventory
+            filing_type = "10-Q" if fiscal_quarter is not None else "10-K"
+            # Annualize COGS for quarterly periods via TTM when possible
             if fiscal_quarter is not None:
-                # Quarterly period (10-Q) - annualize COGS
-                annualized_cogs = cogs * 4
+                annualized_cogs, ttm_basis = self._ttm_sum('cost_of_sales_billion', cogs)
             else:
-                # Annual period (10-K) - use as is
-                annualized_cogs = cogs
+                annualized_cogs, ttm_basis = cogs, "annual"
 
-            # For simplicity, use current inventory (not average)
-            # To calculate true average, would need previous period's inventory
-            inventory_turnover = annualized_cogs / inventory
+            # Time-average the balance-sheet item
+            avg_inventory, averaged = self._avg_balance('inventory_billion', inventory, filing_type)
+
+            inventory_turnover = annualized_cogs / avg_inventory
             dsi = 365 / inventory_turnover
 
             inventory_metrics['inventory_turnover_ratio'] = round(inventory_turnover, 2)
             inventory_metrics['days_sales_of_inventory'] = round(dsi, 1)
+            inventory_metrics['inventory_averaged'] = averaged
+            inventory_metrics['cogs_ttm_basis'] = ttm_basis
 
         return inventory_metrics
 
@@ -794,36 +840,49 @@ class TargetFinancialAnalyzer:
             else:
                 debt_metrics['debt_to_ebitda_health'] = 'risky'
 
-        # Pillar 2: Return on Equity and Assets
-        if net_income and stockholders_equity:
-            # 5. ROE = (Net Income / Stockholders' Equity) × 100%
-            roe = (net_income / stockholders_equity) * 100
+        # Return on Equity and Assets — all ratios that pair income-statement
+        # items (net income, revenue) with balance-sheet items use averaged
+        # balance-sheet values and TTM income-statement values.
+        fiscal_quarter = vital_signs.get('fiscal_quarter')
+        filing_type = "10-Q" if fiscal_quarter is not None else "10-K"
+
+        if fiscal_quarter is not None:
+            ttm_net_income, ni_basis = self._ttm_sum('net_income_billion', net_income)
+            ttm_revenue, _ = self._ttm_sum('net_sales_billion', vital_signs.get('net_sales_billion'))
+        else:
+            ttm_net_income, ni_basis = net_income, "annual"
+            ttm_revenue = vital_signs.get('net_sales_billion')
+
+        avg_equity, equity_averaged = self._avg_balance('stockholders_equity_billion', stockholders_equity, filing_type)
+        avg_assets, assets_averaged = self._avg_balance('total_assets_billion', total_assets, filing_type)
+
+        if ttm_net_income and avg_equity:
+            roe = (ttm_net_income / avg_equity) * 100
             debt_metrics['return_on_equity_percent'] = round(roe, 2)
+            debt_metrics['roe_equity_averaged'] = equity_averaged
+            debt_metrics['roe_income_basis'] = ni_basis
 
-            # Pillar 3: DuPont Analysis Components
-            # Component 1: Profit Margin (already exists as net_profit_margin_percent)
-            profit_margin = vital_signs.get('net_profit_margin_percent', 0) / 100  # Convert to decimal
+            # DuPont decomposition using consistent averaged/TTM inputs
+            profit_margin = (ttm_net_income / ttm_revenue) if ttm_revenue else 0
 
-            # Component 2: Asset Turnover = Revenue / Total Assets
-            net_sales = vital_signs.get('net_sales_billion')
-            if net_sales and total_assets and total_assets > 0:
-                asset_turnover = net_sales / total_assets
+            if ttm_revenue and avg_assets and avg_assets > 0:
+                asset_turnover = ttm_revenue / avg_assets
                 debt_metrics['dupont_asset_turnover'] = round(asset_turnover, 2)
 
-            # Component 3: Financial Leverage = Total Assets / Stockholders Equity
-            if total_assets and stockholders_equity > 0:
-                financial_leverage = total_assets / stockholders_equity
+            if avg_assets and avg_equity > 0:
+                financial_leverage = avg_assets / avg_equity
                 debt_metrics['dupont_financial_leverage'] = round(financial_leverage, 2)
 
-            # Validation: ROE should equal Profit Margin × Asset Turnover × Financial Leverage
             if all(k in debt_metrics for k in ['dupont_asset_turnover', 'dupont_financial_leverage']):
-                calculated_roe = profit_margin * debt_metrics['dupont_asset_turnover'] * debt_metrics['dupont_financial_leverage'] * 100
-                debt_metrics['dupont_roe_validation'] = round(calculated_roe, 2)  # Should match return_on_equity_percent
+                calculated_roe = (profit_margin
+                                  * debt_metrics['dupont_asset_turnover']
+                                  * debt_metrics['dupont_financial_leverage']) * 100
+                debt_metrics['dupont_roe_validation'] = round(calculated_roe, 2)
 
-        if net_income and total_assets:
-            # 6. ROA = (Net Income / Total Assets) × 100%
-            roa = (net_income / total_assets) * 100
+        if ttm_net_income and avg_assets:
+            roa = (ttm_net_income / avg_assets) * 100
             debt_metrics['return_on_assets_percent'] = round(roa, 2)
+            debt_metrics['roa_assets_averaged'] = assets_averaged
 
         return debt_metrics
 
@@ -922,33 +981,36 @@ class TargetFinancialAnalyzer:
         """
         efficiency_metrics = {}
 
-        # Extract values (in billions)
+        # Raw values (in billions)
         net_sales = vital_signs.get('net_sales_billion')
         total_assets = vital_signs.get('total_assets_billion')
         current_receivables = vital_signs.get('current_receivables_billion')
         current_payables = vital_signs.get('current_payables_billion')
         cost_of_sales = vital_signs.get('cost_of_sales_billion')
 
-        # CRITICAL: Detect if quarterly period and annualize income statement items
-        # Balance sheet items are point-in-time, but income statement items are cumulative
         fiscal_quarter = vital_signs.get('fiscal_quarter')
 
+        # Income-statement items annualized via TTM (or ×4 fallback)
         if fiscal_quarter is not None:
-            # Quarterly period (10-Q) - annualize COGS and Revenue
-            # Multiply by 4 to convert 3-month values to 12-month equivalent
-            annualized_revenue = net_sales * 4 if net_sales else None
-            annualized_cogs = cost_of_sales * 4 if cost_of_sales else None
+            annualized_revenue, rev_basis = self._ttm_sum('net_sales_billion', net_sales)
+            annualized_cogs, cogs_basis = self._ttm_sum('cost_of_sales_billion', cost_of_sales)
         else:
-            # Annual period (10-K) - use as is (already 12 months)
-            annualized_revenue = net_sales
-            annualized_cogs = cost_of_sales
+            annualized_revenue, rev_basis = net_sales, "annual"
+            annualized_cogs, cogs_basis = cost_of_sales, "annual"
 
-        # 1. Asset Turnover Ratio = Revenue / Total Assets
-        if annualized_revenue and total_assets and total_assets > 0:
-            asset_turnover = annualized_revenue / total_assets
+        # Balance-sheet items time-averaged
+        filing_type = "10-Q" if fiscal_quarter is not None else "10-K"
+        avg_assets, _ = self._avg_balance('total_assets_billion', total_assets, filing_type)
+        avg_receivables, _ = self._avg_balance('current_receivables_billion', current_receivables, filing_type)
+        avg_payables, _ = self._avg_balance('current_payables_billion', current_payables, filing_type)
+
+        efficiency_metrics['revenue_ttm_basis'] = rev_basis
+        efficiency_metrics['cogs_ttm_basis'] = cogs_basis
+
+        # Asset Turnover = TTM Revenue / Avg Total Assets
+        if annualized_revenue and avg_assets and avg_assets > 0:
+            asset_turnover = annualized_revenue / avg_assets
             efficiency_metrics['asset_turnover_ratio'] = round(asset_turnover, 2)
-
-            # Health assessment (retail industry benchmark: >1.5 is good)
             if asset_turnover >= 1.5:
                 efficiency_metrics['asset_turnover_health'] = 'Healthy'
             elif asset_turnover >= 1.0:
@@ -956,23 +1018,17 @@ class TargetFinancialAnalyzer:
             else:
                 efficiency_metrics['asset_turnover_health'] = 'Weak'
 
-        # 2. Receivables Turnover = Revenue / Accounts Receivable (use annualized revenue)
-        if annualized_revenue and current_receivables and current_receivables > 0:
-            receivables_turnover = annualized_revenue / current_receivables
+        # Receivables Turnover = TTM Revenue / Avg Receivables
+        if annualized_revenue and avg_receivables and avg_receivables > 0:
+            receivables_turnover = annualized_revenue / avg_receivables
             efficiency_metrics['receivables_turnover_ratio'] = round(receivables_turnover, 2)
+            efficiency_metrics['days_sales_outstanding'] = round(365 / receivables_turnover, 1)
 
-            # Days Sales Outstanding (DSO) = 365 / Receivables Turnover
-            dso = 365 / receivables_turnover
-            efficiency_metrics['days_sales_outstanding'] = round(dso, 1)
-
-        # 3. Payables Turnover = COGS / Accounts Payable (use annualized COGS)
-        if annualized_cogs and current_payables and current_payables > 0:
-            payables_turnover = annualized_cogs / current_payables
+        # Payables Turnover = TTM COGS / Avg Payables
+        if annualized_cogs and avg_payables and avg_payables > 0:
+            payables_turnover = annualized_cogs / avg_payables
             efficiency_metrics['payables_turnover_ratio'] = round(payables_turnover, 2)
-
-            # Days Payables Outstanding (DPO) = 365 / Payables Turnover
-            dpo = 365 / payables_turnover
-            efficiency_metrics['days_payable_outstanding'] = round(dpo, 1)
+            efficiency_metrics['days_payable_outstanding'] = round(365 / payables_turnover, 1)
 
         return efficiency_metrics
 
@@ -1503,16 +1559,21 @@ class TargetFinancialAnalyzer:
 
     def export_timeseries_json(self, output_path: str):
         """
-        Export time-series friendly JSON format (Phase 3).
+        Export time-series friendly JSON format.
 
         Creates a flat structure optimized for Plotly visualization with parallel
-        arrays for each metric category.
+        arrays for each metric category. Metadata carries the company identity
+        and branding so downstream stages (charts, deck) don't need the config.
         """
+        cfg = self.config
         timeseries_data = {
             'metadata': {
-                'company': 'Target Corporation',
-                'ticker': 'TGT',
-                'cik': '0000027419',
+                'company': cfg.name,
+                'short_name': cfg.short_name,
+                'ticker': cfg.ticker,
+                'cik': cfg.cik,
+                'primary_color_rgb': list(cfg.branding.primary_color_rgb),
+                'accent_color_rgb': list(cfg.branding.accent_color_rgb),
                 'total_periods': len(self.results)
             },
             'periods': [],
@@ -1873,7 +1934,7 @@ class TargetFinancialAnalyzer:
         """Export executive summary report."""
         report_lines = []
         report_lines.append("=" * 80)
-        report_lines.append("TARGET CORPORATION - FINANCIAL ANALYSIS REPORT")
+        report_lines.append(f"{self.config.name.upper()} - FINANCIAL ANALYSIS REPORT")
         report_lines.append("=" * 80)
         report_lines.append("")
 
@@ -1905,59 +1966,60 @@ class TargetFinancialAnalyzer:
         print(f"✅ Summary report exported to: {output_path}")
 
 
-def main():
-    """Main execution function."""
+def run_analysis(config: CompanyConfig) -> FinancialAnalyzer:
+    """
+    Run the analysis stage of the pipeline for the given config and write
+    four JSON/text outputs to output/ under the ticker.
+    """
     import os
     from dotenv import load_dotenv
 
-    # Load environment variables
     load_dotenv()
 
-    print("🎯 Target Corporation Financial Analyzer")
+    print(f"🎯 {config.name} Financial Analyzer")
     print("=" * 60)
 
-    # Configuration
-    data_dir = "data/Target 10Q"
-    auto_download = True  # Enable automated downloads
-
-    # Get credentials from environment
     user_name = os.getenv("SEC_USER_NAME")
     user_email = os.getenv("SEC_USER_EMAIL")
 
-    if auto_download and (not user_name or not user_email):
-        print("❌ Error: SEC credentials not configured")
-        print("   Please create a .env file with SEC_USER_NAME and SEC_USER_EMAIL")
-        print("   See .env.example for template")
-        return
+    if not user_name or not user_email:
+        raise RuntimeError(
+            "SEC credentials not configured. Create a .env with SEC_USER_NAME and SEC_USER_EMAIL."
+        )
 
-    # Initialize analyzer with download capability
-    analyzer = TargetFinancialAnalyzer(
-        data_dir=data_dir,
-        auto_download=auto_download,
+    analyzer = FinancialAnalyzer(
+        config=config,
+        auto_download=True,
         user_name=user_name,
-        user_email=user_email
+        user_email=user_email,
     )
 
-    # Analyze all filings (will auto-download if enabled)
     results = analyzer.analyze_all_filings()
 
-    # Export results
     print("\n" + "=" * 60)
     print("📤 Exporting Results...")
     print("=" * 60)
 
-    analyzer.export_json("output/target_analysis.json")
-    analyzer.export_timeseries_json("output/target_timeseries.json")
-    analyzer.export_summary_report("output/target_summary.txt")
-    analyzer.export_executive_insights("output/executive_insights.json")
+    analyzer.export_json(config.output_path("analysis.json"))
+    analyzer.export_timeseries_json(config.output_path("timeseries.json"))
+    analyzer.export_summary_report(config.output_path("summary.txt"))
+    analyzer.export_executive_insights(config.output_path("executive_insights.json"))
 
-    print("\n✅ Analysis complete!")
-    print(f"   Total filings analyzed: {len(results)}")
-    print(f"   Output files:")
-    print(f"     - target_analysis.json (detailed format)")
-    print(f"     - target_timeseries.json (time-series format for Plotly)")
-    print(f"     - target_summary.txt (human-readable report)")
-    print(f"     - executive_insights.json (key insights for reports)")
+    print(f"\n✅ Analysis complete. {len(results)} filings analyzed.")
+    return analyzer
+
+
+def main():
+    """CLI entry point. Defaults to config/target.yaml."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run financial analysis from a company config.")
+    parser.add_argument("--config", default="config/target.yaml",
+                        help="Path to company YAML config.")
+    args = parser.parse_args()
+
+    config = CompanyConfig.from_yaml(args.config)
+    run_analysis(config)
 
 
 if __name__ == "__main__":

@@ -1,84 +1,77 @@
 #!/usr/bin/env python3
 """
-Target Financial Analyzer - Main Entry Point
-=============================================
+Financial Analyzer - Main Entry Point
+======================================
 
-Run this script to:
-1. Download SEC filings (10-K and 10-Q) from SEC EDGAR
-2. Analyze financial data using XBRL parsing
-3. Generate 24 interactive Plotly charts
-4. Create a professional PowerPoint presentation
+Runs the three-stage pipeline for a given company config:
+1. Download and parse SEC filings; write analysis + timeseries JSON
+2. Generate all 24 Plotly charts (HTML + PNG)
+3. Build the PowerPoint deck
 
 Usage:
-    python run_analysis.py
-
-Requirements:
-    - Python 3.8+
-    - Dependencies from requirements.txt
-    - SEC credentials in .env file (see .env.example)
+    python run_analysis.py                          # uses config/target.yaml
+    python run_analysis.py --config config/walmart.yaml
 """
 
-import os
+import argparse
 import sys
 from pathlib import Path
 
+from config_loader import CompanyConfig
+from financial_analyzer import run_analysis as run_analysis_stage
+from visualize_data import run_charts
+from create_presentation import create_presentation
+
 
 def main():
-    """Run the complete Target financial analysis pipeline."""
+    parser = argparse.ArgumentParser(description="Run the full financial-analysis pipeline.")
+    parser.add_argument("--config", default="config/target.yaml",
+                        help="Path to company YAML config (default: config/target.yaml).")
+    args = parser.parse_args()
+
+    config = CompanyConfig.from_yaml(args.config)
 
     print("=" * 60)
-    print("   Target Financial Analyzer")
+    print(f"   {config.name} Financial Analyzer")
     print("   Automated SEC Filing Analysis & Visualization")
     print("=" * 60)
     print()
 
-    # Check for .env file
     if not Path(".env").exists():
         print("ERROR: .env file not found")
         print()
         print("Please create a .env file with your SEC credentials:")
         print("  SEC_USER_NAME=Your Name")
         print("  SEC_USER_EMAIL=your.email@example.com")
-        print()
-        print("See .env.example for a template.")
         sys.exit(1)
 
-    # Step 1: Run financial analysis
+    # Stage 1: Analysis
     print("STEP 1/3: Analyzing SEC Filings")
     print("-" * 40)
-    from financial_analyzer import main as analyze
-    analyze()
+    run_analysis_stage(config)
     print()
 
-    # Step 2: Generate visualizations
+    # Stage 2: Charts
     print("STEP 2/3: Generating Charts")
     print("-" * 40)
-    from visualize_data import main as visualize
-    visualize()
+    run_charts(config)
     print()
 
-    # Step 3: Create PowerPoint presentation
+    # Stage 3: Deck
     print("STEP 3/3: Creating PowerPoint Presentation")
     print("-" * 40)
-    from create_presentation import create_target_presentation
-    output_path = create_target_presentation()
+    output_path = create_presentation(config)
     print()
 
-    # Summary
     print("=" * 60)
     print("   Analysis Complete!")
     print("=" * 60)
     print()
     print("Output files:")
-    print("  - output/Target_Financial_Analysis.pptx  (presentation)")
-    print("  - output/chart_*.html                    (24 interactive charts)")
-    print("  - output/target_timeseries.json          (time-series data)")
-    print("  - output/target_analysis.json            (detailed analysis)")
-    print()
-    print("Next steps:")
-    print("  1. Open output/Target_Financial_Analysis.pptx")
-    print("  2. Browse interactive charts in output/ directory")
-    print()
+    print(f"  - {output_path}  (presentation)")
+    print(f"  - output/chart_*.html                    (24 interactive charts)")
+    print(f"  - {config.output_path('timeseries.json')}  (time-series data)")
+    print(f"  - {config.output_path('analysis.json')}    (detailed analysis)")
 
 
 if __name__ == "__main__":

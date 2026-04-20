@@ -1,0 +1,35 @@
+# Company config schema. Copy this, name it <ticker>.yaml, and fill in values.
+#
+# Every field below is required except where marked optional.
+
+company:
+  name: "Full legal name, e.g. Target Corporation"        # shown in deck titles, exec summary
+  short_name: "Short display name, e.g. Target"           # shown in chart titles
+  ticker: "4-letter ticker, e.g. TGT"                     # drives output filenames
+  cik: "10-digit SEC CIK with leading zeros, e.g. 0000027419"
+
+fiscal_calendar:
+  # year_end_month: the calendar month the 10-K period-of-report falls in.
+  #   Retail (Target/Walmart/Kroger): 2 (Feb) — actual close is Jan 31.
+  #   Apple: 9. Most calendar-year companies: 12.
+  # convention: how fiscal years are labeled.
+  #   "starts_in" (retail): FY2024 STARTS Feb 2024, ends Feb 2025. 10-K dated Feb-2025 = FY2024.
+  #   "ends_in"  (standard): FY2024 ENDS in calendar year 2024. 10-K dated Sep-2024 = FY2024.
+  # If omitted, "starts_in" is used when year_end_month<=3, else "ends_in".
+  year_end_month: 12                                      # 1-12
+  year_end_day: 31                                        # last day typically
+  convention: "ends_in"                                   # optional
+
+branding:
+  primary_color_rgb: [0, 102, 204]                        # title + accent color in deck/charts
+  accent_color_rgb: [51, 51, 51]                          # secondary text
+
+# Optional: peer tickers for comparison charts (Pillar 5 scatter, CCC comparison).
+# If omitted, peer comparison charts fall back to sensible defaults or skip.
+peers: []
+
+download:
+  num_10k: 10                                             # annual filings to fetch
+  num_10q: 12                                             # quarterly filings to fetch
+
+data_dir: "data"                                          # where SEC filings are stored/downloaded

@@ -1,0 +1,25 @@
+company:
+  name: "Target Corporation"
+  short_name: "Target"
+  ticker: "TGT"
+  cik: "0000027419"
+
+fiscal_calendar:
+  # Target's fiscal year ends late Jan / early Feb; 10-K period-of-report is dated Feb 1.
+  # Use month 2 (Feb) so the annual period matches, and starts_in convention so a
+  # filing dated Feb-2025 is labeled FY2024.
+  year_end_month: 2
+  year_end_day: 1
+  convention: "starts_in"
+
+branding:
+  primary_color_rgb: [204, 0, 0]      # Target red
+  accent_color_rgb: [51, 51, 51]
+
+peers: ["WMT", "COST", "AMZN", "KR"]
+
+download:
+  num_10k: 10
+  num_10q: 12
+
+data_dir: "data/Target 10Q"
